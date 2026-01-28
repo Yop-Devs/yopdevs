@@ -1,11 +1,10 @@
-'use client'
-
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function EntryPage() {
-  const supabase = createClient()
+  // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'signin' | 'signup' | 'forgot'>('signin')
