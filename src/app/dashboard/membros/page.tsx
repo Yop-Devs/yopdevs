@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import Link from 'next/navigation'
+import Link from 'next/link'
 
 export default function MembersPage() {
   const supabase = createClient()
