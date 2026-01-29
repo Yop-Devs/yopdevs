@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function MasterAdminPage() {
-  const supabase = createClient()
   const [users, setUsers] = useState<any[]>([])
   const [content, setContent] = useState<{ posts: any[], projects: any[] }>({ posts: [], projects: [] })
   const [loading, setLoading] = useState(true)

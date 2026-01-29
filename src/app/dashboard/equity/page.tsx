@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function EquityPortfolioPage() {
-  const supabase = createClient()
   const [investments, setInvestments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 

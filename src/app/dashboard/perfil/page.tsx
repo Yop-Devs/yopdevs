@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function ProfilePage() {
-  const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [uploading, setUploading] = useState(false)

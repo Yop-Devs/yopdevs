@@ -1,10 +1,17 @@
+'use client'
+
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+// MODIFICAÇÃO 1: Mova a criação do cliente para fora do componente.
+// Isso impede que centenas de instâncias sejam criadas e travem o login.
+const supabaseInstance = createClient()
+
 export default function EntryPage() {
-  // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão
-  const supabase = useMemo(() => createClient(), [])
+  // MODIFICAÇÃO 2: Aponte para a instância externa criada acima.
+  const supabase = supabaseInstance 
+  
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'signin' | 'signup' | 'forgot'>('signin')
@@ -23,14 +30,22 @@ export default function EntryPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } }
+        options: { 
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/auth/callback` 
+        }
       })
       if (error) setMessage({ type: 'error', text: `ERRO NO CADASTRO: ${error.message.toUpperCase()}` })
       else setMessage({ type: 'success', text: 'PROTOCOLO ENVIADO! VERIFIQUE SEU E-MAIL PARA ATIVAR.' })
     } else if (view === 'signin') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
-      else router.push('/dashboard')
+      if (error) {
+        setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
+      } else {
+        // Correção adicional: Use window.location para garantir que o middleware 
+        // reconheça a nova sessão instantaneamente.
+        window.location.href = '/dashboard'
+      }
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
@@ -41,6 +56,7 @@ export default function EntryPage() {
     setLoading(false)
   }
 
+  // DAQUI PARA BAIXO O SEU CÓDIGO DE LAYOUT CONTINUA EXATAMENTE IGUAL
   return (
     <div className="min-h-screen bg-[#fcfcfd] flex flex-col lg:flex-row font-sans text-slate-900">
       
@@ -85,12 +101,10 @@ export default function EntryPage() {
           </div>
 
           <div className="relative">
-            {/* O CARD DE FORMULÁRIO */}
             <form 
               onSubmit={handleAuth} 
               className="bg-white border-2 border-slate-900 p-8 lg:p-10 rounded-3xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] space-y-6"
             >
-              {/* MENSAGEM DE STATUS (SUBSTITUI O ALERT) */}
               {message && (
                 <div className={`p-4 border-2 rounded-xl text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in duration-300 ${
                   message.type === 'success' 
@@ -125,7 +139,7 @@ export default function EntryPage() {
                         <button type="button" onClick={() => {setView('forgot'); setMessage(null)}} className="text-slate-400 hover:text-indigo-600 transition-colors">Esqueci a senha</button>
                       )}
                     </div>
-                    <input required type="password" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <input required type="password" name="password" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                   </div>
                 )}
               </div>

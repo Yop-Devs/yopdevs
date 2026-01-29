@@ -2,12 +2,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function SecurityPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()

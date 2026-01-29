@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 
 export default function PublicProfilePage() {
   const { id } = useParams()
   const router = useRouter()
-  const supabase = createClient()
   
   const [profile, setProfile] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
