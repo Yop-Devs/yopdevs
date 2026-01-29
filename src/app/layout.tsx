@@ -13,24 +13,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     async function checkUserAndLoadProfile() {
-      // 1. Verifica se existe um usuário logado no navegador
-      const { data: { user }, error } = await supabase.auth.getUser()
-      
-      // 2. Se não houver usuário ou der erro, manda para a home (Login)
-      if (error || !user) {
-        console.log("Acesso negado: Redirecionando para login...")
+      try {
+        // Busca a sessão atual de forma mais direta
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          // Tenta uma segunda vez após 500ms (ajuda em domínios lentos)
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const { data: { user } } = await supabase.auth.getUser()
+          
+          if (!user) {
+            console.log("Sessão não encontrada após re-tentativa.")
+            router.push('/')
+            return
+          }
+          
+          // Se achou o usuário na segunda tentativa, continua
+          loadProfileData(user.id)
+        } else {
+          loadProfileData(session.user.id)
+        }
+      } catch (err) {
+        console.error("Erro crítico na verificação:", err)
         router.push('/')
-        return
       }
+    }
 
-      // 3. Se estiver logado, carrega o perfil normalmente
-      const { data: profileData } = await supabase
+    async function loadProfileData(userId: string) {
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
       
-      setProfile(profileData)
+      if (error) {
+        console.warn("Perfil não encontrado, mas usuário está logado.")
+      }
+      
+      setProfile(data)
       setLoading(false)
     }
 
