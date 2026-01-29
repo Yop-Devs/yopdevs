@@ -1,14 +1,9 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'your-project-id.supabase.co', // Substitua pelo ID do seu projeto
-        port: '',
-        pathname: '/storage/v1/object/public/**',
-      },
-    ],
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // Se quiser silenciar o erro e usar Turbopack puro:
+  experimental: {
+    turbo: {},
   },
 };
 

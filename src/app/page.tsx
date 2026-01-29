@@ -1,11 +1,14 @@
+"use client" // ESTA LINHA É OBRIGATÓRIA NO TOPO DO ARQUIVO
+
 import { useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase' // Agora usando a instância Singleton que corrigimos
 import { useRouter } from 'next/navigation'
 
 export default function EntryPage() {
-  // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão
+  // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão no cliente
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState<'signin' | 'signup' | 'forgot'>('signin')
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -23,14 +26,21 @@ export default function EntryPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } }
+        options: { 
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
       })
       if (error) setMessage({ type: 'error', text: `ERRO NO CADASTRO: ${error.message.toUpperCase()}` })
       else setMessage({ type: 'success', text: 'PROTOCOLO ENVIADO! VERIFIQUE SEU E-MAIL PARA ATIVAR.' })
     } else if (view === 'signin') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
-      else router.push('/dashboard')
+      if (error) {
+        setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
+      } else {
+        // Redirecionamento forçado para o novo domínio yopdevs.com.br
+        window.location.href = '/dashboard'
+      }
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
@@ -73,7 +83,7 @@ export default function EntryPage() {
         </div>
       </div>
 
-      {/* LADO DIREITO: ACESSO COM FEEDBACK INTEGRADO */}
+      {/* LADO DIREITO: ACESSO */}
       <div className="lg:w-1/2 flex flex-col items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-[420px] space-y-8">
           
@@ -85,12 +95,10 @@ export default function EntryPage() {
           </div>
 
           <div className="relative">
-            {/* O CARD DE FORMULÁRIO */}
             <form 
               onSubmit={handleAuth} 
               className="bg-white border-2 border-slate-900 p-8 lg:p-10 rounded-3xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] space-y-6"
             >
-              {/* MENSAGEM DE STATUS (SUBSTITUI O ALERT) */}
               {message && (
                 <div className={`p-4 border-2 rounded-xl text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in duration-300 ${
                   message.type === 'success' 
@@ -125,7 +133,7 @@ export default function EntryPage() {
                         <button type="button" onClick={() => {setView('forgot'); setMessage(null)}} className="text-slate-400 hover:text-indigo-600 transition-colors">Esqueci a senha</button>
                       )}
                     </div>
-                    <input required type="password" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <input required type="password" name="password" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                   </div>
                 )}
               </div>

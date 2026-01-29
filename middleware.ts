@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
-          // AQUI ESTAVA O ERRO: Adicionado o value: '' explicitamente
           request.cookies.set({ name, value: '', ...options })
           response = NextResponse.next({
             request: {
@@ -47,9 +46,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
+  // Se já estiver logado e tentar acessar a tela de login (/), vai para o dashboard
+  if (user && request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/auth/callback'],
+  matcher: ['/', '/dashboard/:path*', '/auth/callback'],
 }
