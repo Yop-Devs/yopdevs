@@ -17,36 +17,44 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
+          // Configuração vital para o domínio yopdevs.com.br
+          const cookieOptions = {
+            ...options,
+            domain: 'yopdevs.com.br',
+            path: '/',
+            sameSite: 'lax' as const,
+            secure: true,
+          }
+          request.cookies.set({ name, value, ...cookieOptions })
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({ name, value, ...options })
+          response.cookies.set({ name, value, ...cookieOptions })
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
+          const cookieOptions = {
+            ...options,
+            domain: 'yopdevs.com.br',
+            path: '/',
+          }
+          request.cookies.set({ name, value: '', ...cookieOptions })
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({ name, value: '', ...options })
+          response.cookies.set({ name, value: '', ...cookieOptions })
         },
       },
     }
   )
 
-  // Proteção de Rotas: Verifica se o usuário está logado
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Se tentar acessar o dashboard sem estar logado, volta para a home
+  // Se não estiver logado e tentar o dashboard, volta para a home
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Se já estiver logado e tentar acessar a tela de login (/), vai para o dashboard
+  // Se logado na home, vai para o dashboard
   if (user && request.nextUrl.pathname === '/') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
