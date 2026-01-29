@@ -17,32 +17,32 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Configuração vital para o domínio yopdevs.com.br
-          const cookieOptions = {
-            ...options,
-            domain: 'yopdevs.com.br',
-            path: '/',
-            sameSite: 'lax' as const,
-            secure: true,
-          }
-          request.cookies.set({ name, value, ...cookieOptions })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value, ...cookieOptions })
-        },
-        remove(name: string, options: CookieOptions) {
-          const cookieOptions = {
-            ...options,
-            domain: 'yopdevs.com.br',
-            path: '/',
-          }
-          request.cookies.set({ name, value: '', ...cookieOptions })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          response.cookies.set({ name, value: '', ...cookieOptions })
-        },
+  const cookieOptions = {
+    ...options,
+    // Remova o 'www' para que o cookie valha para o domínio pai e subdomínios
+    domain: '.yopdevs.com.br', 
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: true,
+  }
+  request.cookies.set({ name, value, ...cookieOptions })
+  response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+  response.cookies.set({ name, value, ...cookieOptions })
+},
+remove(name: string, options: CookieOptions) {
+  const cookieOptions = {
+    ...options,
+    domain: '.yopdevs.com.br',
+    path: '/',
+  }
+  request.cookies.set({ name, value: '', ...cookieOptions })
+  response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+  response.cookies.set({ name, value: '', ...cookieOptions })
+}
       },
     }
   )
