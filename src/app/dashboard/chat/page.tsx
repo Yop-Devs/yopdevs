@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 export default function ChatListPage() {
-  const supabase = createClient()
   const [contacts, setContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 

@@ -1,12 +1,11 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useParams } from 'next/navigation'
 
 export default function ChatRoomPage() {
   const { id: receiver_id } = useParams()
-  const supabase = createClient()
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [receiver, setReceiver] = useState<any>(null)

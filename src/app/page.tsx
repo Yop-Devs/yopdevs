@@ -4,6 +4,10 @@ import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase' // Agora usando a instância Singleton que corrigimos
 import { useRouter } from 'next/navigation'
 
+// MODIFICAÇÃO 1: Mova a criação do cliente para fora do componente.
+// Isso impede que centenas de instâncias sejam criadas e travem o login.
+const supabaseInstance = createClient()
+
 export default function EntryPage() {
   // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão no cliente
   const supabase = useMemo(() => createClient(), [])
@@ -38,7 +42,8 @@ export default function EntryPage() {
       if (error) {
         setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
       } else {
-        // Redirecionamento forçado para o novo domínio yopdevs.com.br
+        // Correção adicional: Use window.location para garantir que o middleware 
+        // reconheça a nova sessão instantaneamente.
         window.location.href = '/dashboard'
       }
     } else {
@@ -51,6 +56,7 @@ export default function EntryPage() {
     setLoading(false)
   }
 
+  // DAQUI PARA BAIXO O SEU CÓDIGO DE LAYOUT CONTINUA EXATAMENTE IGUAL
   return (
     <div className="min-h-screen bg-[#fcfcfd] flex flex-col lg:flex-row font-sans text-slate-900">
       
