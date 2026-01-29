@@ -1,173 +1,178 @@
-"use client" // ESTA LINHA É OBRIGATÓRIA NO TOPO DO ARQUIVO
+"use client"
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
-import { useState, useMemo } from 'react'
-import { createClient } from '@/lib/supabase' // Agora usando a instância Singleton que corrigimos
-import { useRouter } from 'next/navigation'
-
-// MODIFICAÇÃO 1: Mova a criação do cliente para fora do componente.
-// Isso impede que centenas de instâncias sejam criadas e travem o login.
-const supabaseInstance = createClient()
-
-export default function EntryPage() {
-  // useMemo garante que o cliente seja criado APENAS UMA VEZ por sessão no cliente
-  const supabase = useMemo(() => createClient(), [])
-  const router = useRouter()
-  
+export default function LandingPage() {
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<'signin' | 'signup' | 'forgot'>('signin')
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  
+  const [showModal, setShowModal] = useState(false)
+
+  // Estados do Formulário
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage(null)
 
-    if (view === 'signup') {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { 
-          data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+    try {
+      if (mode === 'signup') {
+        if (password !== confirmPassword) throw new Error("As senhas não coincidem!")
+        
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { 
+            data: { 
+              full_name: fullName,
+              birth_date: birthDate 
+            } 
+          }
+        })
+        if (error) throw error
+        alert("Cadastro realizado! Verifique seu e-mail.")
+      } else if (mode === 'login') {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        if (data.session) {
+          await supabase.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token })
+          window.location.href = '/dashboard'
         }
-      })
-      if (error) setMessage({ type: 'error', text: `ERRO NO CADASTRO: ${error.message.toUpperCase()}` })
-      else setMessage({ type: 'success', text: 'PROTOCOLO ENVIADO! VERIFIQUE SEU E-MAIL PARA ATIVAR.' })
-    } else if (view === 'signin') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setMessage({ type: 'error', text: `ACESSO NEGADO: ${error.message.toUpperCase()}` })
       } else {
-        // Correção adicional: Use window.location para garantir que o middleware 
-        // reconheça a nova sessão instantaneamente.
-        window.location.href = '/dashboard'
+        const { error } = await supabase.auth.resetPasswordForEmail(email)
+        if (error) throw error
+        alert("Link enviado para o e-mail.")
       }
-    } else {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
-      if (error) setMessage({ type: 'error', text: `FALHA NO ENVIO: ${error.message.toUpperCase()}` })
-      else setMessage({ type: 'success', text: 'LINK DE RECUPERAÇÃO ENVIADO PARA SEU E-MAIL.' })
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  // DAQUI PARA BAIXO O SEU CÓDIGO DE LAYOUT CONTINUA EXATAMENTE IGUAL
   return (
-    <div className="min-h-screen bg-[#fcfcfd] flex flex-col lg:flex-row font-sans text-slate-900">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-indigo-500/30">
       
-      {/* LADO ESQUERDO: PROPÓSITO */}
-      <div className="lg:w-1/2 flex flex-col justify-center p-12 lg:p-24 space-y-8 bg-white border-r-2 border-slate-900">
-        <div className="space-y-4">
-          <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-            YOP DEVS
+      {/* HEADER */}
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/60 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span className="text-xl font-black italic tracking-tighter uppercase">Yop Devs</span>
+          </div>
+          <button onClick={() => { setMode('login'); setShowModal(true); }} className="px-8 py-3 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 hover:text-white transition-all shadow-xl shadow-white/5">
+            Área de Membros da comunidade
+          </button>
+        </div>
+      </nav>
+
+      {/* HERO SECTION */}
+      <section className="relative pt-48 pb-20 px-6">
+        <div className="max-w-6xl mx-auto text-center relative z-10">
+          <h1 className="text-6xl md:text-[110px] font-black italic tracking-tighter uppercase leading-[0.8] mb-10">
+            Engineered for <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-400">Equity & Growth</span>
           </h1>
-          <div className="h-2 w-24 bg-indigo-600"></div>
-        </div>
-        
-        <h2 className="text-4xl font-extrabold tracking-tight leading-[1.1]">
-          Onde o <span className="text-indigo-600 italic">Código Elite</span> encontra o <span className="underline decoration-4">Capital Estratégico</span>.
-        </h2>
-        
-        <p className="text-xl text-slate-500 font-medium max-w-lg leading-relaxed">
-          Nascemos para eliminar a barreira entre grandes teses de negócios e a execução técnica impecável.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8">
-          <div className="p-6 border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-2">Para DEVS</p>
-            <p className="text-sm font-bold">Acesse projetos validados e torne-se sócio através de Equity.</p>
-          </div>
-          <div className="p-6 border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-2">Para Empresários</p>
-            <p className="text-sm font-bold">Encontre o CTO ou time técnico capaz de escalar seu ROI.</p>
+          <p className="text-slate-400 max-w-3xl mx-auto text-lg md:text-2xl font-medium leading-relaxed mb-12">
+            A infraestrutura definitiva para mentes brilhantes. Conectamos o rigor da engenharia de software com a tese estratégica de negócios de alto impacto.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-5 justify-center">
+            <button onClick={() => { setMode('signup'); setShowModal(true); }} className="px-12 py-6 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-500/30">
+              Quero Me Cadastrar
+            </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* LADO DIREITO: ACESSO */}
-      <div className="lg:w-1/2 flex flex-col items-center justify-center p-8 bg-slate-50">
-        <div className="w-full max-w-[420px] space-y-8">
-          
-          <div className="text-center space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Protocolo de Segurança</p>
-            <h3 className="text-2xl font-black uppercase italic">
-              {view === 'signin' ? 'Iniciar Sessão' : view === 'signup' ? 'Criar Acesso' : 'Recuperar Chave'}
-            </h3>
+      {/* INFO SECTIONS */}
+      <section className="max-w-7xl mx-auto px-6 py-32 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          { t: "MARKETPLACE", d: "Acesse projetos validados por empresários prontos para ceder equity em troca de CTOs de elite.", i: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
+          { t: "DISCUSSÃO", d: "Fóruns técnicos de alto nível sobre arquitetura, escala, IA e teses de mercado internacional.", i: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" },
+          { t: "NOTIFICAÇÕES", d: "Receba alertas instantâneos sempre que uma nova tese de negócio for postada no seu setor.", i: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }
+        ].map((item, idx) => (
+          <div key={idx} className="p-10 rounded-[32px] bg-white/[0.02] border border-white/5 hover:border-indigo-500/50 transition-all group">
+            <svg className="w-8 h-8 text-indigo-500 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.i}/></svg>
+            <h3 className="text-xl font-black italic uppercase mb-4 tracking-tighter">{item.t}</h3>
+            <p className="text-slate-500 text-sm leading-relaxed">{item.d}</p>
           </div>
+        ))}
+      </section>
 
-          <div className="relative">
-            <form 
-              onSubmit={handleAuth} 
-              className="bg-white border-2 border-slate-900 p-8 lg:p-10 rounded-3xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] space-y-6"
-            >
-              {message && (
-                <div className={`p-4 border-2 rounded-xl text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in duration-300 ${
-                  message.type === 'success' 
-                  ? 'bg-green-50 border-green-500 text-green-700' 
-                  : 'bg-red-50 border-red-500 text-red-700'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    {message.text}
+      {/* FOOTER */}
+      <footer className="border-t border-white/5 pt-20 pb-10 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-slate-800 rounded-lg flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span className="text-sm font-black italic uppercase tracking-tighter">Yop Devs Protocol</span>
+          </div>
+          <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+            <a href="#" className="hover:text-white transition-colors">Termos</a>
+            <a href="#" className="hover:text-white transition-colors">Privacidade</a>
+            <a href="#" className="hover:text-white transition-colors">Suporte</a>
+          </div>
+          <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">
+            &copy; 2026 Gabriel Carrara. All Rights Reserved.
+          </p>
+        </div>
+      </footer>
+
+      {/* MODAL SISTEM */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowModal(false)}></div>
+          <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[40px] p-10 shadow-2xl animate-in zoom-in duration-300 overflow-y-auto max-h-[90vh]">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter">
+                {mode === 'login' ? 'Faça Login' : mode === 'signup' ? 'Cadastre-se' : 'Resetar Senha'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {mode === 'signup' && (
+                <>
+                  <input type="text" placeholder="Nome Completo" className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase text-slate-500 ml-4 tracking-widest">Data de Nascimento</label>
+                    <input type="date" className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 text-sm text-slate-400" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
                   </div>
-                </div>
+                </>
+              )}
+              
+              <input type="email" placeholder="E-mail" className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              
+              {mode !== 'reset' && (
+                <>
+                  <input type="password" placeholder="Senha" className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  {mode === 'signup' && (
+                    <input type="password" placeholder="Confirmar Senha" className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-indigo-500 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  )}
+                </>
               )}
 
-              <div className="space-y-4">
-                {view === 'signup' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Nome Completo</label>
-                    <input required type="text" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="SEU NOME" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                  </div>
-                )}
-                
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">E-mail Institucional</label>
-                  <input required type="email" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="NOME@EMPRESA.COM" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-
-                {view !== 'forgot' && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest ml-1">
-                      <label>Senha de Acesso</label>
-                      {view === 'signin' && (
-                        <button type="button" onClick={() => {setView('forgot'); setMessage(null)}} className="text-slate-400 hover:text-indigo-600 transition-colors">Esqueci a senha</button>
-                      )}
-                    </div>
-                    <input required type="password" name="password" className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                  </div>
-                )}
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full py-5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg">
-                {loading ? 'PROCESSANDO...' : view === 'signin' ? 'AUTENTICAR SESSÃO' : view === 'signup' ? 'EFETIVAR CADASTRO' : 'ENVIAR LINK'}
+              <button type="submit" disabled={loading} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-indigo-600 hover:text-white transition-all">
+                {loading ? "Processando..." : mode === 'login' ? "Entrar no YOP" : mode === 'signup' ? "Efetivar Registro" : "Enviar Chave"}
               </button>
             </form>
-          </div>
 
-          <div className="flex flex-col gap-3 items-center">
-            {view !== 'signin' && (
-              <button onClick={() => {setView('signin'); setMessage(null)}} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">
-                Voltar para o Login
+            <div className="mt-8 flex flex-col gap-4 text-center">
+              <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                {mode === 'login' ? 'Não possui acesso? Cadastre-se AGORA!' : 'Já possui conta? FAÇA LOGIN'}
               </button>
-            )}
-            {view === 'signin' && (
-              <button onClick={() => {setView('signup'); setMessage(null)}} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">
-                Não possui credenciais? <span className="text-indigo-600">Cadastre-se</span>
-              </button>
-            )}
+              {mode === 'login' && (
+                <button onClick={() => setMode('reset')} className="text-[10px] font-black uppercase tracking-widest text-slate-600">Esqueci minha chave de segurança</button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      
-      <footer className="fixed bottom-6 right-6 text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em] pointer-events-none">
-        © 2026 YOP_DEVS_INFRASTRUCTURE
-      </footer>
+      )}
     </div>
   )
 }
