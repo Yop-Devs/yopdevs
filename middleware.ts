@@ -11,7 +11,6 @@ export async function middleware(request: NextRequest) {
       cookies: {
         get(name: string) { return request.cookies.get(name)?.value },
         set(name: string, value: string, options: CookieOptions) {
-          // Força o cookie para o domínio oficial e subdomínios
           const opt = { ...options, domain: '.yopdevs.com.br', path: '/', sameSite: 'lax' as const, secure: true }
           request.cookies.set({ name, value, ...opt })
           response = NextResponse.next({ request: { headers: request.headers } })
@@ -29,14 +28,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Bloqueio apenas para a rota de dashboard
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
-
   return response
 }
 
-export const config = {
-  matcher: ['/dashboard/:path*', '/auth/callback'],
-}
+export const config = { matcher: ['/dashboard/:path*', '/auth/callback'] }
