@@ -12,16 +12,22 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
-        },
+        // No seu middleware.ts, dentro do createServerClient
+set(name: string, value: string, options: CookieOptions) {
+  const cookieOptions = {
+    ...options,
+    // O segredo: o ponto inicial faz o cookie valer para yopdevs.com.br e www.yopdevs.com.br
+    domain: '.yopdevs.com.br', 
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: true,
+  }
+  request.cookies.set({ name, value, ...cookieOptions })
+  response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+  response.cookies.set({ name, value, ...cookieOptions })
+}
       },
     }
   )
