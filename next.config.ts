@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Se quiser silenciar o erro e usar Turbopack puro:
-  experimental: {
-    turbo: {},
-  },
+  /* Configurações básicas são suficientes para o Next.js 16 */
 };
 
 export default nextConfig;
