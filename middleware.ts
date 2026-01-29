@@ -10,25 +10,40 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        // No seu middleware.ts, dentro do createServerClient
-set(name: string, value: string, options: CookieOptions) {
-  const cookieOptions = {
-    ...options,
-    // O segredo: o ponto inicial faz o cookie valer para yopdevs.com.br e www.yopdevs.com.br
-    domain: '.yopdevs.com.br', 
-    path: '/',
-    sameSite: 'lax' as const,
-    secure: true,
-  }
-  request.cookies.set({ name, value, ...cookieOptions })
-  response = NextResponse.next({
-    request: { headers: request.headers },
-  })
-  response.cookies.set({ name, value, ...cookieOptions })
+      // Dentro do createServerClient no seu middleware.ts
+cookies: {
+  get(name: string) {
+    return request.cookies.get(name)?.value
+  },
+  set(name: string, value: string, options: CookieOptions) {
+    // O segredo para o navegador aceitar o cookie no domínio oficial
+    const cookieOptions = {
+      ...options,
+      domain: '.yopdevs.com.br', // O ponto inicial permite www e sem www
+      path: '/',
+      sameSite: 'lax' as const,
+      secure: true,
+      httpOnly: true,
+    }
+    request.cookies.set({ name, value, ...cookieOptions })
+    response = NextResponse.next({
+      request: { headers: request.headers },
+    })
+    response.cookies.set({ name, value, ...cookieOptions })
+  },
+  remove(name: string, options: CookieOptions) {
+    const cookieOptions = {
+      ...options,
+      domain: '.yopdevs.com.br',
+      path: '/',
+    }
+    request.cookies.set({ name, value: '', ...cookieOptions })
+    response = NextResponse.next({
+      request: { headers: request.headers },
+    })
+    response.cookies.set({ name, value: '', ...cookieOptions })
+  },
 }
-      },
     }
   )
 
