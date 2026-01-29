@@ -12,38 +12,28 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-  const cookieOptions = {
-    ...options,
-    // Remova o 'www' para que o cookie valha para o domínio pai e subdomínios
-    domain: '.yopdevs.com.br', 
-    path: '/',
-    sameSite: 'lax' as const,
-    secure: true,
-  }
-  request.cookies.set({ name, value, ...cookieOptions })
-  response = NextResponse.next({
-    request: { headers: request.headers },
-  })
-  response.cookies.set({ name, value, ...cookieOptions })
-},
-remove(name: string, options: CookieOptions) {
-  const cookieOptions = {
-    ...options,
-    domain: '.yopdevs.com.br',
-    path: '/',
-  }
-  request.cookies.set({ name, value: '', ...cookieOptions })
-  response = NextResponse.next({
-    request: { headers: request.headers },
-  })
-  response.cookies.set({ name, value: '', ...cookieOptions })
+      // Dentro do createServerClient no seu middleware.ts
+cookies: {
+  get(name: string) {
+    return request.cookies.get(name)?.value
+  },
+  set(name: string, value: string, options: CookieOptions) {
+    // Remova a linha 'domain' manual se ela existir.
+    // Deixe o Next.js e o Supabase negociarem o domínio sozinhos.
+    request.cookies.set({ name, value, ...options })
+    response = NextResponse.next({
+      request: { headers: request.headers },
+    })
+    response.cookies.set({ name, value, ...options })
+  },
+  remove(name: string, options: CookieOptions) {
+    request.cookies.set({ name, value: '', ...options })
+    response = NextResponse.next({
+      request: { headers: request.headers },
+    })
+    response.cookies.set({ name, value: '', ...options })
+  },
 }
-      },
     }
   )
 
