@@ -52,7 +52,16 @@ function LandingPageContent() {
           supabase.from('posts').select('id, title, category, created_at, profiles(full_name)').order('created_at', { ascending: false }).limit(6),
           supabase.from('projects').select('id, title, category, created_at').order('created_at', { ascending: false }).limit(4),
         ])
-        if (postsRes.data) setLatestPosts(postsRes.data)
+        if (postsRes.data) {
+          const normalized = postsRes.data.map((p: { id: string; title: string; category: string; created_at: string; profiles?: { full_name: string } | { full_name: string }[] }) => ({
+            id: p.id,
+            title: p.title,
+            category: p.category,
+            created_at: p.created_at,
+            profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles,
+          }))
+          setLatestPosts(normalized)
+        }
         if (projectsRes.data) setLatestProjects(projectsRes.data)
       } catch {
         // RLS pode bloquear; mantém arrays vazios
@@ -262,7 +271,7 @@ function LandingPageContent() {
                         >
                           <h4 className="font-bold text-slate-900 group-hover:text-violet-700 transition-colors line-clamp-1">{post.title}</h4>
                           <p className="text-xs text-slate-500 mt-1">
-                            {(post.profiles as { full_name?: string })?.full_name ?? 'Membro'} · {post.category ?? 'Geral'} · {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                            {post.profiles?.full_name ?? 'Membro'} · {post.category ?? 'Geral'} · {new Date(post.created_at).toLocaleDateString('pt-BR')}
                           </p>
                         </Link>
                       </li>
