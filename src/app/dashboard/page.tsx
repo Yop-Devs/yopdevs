@@ -8,14 +8,25 @@ import Link from 'next/link'
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [latestProjects, setLatestProjects] = useState<any[]>([])
+  const [latestPosts, setLatestPosts] = useState<any[]>([])
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      setProfile(data)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        setProfile(prof)
+      }
+      const [projsRes, postsRes] = await Promise.all([
+        supabase.from('projects').select('id, title, category, created_at').order('created_at', { ascending: false }).limit(5),
+        supabase.from('posts').select('id, title, category, created_at').order('created_at', { ascending: false }).limit(5),
+      ])
+      setLatestProjects(projsRes.data || [])
+      setLatestPosts(postsRes.data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const selectRole = async (role: 'DEV' | 'BUSINESS') => {
@@ -43,11 +54,16 @@ export default function DashboardPage() {
           </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link href="/dashboard/perfil" className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
             Configurações
           </Link>
-          <Link href="/dashboard/forum" className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-lg shadow-slate-200 transition-all">
+          {profile?.role === 'BUSINESS' && (
+            <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg transition-all">
+              Lançar Projeto
+            </Link>
+          )}
+          <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-lg shadow-slate-200 transition-all">
             Novo Post
           </Link>
         </div>
@@ -82,10 +98,33 @@ export default function DashboardPage() {
 
           <section className="space-y-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Atividade da Rede</h3>
-            <div className="p-6 bg-white border border-slate-100 rounded-xl hover:border-slate-300 transition-all group cursor-pointer shadow-sm">
-              <p className="text-[9px] font-bold text-indigo-500 mb-1 uppercase tracking-tighter">Sistema de Alerta</p>
-              <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">Nova oportunidade de sociedade postada em Fintech & IA.</h4>
-            </div>
+            {latestProjects.length === 0 && latestPosts.length === 0 ? (
+              <div className="p-8 bg-white border border-slate-100 rounded-xl text-center">
+                <p className="text-slate-500 text-sm font-medium mb-2">Nenhuma atividade recente.</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Seja o primeiro a lançar um projeto ou criar um tópico no fórum.</p>
+                <div className="flex gap-3 justify-center mt-4">
+                  <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-indigo-600 hover:underline uppercase">Lançar projeto</Link>
+                  <Link href="/dashboard/forum/novo" className="text-[10px] font-black text-indigo-600 hover:underline uppercase">Novo tópico</Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {latestProjects.map((p) => (
+                  <Link key={p.id} href="/dashboard/projetos" className="block p-5 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group">
+                    <p className="text-[9px] font-bold text-indigo-500 mb-1 uppercase tracking-tighter">Novo projeto</p>
+                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.title}</h4>
+                    <p className="text-[9px] text-slate-400 mt-1">{p.category || 'Venture'} • {new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                  </Link>
+                ))}
+                {latestPosts.map((p) => (
+                  <Link key={p.id} href={`/dashboard/forum/${p.id}`} className="block p-5 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group">
+                    <p className="text-[9px] font-bold text-indigo-500 mb-1 uppercase tracking-tighter">Novo no fórum</p>
+                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.title}</h4>
+                    <p className="text-[9px] text-slate-400 mt-1">{p.category || 'Geral'} • {new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 
@@ -119,6 +158,23 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Atalhos rápidos</h4>
+            <div className="space-y-2">
+              <Link href="/dashboard/projetos" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
+                Ver projetos
+              </Link>
+              <Link href="/dashboard/forum" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
+                Fórum
+              </Link>
+              <Link href="/dashboard/membros" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
+                Membros
+              </Link>
+              <Link href="/dashboard/notificacoes" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
+                Alertas
+              </Link>
+            </div>
+          </div>
           <div className="bg-slate-50 p-6 rounded-xl border border-slate-200/50">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Protocolo de Segurança</h4>
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium italic">Sua sessão está criptografada de ponta a ponta via Supabase Auth Protocol v4.0.</p>
