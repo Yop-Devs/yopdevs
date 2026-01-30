@@ -2,18 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function MasterAdminPage() {
+  const router = useRouter()
   const [users, setUsers] = useState<any[]>([])
   const [content, setContent] = useState<{ posts: any[], projects: any[] }>({ posts: [], projects: [] })
   const [loading, setLoading] = useState(true)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [accessDenied, setAccessDenied] = useState(false)
 
   async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push('/')
+      return
+    }
+    const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (myProfile?.role !== 'ADMIN') {
+      setAccessDenied(true)
+      setLoading(false)
+      return
+    }
     const { data: p } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
     const { data: posts } = await supabase.from('posts').select('*, profiles(full_name)').order('created_at', { ascending: false })
     const { data: projects } = await supabase.from('projects').select('*, profiles(full_name)').order('created_at', { ascending: false })
-    
     setUsers(p || [])
     setContent({ posts: posts || [], projects: projects || [] })
     setLoading(false)
@@ -41,6 +54,18 @@ export default function MasterAdminPage() {
   useEffect(() => { loadData() }, [])
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] uppercase text-slate-400">Acessando_Nucleo_Admin...</div>
+
+  if (accessDenied) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-8 py-20 text-center">
+        <h1 className="text-2xl font-black uppercase text-slate-900 mb-4">Acesso restrito</h1>
+        <p className="text-slate-500 mb-8">Apenas administradores podem acessar este painel.</p>
+        <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] hover:bg-slate-800 transition-colors">
+          Voltar ao dashboard
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-12 font-sans">
