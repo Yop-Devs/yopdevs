@@ -11,6 +11,8 @@ export default function NotificationsPage() {
   const [myId, setMyId] = useState<string | null>(null)
   const [senderNames, setSenderNames] = useState<Record<string, string>>({})
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   const getTypeLabel = (type: string): string => {
     switch (type) {
@@ -83,6 +85,58 @@ export default function NotificationsPage() {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === notifications.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(notifications.map((n) => n.id)))
+    }
+  }
+
+  const deleteOne = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', myId!)
+    if (!error) {
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+      setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    }
+  }
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return
+    setDeleting(true)
+    const { error } = await supabase.from('notifications').delete().in('id', Array.from(selectedIds)).eq('user_id', myId!)
+    if (!error) {
+      setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)))
+      setSelectedIds(new Set())
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    }
+    setDeleting(false)
+  }
+
+  const deleteAll = async () => {
+    if (!myId) return
+    if (!confirm('Apagar todas as notificações? Esta ação não pode ser desfeita.')) return
+    setDeleting(true)
+    const { error } = await supabase.from('notifications').delete().eq('user_id', myId)
+    if (!error) {
+      setNotifications([])
+      setSelectedIds(new Set())
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    }
+    setDeleting(false)
+  }
+
   const handleNotificationClick = (n: { id: string; link?: string | null; type?: string }) => {
     markAsRead(n.id)
     if (n.link) router.push(n.link)
@@ -101,11 +155,12 @@ export default function NotificationsPage() {
 
   const getDisplayContent = (n: { type?: string; content?: string }, senderId: string | null) => {
     const isMsg = n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')
-    if (isMsg && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma mensagem`
+    if (isMsg && senderId && senderNames[senderId]) return `Você recebeu uma nova mensagem de ${senderNames[senderId]}`
     if (n.type === 'FRIEND_REQUEST' && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma solicitação de amizade`
     if (n.type === 'FRIEND_ACCEPTED' && senderId && senderNames[senderId]) return `${senderNames[senderId]} aceitou sua solicitação de amizade`
+    if (n.type === 'LIKE' && senderId && senderNames[senderId]) return `${senderNames[senderId]} curtiu sua postagem`
     if (n.type === 'COMMENT_LIKE' && senderId && senderNames[senderId]) return `${senderNames[senderId]} curtiu sua resposta no fórum`
-    if (n.type === 'FORUM_REPLY' && senderId && senderNames[senderId]) return `${senderNames[senderId]} respondeu no seu tópico do fórum`
+    if (n.type === 'FORUM_REPLY' && senderId && senderNames[senderId]) return `${senderNames[senderId]} respondeu na sua postagem do fórum`
     return n.content || 'Nova notificação'
   }
 
@@ -121,10 +176,21 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-[1000px] mx-auto py-12 px-6 space-y-10">
-      <header className="border-b-2 border-slate-900 pb-8 flex justify-between items-end">
+      <header className="border-b-2 border-slate-900 pb-8 flex flex-wrap justify-between items-end gap-4">
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">NOTIFICAÇÕES</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={toggleSelectAll} className="px-4 py-2 border-2 border-slate-200 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">
+            {selectedIds.size === notifications.length && notifications.length > 0 ? 'Desmarcar todas' : 'Selecionar todas'}
+          </button>
+          <button type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || deleting} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-[9px] font-black uppercase hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            Apagar selecionadas {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+          </button>
+          <button type="button" onClick={deleteAll} disabled={notifications.length === 0 || deleting} className="px-4 py-2 bg-red-100 text-red-700 border-2 border-red-200 rounded-xl text-[9px] font-black uppercase hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            Apagar todas
+          </button>
         </div>
       </header>
 
@@ -144,6 +210,10 @@ export default function NotificationsPage() {
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(n); } }}
               className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer"
             >
+              <div className="flex shrink-0 items-center">
+                <input type="checkbox" checked={selectedIds.has(n.id)} onChange={() => toggleSelect(n.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+              </div>
+              <button type="button" onClick={(e) => deleteOne(n.id, e)} className="shrink-0 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar esta notificação">✕</button>
               <div className="flex flex-1 min-w-0 items-center gap-6">
                 <div className="shrink-0">{getIcon(n.type)}</div>
                 <div className="flex-1 min-w-0">
@@ -172,7 +242,7 @@ export default function NotificationsPage() {
                   Ver solicitações
                 </button>
               )}
-              {(n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
+              {(n.type === 'LIKE' || n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
                   Ver fórum
                 </button>

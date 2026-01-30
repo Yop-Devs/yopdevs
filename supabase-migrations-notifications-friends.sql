@@ -47,14 +47,36 @@ CREATE POLICY "Anyone can read likes" ON post_comment_likes FOR SELECT USING (tr
 CREATE POLICY "Auth can insert like" ON post_comment_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Auth can delete own like" ON post_comment_likes FOR DELETE USING (auth.uid() = user_id);
 
+-- Fórum: curtir postagem (tópico)
+CREATE TABLE IF NOT EXISTS post_likes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id uuid NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read post likes" ON post_likes;
+DROP POLICY IF EXISTS "Auth can insert post like" ON post_likes;
+DROP POLICY IF EXISTS "Auth can delete own post like" ON post_likes;
+CREATE POLICY "Anyone can read post likes" ON post_likes FOR SELECT USING (true);
+CREATE POLICY "Auth can insert post like" ON post_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Auth can delete own post like" ON post_likes FOR DELETE USING (auth.uid() = user_id);
+
 -- ========== TRIGGERS DE NOTIFICAÇÃO (descomente e rode um por vez no SQL Editor) ==========
 
--- 1) Mensagem no chat (link e from_user_id são obrigatórios para o nome do remetente aparecer na tela)
+-- 1) Mensagem no chat (link e from_user_id para exibir "Você recebeu uma nova mensagem de [nome]")
 -- CREATE OR REPLACE FUNCTION notify_on_new_message()
 -- RETURNS TRIGGER AS $$
+-- DECLARE sender_name text;
 -- BEGIN
+--   SELECT full_name INTO sender_name FROM profiles WHERE id = NEW.sender_id;
 --   INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
---   VALUES (NEW.receiver_id, 'CHAT', 'Nova mensagem no chat.', false, '/dashboard/chat/' || NEW.sender_id, NEW.sender_id);
+--   VALUES (NEW.receiver_id, 'CHAT', 'Você recebeu uma nova mensagem de ' || COALESCE(sender_name, 'alguém') || '.', false, '/dashboard/chat/' || NEW.sender_id, NEW.sender_id);
 --   RETURN NEW;
 -- END;
 -- $$ LANGUAGE plpgsql;
@@ -103,6 +125,22 @@ CREATE POLICY "Auth can delete own like" ON post_comment_likes FOR DELETE USING 
 -- $$ LANGUAGE plpgsql;
 -- DROP TRIGGER IF EXISTS on_comment_like_insert ON post_comment_likes;
 -- CREATE TRIGGER on_comment_like_insert AFTER INSERT ON post_comment_likes FOR EACH ROW EXECUTE FUNCTION notify_on_comment_like();
+
+-- 4b) Alguém curtiu sua postagem (tópico) do fórum
+-- CREATE OR REPLACE FUNCTION notify_on_post_like()
+-- RETURNS TRIGGER AS $$
+-- DECLARE post_author uuid;
+-- BEGIN
+--   SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+--   IF post_author IS NOT NULL AND post_author <> NEW.user_id THEN
+--     INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
+--     VALUES (post_author, 'LIKE', 'Alguém curtiu sua postagem.', false, '/dashboard/forum/' || NEW.post_id, NEW.user_id, jsonb_build_object('post_id', NEW.post_id));
+--   END IF;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+-- DROP TRIGGER IF EXISTS on_post_like_insert ON post_likes;
+-- CREATE TRIGGER on_post_like_insert AFTER INSERT ON post_likes FOR EACH ROW EXECUTE FUNCTION notify_on_post_like();
 
 -- 5) Nova resposta no seu tópico do fórum
 -- CREATE OR REPLACE FUNCTION notify_on_forum_reply()

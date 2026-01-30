@@ -10,22 +10,39 @@ export default function NovoPostPage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [formData, setFormData] = useState({ title: '', content: '', category: 'Geral' })
 
+  const LIMITE_POSTS_POR_DIA = 5
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setStatus(null)
 
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
 
-    if (user) {
-      const { error } = await supabase.from('posts').insert([{ ...formData, author_id: user.id }])
-      if (error) {
-        setStatus({ type: 'error', text: `ERRO DE PUBLICAÇÃO: ${error.message.toUpperCase()}` })
-        setSaving(false)
-      } else {
-        setStatus({ type: 'success', text: 'TÓPICO CRIADO COM SUCESSO.' })
-        setTimeout(() => router.push('/dashboard/forum'), 1500)
-      }
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const inicioDoDia = hoje.toISOString()
+
+    const { count } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
+      .eq('author_id', user.id)
+      .gte('created_at', inicioDoDia)
+
+    if ((count ?? 0) >= LIMITE_POSTS_POR_DIA) {
+      setStatus({ type: 'error', text: `LIMITE DIÁRIO ATINGIDO: VOCÊ JÁ PUBLICOU ${LIMITE_POSTS_POR_DIA} TÓPICOS HOJE. TENTE AMANHÃ.` })
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase.from('posts').insert([{ ...formData, author_id: user.id }])
+    if (error) {
+      setStatus({ type: 'error', text: `ERRO DE PUBLICAÇÃO: ${error.message.toUpperCase()}` })
+      setSaving(false)
+    } else {
+      setStatus({ type: 'success', text: 'TÓPICO CRIADO COM SUCESSO.' })
+      setTimeout(() => router.push('/dashboard/forum'), 1500)
     }
   }
 

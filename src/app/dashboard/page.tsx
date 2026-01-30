@@ -29,12 +29,6 @@ export default function DashboardPage() {
     }
   }
 
-  const selectRole = async (role: 'DEV' | 'BUSINESS') => {
-    if (!profile) return
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', profile.id)
-    if (!error) window.location.reload()
-  }
-
   useEffect(() => { loadData() }, [])
 
   if (loading) return (
@@ -58,11 +52,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/perfil" className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
             Configurações
           </Link>
-          {profile?.role === 'BUSINESS' && (
-            <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg transition-all">
-              Lançar Projeto
-            </Link>
-          )}
+          <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg transition-all">
+            Lançar Projeto
+          </Link>
           <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-lg shadow-slate-200 transition-all">
             Novo Post
           </Link>
@@ -81,18 +73,16 @@ export default function DashboardPage() {
               </div>
               
               <h2 className="text-3xl font-bold tracking-tight mb-4 uppercase italic">
-                {profile?.role === 'DEV' ? 'Modo Engenharia Ativo' : 'Visão de Negócios Ativa'}
+                Sua rede ativa
               </h2>
               
               <p className="text-slate-400 max-w-xl text-sm leading-relaxed font-medium">
-                {profile?.role === 'DEV' 
-                  ? 'Sua infraestrutura técnica está visível para parceiros estratégicos. Monitore o marketplace para oportunidades de equity.' 
-                  : 'Sua tese estratégica está em fase de validação. Conecte-se com engenheiros de software de elite para construir seu produto.'}
+                Poste no fórum, crie projetos e converse com amigos. Todas as ferramentas estão disponíveis para você.
               </p>
             </div>
             
             <div className="absolute right-[-20px] bottom-[-40px] text-[180px] font-black opacity-[0.02] italic pointer-events-none select-none">
-              {profile?.role || 'USER'}
+              YOP
             </div>
           </div>
 
@@ -128,36 +118,8 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        {/* Barra Lateral - Seletor de Modo */}
+        {/* Barra Lateral */}
         <aside className="lg:col-span-4 space-y-8">
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 italic">Modo de Operação</h3>
-            
-            <div className="grid grid-cols-1 gap-3">
-              <button 
-                onClick={() => selectRole('DEV')}
-                className={`flex items-center justify-between p-5 rounded-xl border transition-all group ${profile?.role === 'DEV' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-              >
-                <div className="text-left">
-                  <p className="text-xs font-black uppercase tracking-tight">Desenvolvedor</p>
-                  <p className="text-[9px] opacity-60 font-mono mt-1">Construção & Escala</p>
-                </div>
-                <svg className="w-5 h-5 opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-              </button>
-
-              <button 
-                onClick={() => selectRole('BUSINESS')}
-                className={`flex items-center justify-between p-5 rounded-xl border transition-all group ${profile?.role === 'BUSINESS' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-              >
-                <div className="text-left">
-                  <p className="text-xs font-black uppercase tracking-tight">Empresário</p>
-                  <p className="text-[9px] opacity-60 font-mono mt-1">Estratégia & ROI</p>
-                </div>
-                <svg className="w-5 h-5 opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </button>
-            </div>
-          </div>
-
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Atalhos rápidos</h4>
             <div className="space-y-2">

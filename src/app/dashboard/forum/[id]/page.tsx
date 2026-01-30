@@ -12,6 +12,7 @@ export default function PostDetailPage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [myId, setMyId] = useState<string | null>(null)
   const [likesByComment, setLikesByComment] = useState<Record<string, { count: number; iLiked: boolean }>>({})
+  const [postLike, setPostLike] = useState<{ count: number; iLiked: boolean }>({ count: 0, iLiked: false })
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -22,6 +23,11 @@ export default function PostDetailPage() {
     setPost(p)
     const commentList = c || []
     setComments(commentList)
+
+    const { data: postLikes } = await supabase.from('post_likes').select('user_id').eq('post_id', id)
+    const postLikeCount = postLikes?.length ?? 0
+    const postILiked = user ? (postLikes?.some((l) => l.user_id === user.id) ?? false) : false
+    setPostLike({ count: postLikeCount, iLiked: postILiked })
 
     if (commentList.length > 0) {
       const commentIds = commentList.map((x) => x.id)
@@ -62,6 +68,18 @@ export default function PostDetailPage() {
     }
   }
 
+  const togglePostLike = async () => {
+    if (!myId || !id) return
+    const iLiked = postLike.iLiked
+    if (iLiked) {
+      await supabase.from('post_likes').delete().eq('post_id', id).eq('user_id', myId)
+      setPostLike((prev) => ({ count: Math.max(0, prev.count - 1), iLiked: false }))
+    } else {
+      await supabase.from('post_likes').insert([{ post_id: id, user_id: myId }])
+      setPostLike((prev) => ({ count: prev.count + 1, iLiked: true }))
+    }
+  }
+
   const toggleLike = async (commentId: string) => {
     if (!myId) return
     const cur = likesByComment[commentId]
@@ -93,6 +111,18 @@ export default function PostDetailPage() {
 
         <h1 className="text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-6 leading-tight">{post.title}</h1>
         <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">{post.content}</p>
+        <div className="mt-6 pt-4 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={togglePostLike}
+            disabled={!myId}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 transition-all ${postLike.iLiked ? 'bg-pink-50 border-pink-300 text-pink-600' : 'bg-white border-slate-200 text-slate-500 hover:border-pink-200'}`}
+          >
+            <span>{postLike.iLiked ? '❤' : '🤍'}</span>
+            <span>{postLike.count}</span>
+            <span>{postLike.iLiked ? 'Descurtir postagem' : 'Curtir postagem'}</span>
+          </button>
+        </div>
       </article>
 
       {/* Seção de Respostas (Thread) */}

@@ -17,28 +17,42 @@ export default function NewProjectPage() {
     equity_offered: 0
   })
 
+  const LIMITE_PROJETOS_POR_DIA = 3
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setStatus(null)
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
-      const { error } = await supabase.from('projects').insert([
-        { 
-          ...formData, 
-          owner_id: user.id 
-        }
-      ])
 
-      if (error) {
-        setStatus({ type: 'error', text: `FALHA NO LANÇAMENTO: ${error.message.toUpperCase()}` })
-        setSaving(false)
-      } else {
-        setStatus({ type: 'success', text: 'VENTURE LANÇADA COM SUCESSO. REDIRECIONANDO...' })
-        setTimeout(() => router.push('/dashboard/projetos'), 2000)
-      }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const inicioDoDia = hoje.toISOString()
+
+    const { count } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', user.id)
+      .gte('created_at', inicioDoDia)
+
+    if ((count ?? 0) >= LIMITE_PROJETOS_POR_DIA) {
+      setStatus({ type: 'error', text: `LIMITE DIÁRIO ATINGIDO: VOCÊ JÁ CRIOU ${LIMITE_PROJETOS_POR_DIA} PROJETOS HOJE. TENTE AMANHÃ.` })
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase.from('projects').insert([
+      { ...formData, owner_id: user.id }
+    ])
+
+    if (error) {
+      setStatus({ type: 'error', text: `FALHA NO LANÇAMENTO: ${error.message.toUpperCase()}` })
+      setSaving(false)
+    } else {
+      setStatus({ type: 'success', text: 'VENTURE LANÇADA COM SUCESSO. REDIRECIONANDO...' })
+      setTimeout(() => router.push('/dashboard/projetos'), 2000)
     }
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function ChatRoomPage() {
   const { id: receiver_id } = useParams()
@@ -11,6 +12,7 @@ export default function ChatRoomPage() {
   const [newMessage, setNewMessage] = useState('')
   const [receiver, setReceiver] = useState<any>(null)
   const [me, setMe] = useState<string | null>(null)
+  const [isFriend, setIsFriend] = useState<boolean | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   async function init() {
@@ -24,6 +26,14 @@ export default function ChatRoomPage() {
 
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', receiver_id).single()
     setReceiver(prof)
+
+    const { data: friends } = await supabase
+      .from('friend_requests')
+      .select('from_id, to_id')
+      .or(`from_id.eq.${user.id},to_id.eq.${user.id}`)
+      .eq('status', 'accepted')
+    const friendIds = new Set((friends || []).map((f) => (f.from_id === user.id ? f.to_id : f.from_id)))
+    setIsFriend(friendIds.has(receiver_id as string))
 
     const { data: msgs } = await supabase.from('messages')
       .select('*')
@@ -47,6 +57,7 @@ export default function ChatRoomPage() {
   const send = async (e: any) => {
     e.preventDefault()
     if (!newMessage.trim() || !me || receiver_id === me) return
+    if (!isFriend) return
     const content = newMessage.trim()
     setNewMessage('')
     const { data: inserted } = await supabase.from('messages').insert([{ sender_id: me, receiver_id, content }]).select('*').single()
@@ -81,14 +92,21 @@ export default function ChatRoomPage() {
         <div ref={scrollRef} />
       </div>
 
+      {isFriend === false && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-b-3xl text-center">
+          <p className="text-sm font-bold text-amber-800">Só é possível enviar mensagens para amigos.</p>
+          <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-indigo-600 underline font-black">Membros</Link> e aguarde a aceitação.</p>
+        </div>
+      )}
       <form onSubmit={send} className="bg-white border-2 border-slate-900 p-4 rounded-b-3xl flex gap-3 shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-        <input 
-          className="flex-1 bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-300" 
-          placeholder="Transmitir mensagem técnica..." 
-          value={newMessage} 
-          onChange={e => setNewMessage(e.target.value)} 
+        <input
+          className="flex-1 bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-300 disabled:opacity-60"
+          placeholder="Escreva sua mensagem..."
+          value={newMessage}
+          onChange={e => setNewMessage(e.target.value)}
+          disabled={!isFriend}
         />
-        <button className="bg-slate-900 text-white px-10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg">
+        <button type="submit" disabled={!isFriend} className="bg-slate-900 text-white px-10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
           ENVIAR
         </button>
       </form>
