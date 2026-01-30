@@ -90,7 +90,7 @@ export default function VerAmigosPage() {
     const { data } = await supabase.from('friend_requests').select('id').eq('from_id', myId).eq('to_id', id).eq('status', 'pending').maybeSingle()
     return !!data
   }
-  const isMe = (id: string) => myId && id === myId
+  const isMe = (id: string): boolean => !!myId && id === myId
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-[0.5em]">Carregando...</div>
 
