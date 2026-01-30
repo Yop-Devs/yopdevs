@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
@@ -52,8 +53,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-[#050505] font-mono text-[10px] uppercase tracking-widest text-indigo-500">
-      Verificando_Protocolo...
+    <div className="flex h-screen items-center justify-center bg-slate-50 font-semibold text-sm text-[#4c1d95]">
+      Verificando acesso...
     </div>
   )
 
@@ -86,8 +87,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-8 flex items-center justify-between">
-          <Link href="/dashboard" className="text-xl font-black text-white italic uppercase tracking-tighter">YOP DEVS</Link>
+        <div className="p-6 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Logo variant="light" size="sm" />
+          </Link>
           <button className="lg:hidden text-slate-400" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -97,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
-              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all ${pathname === item.href ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-[#4c1d95] text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
                 <span className="flex items-center gap-3 min-w-0">
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                   <span className="truncate">{item.name}</span>
@@ -115,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
-            <p className="text-[8px] text-indigo-400 font-mono uppercase tracking-widest">{profile?.role || 'Membro'}</p>
+            <p className="text-[8px] text-violet-400 font-semibold uppercase tracking-wider">{profile?.role || 'Membro'}</p>
           </div>
           <button onClick={handleSignOut} className="text-slate-500 hover:text-red-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -131,7 +134,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <span className="text-xs font-black italic uppercase tracking-tighter">Yop Dashboard</span>
+          <Logo variant="dark" size="sm" />
           <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-[10px]">
             {profile?.full_name?.[0]}
           </div>

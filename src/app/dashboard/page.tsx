@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import Logo, { fredoka } from '@/components/Logo'
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -42,7 +43,7 @@ export default function DashboardPage() {
       {/* Header Profissional */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-8">
         <div>
-          <h1 className="text-3xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">YOP DEVS</h1>
+          <h1 className="leading-none"><Logo variant="dark" size="lg" /></h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
             Sessão ativa: <span className="text-indigo-600">{profile?.full_name}</span>
           </p>
@@ -81,7 +82,7 @@ export default function DashboardPage() {
               </p>
             </div>
             
-            <div className="absolute right-[-20px] bottom-[-40px] text-[180px] font-black opacity-[0.02] italic pointer-events-none select-none">
+            <div className={`absolute right-[-20px] bottom-[-40px] text-[120px] font-bold opacity-[0.06] pointer-events-none select-none text-[#4c1d95] uppercase tracking-tight ${fredoka.className}`}>
               YOP
             </div>
           </div>

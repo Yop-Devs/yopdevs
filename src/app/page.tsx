@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 function LandingPageContent() {
   const searchParams = useSearchParams()
@@ -142,26 +143,33 @@ function LandingPageContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 overflow-x-hidden">
-      {/* Header claro */}
-      <nav className="fixed top-0 w-full z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      {/* Header com Termos, Privacidade, Suporte em destaque */}
+      <nav className="fixed top-0 w-full z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="h-14 md:h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-9 h-9 bg-[#4c1d95] rounded-xl flex items-center justify-center shadow-md">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <Logo variant="dark" size="sm" />
+            </Link>
+            <div className="flex items-center gap-4 md:gap-6">
+              <Link href="/termos" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Termos de Uso</Link>
+              <Link href="/privacidade" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Privacidade</Link>
+              <Link href="/suporte" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Suporte</Link>
+              <button
+                onClick={() => { setMode('login'); setShowModal(true); }}
+                className="px-4 py-2.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all"
+              >
+                Entrar
+              </button>
             </div>
-            <span className="text-lg md:text-xl font-black text-slate-900 italic tracking-tighter">YOP</span>
           </div>
-          <button
-            onClick={() => { setMode('login'); setShowModal(true); }}
-            className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-all shadow-sm"
-          >
-            Entrar
-          </button>
         </div>
       </nav>
 
-      {/* Hero claro e direto */}
-      <section className="relative pt-32 md:pt-40 pb-20 px-6">
+      {/* Hero */}
+      <section className="relative pt-24 md:pt-28 pb-12 px-4 md:px-6">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-violet-200/40 rounded-full blur-[120px]" />
           <div className="absolute bottom-20 left-0 w-[400px] h-[400px] bg-blue-200/30 rounded-full blur-[100px]" />
@@ -196,16 +204,16 @@ function LandingPageContent() {
         </div>
       </section>
 
-      {/* Para quem é — 3 perfis (cards claros) */}
-      <section className="py-20 md:py-28 px-6 bg-white border-y border-slate-100">
+      {/* Para quem é — 3 perfis */}
+      <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-center text-xs font-bold uppercase tracking-[0.25em] text-slate-500 mb-2">
+          <h2 className="text-center text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
             Para quem é
           </h2>
-          <p className="text-center text-2xl md:text-3xl font-black text-slate-900 mb-14 max-w-2xl mx-auto">
+          <p className="text-center text-xl md:text-2xl font-black text-slate-900 mb-8 max-w-2xl mx-auto">
             Empreendedor, desenvolvedor ou curioso — tem seu lugar aqui.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { tag: 'Quem curte criar e compartilhar', title: 'Curioso & Criador', desc: 'Poste ideias, participe do fórum e receba alertas de oportunidades. Valide suas teses com quem entende de negócio e de código.', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', cta: 'Quero participar' },
               { tag: 'Quem tem capital e visão', title: 'Empresário', desc: 'Publique projetos e encontre CTOs e devs dispostos a sociedade por equity. Marketplace curado de talento técnico.', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', cta: 'Encontrar talentos' },
@@ -230,13 +238,13 @@ function LandingPageContent() {
         </div>
       </section>
 
-      {/* Últimas do fórum + projetos (dinâmico) */}
-      <section className="py-20 md:py-28 px-6 bg-slate-50">
+      {/* Últimas do fórum + projetos */}
+      <section className="py-12 md:py-16 px-4 md:px-6 bg-slate-50">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-center text-2xl md:text-3xl font-black text-slate-900 mb-2">
+          <h2 className="text-center text-xl md:text-2xl font-black text-slate-900 mb-1">
             Atividade recente
           </h2>
-          <p className="text-center text-slate-600 mb-12 max-w-xl mx-auto">
+          <p className="text-center text-slate-600 text-sm mb-8 max-w-xl mx-auto">
             Últimas discussões no fórum e projetos lançados na rede.
           </p>
 
@@ -314,15 +322,15 @@ function LandingPageContent() {
       </section>
 
       {/* O que você encontra */}
-      <section className="py-20 md:py-28 px-6 bg-white border-y border-slate-100">
+      <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-center text-2xl md:text-3xl font-black text-slate-900 mb-4">
+          <h2 className="text-center text-xl md:text-2xl font-black text-slate-900 mb-1">
             O que você encontra na rede
           </h2>
-          <p className="text-center text-slate-600 text-sm md:text-base max-w-xl mx-auto mb-14">
+          <p className="text-center text-slate-600 text-sm max-w-xl mx-auto mb-8">
             Marketplace, fórum e notificações em tempo real.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { t: 'Marketplace', d: 'Projetos que buscam CTOs e sócios técnicos. Navegue por setores e encontre a oportunidade certa.', i: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
               { t: 'Fórum', d: 'Discussões sobre arquitetura, escala, IA e teses de mercado. Troque ideias com devs e empreendedores.', i: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
@@ -341,12 +349,12 @@ function LandingPageContent() {
       </section>
 
       {/* CTA final */}
-      <section className="py-24 md:py-32 px-6 bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700">
+      <section className="py-14 md:py-20 px-4 md:px-6 bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+          <h2 className="text-2xl md:text-3xl font-black text-white mb-3">
             Pronto para entrar na rede?
           </h2>
-          <p className="text-white/90 text-base md:text-lg mb-8 max-w-lg mx-auto">
+          <p className="text-white/90 text-sm md:text-base mb-6 max-w-lg mx-auto">
             Cadastre-se em minutos. Poste no fórum, crie projetos e converse com a comunidade.
           </p>
           <button
@@ -358,23 +366,23 @@ function LandingPageContent() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-16 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col items-center gap-8 text-center">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
+      {/* Footer — Termos, Privacidade e Suporte em destaque */}
+      <footer className="bg-slate-900 text-slate-300 py-10 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <span className="text-sm font-black uppercase tracking-tighter text-white">YOP</span>
-          </div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            <Logo variant="light" size="sm" />
+          </Link>
+          <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
+            <Link href="/termos" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Termos de Uso</Link>
+            <Link href="/privacidade" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Privacidade</Link>
+            <Link href="/suporte" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Suporte</Link>
+          </nav>
+          <p className="text-xs text-slate-500">
             © 2026. Todos os direitos reservados.
           </p>
-          <div className="flex flex-wrap justify-center gap-8 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
-            <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
-            <Link href="/suporte" className="hover:text-white transition-colors">Suporte</Link>
-          </div>
         </div>
       </footer>
 

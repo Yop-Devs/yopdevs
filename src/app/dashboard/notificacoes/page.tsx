@@ -189,7 +189,7 @@ export default function NotificationsPage() {
       <header className="border-b-2 border-slate-900 pb-8 flex flex-wrap justify-between items-end gap-4">
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">NOTIFICAÇÕES</h1>
-          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP</p>
+          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP Devs</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={toggleSelectAll} className="px-4 py-2 border-2 border-slate-200 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">

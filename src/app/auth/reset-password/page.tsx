@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Logo from '@/components/Logo'
 
 export default function ResetPasswordPage() {
   const supabase = createClient()
@@ -32,20 +33,18 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfcfd] flex flex-col items-center justify-center p-6">
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">
-          Yop Devs
-        </h1>
-        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] mt-4">
-          Redefinição de Credenciais
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+      <div className="mb-10 text-center">
+        <h1 className="leading-none"><Logo variant="dark" size="lg" /></h1>
+        <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">
+          Redefinição de senha
         </p>
       </div>
 
       <div className="w-full max-w-[400px]">
         <form 
           onSubmit={handleReset} 
-          className="bg-white border-2 border-slate-900 p-10 rounded-2xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] space-y-6"
+          className="bg-white border border-slate-200 p-8 rounded-2xl shadow-lg space-y-5"
         >
           {/* Mensagem de Feedback Integrada */}
           {message && (
@@ -65,7 +64,7 @@ export default function ResetPasswordPage() {
             <input 
               required
               type="password"
-              className="w-full p-4 bg-white border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#4c1d95] transition-all"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -76,15 +75,15 @@ export default function ResetPasswordPage() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full py-5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg"
+            className="w-full py-4 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all active:scale-[0.98] shadow-lg"
           >
             {loading ? 'PROCESSANDO_DADOS...' : 'ATUALIZAR CHAVE'}
           </button>
         </form>
       </div>
 
-      <footer className="fixed bottom-8 text-[9px] font-bold text-slate-300 uppercase tracking-[0.5em]">
-        © 2026 YOP_DEVS_CORE_SYSTEM
+      <footer className="fixed bottom-6 text-xs text-slate-400">
+        © 2026 YOP Devs
       </footer>
     </div>
   )
