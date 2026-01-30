@@ -134,9 +134,13 @@ export default function MarketplacePage() {
                       <p className="text-[8px] text-slate-400 font-bold uppercase mt-1 tracking-widest">{project.profiles?.role}</p>
                     </div>
                   </Link>
-                  <Link href={`/dashboard/chat/${project.owner_id}`} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shrink-0">
-                    Conectar ↗
-                  </Link>
+                  {project.owner_id !== myId ? (
+                    <Link href={`/dashboard/chat/${project.owner_id}`} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shrink-0">
+                      Conectar ↗
+                    </Link>
+                  ) : (
+                    <span className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest shrink-0 cursor-not-allowed">Seu projeto</span>
+                  )}
                 </div>
                 {project.owner_id !== myId && (
                   <button

@@ -20,7 +20,7 @@ export default function ChatListPage() {
 
     const contactIds = Array.from(new Set(data?.map(m => 
       m.sender_id === user.id ? m.receiver_id : m.sender_id
-    )))
+    ))).filter((id) => id !== user.id)
 
     if (contactIds.length > 0) {
       const { data: profiles } = await supabase

@@ -11,8 +11,11 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('')
+  const [myId, setMyId] = useState<string | null>(null)
 
   async function loadMembers() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setMyId(user.id)
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -28,6 +31,7 @@ export default function MembersPage() {
     const matchesRole = !roleFilter || m.role === roleFilter
     return matchesSearch && matchesRole && m.role !== 'BANNED'
   })
+  const isMe = (id: string) => myId && id === myId
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-[0.5em]">Scanning_Network_Nodes...</div>
 
@@ -122,12 +126,18 @@ export default function MembersPage() {
               >
                 Ver Portfólio
               </Link>
-              <Link 
-                href={`/dashboard/chat/${member.id}`}
-                className="py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-600 transition-all shadow-md"
-              >
-                Conectar ↗
-              </Link>
+              {isMe(member.id) ? (
+                <span className="py-3 bg-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase text-center cursor-not-allowed">
+                  Você
+                </span>
+              ) : (
+                <Link 
+                  href={`/dashboard/chat/${member.id}`}
+                  className="py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-600 transition-all shadow-md text-center"
+                >
+                  Conectar ↗
+                </Link>
+              )}
             </div>
           </div>
         ))}

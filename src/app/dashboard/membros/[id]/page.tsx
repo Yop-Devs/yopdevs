@@ -11,13 +11,13 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [myId, setMyId] = useState<string | null>(null)
 
   async function loadData() {
-    // Busca o perfil público
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setMyId(user.id)
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
-    // Busca os projetos ativos deste usuário
     const { data: proj } = await supabase.from('projects').select('*').eq('owner_id', id).order('created_at', { ascending: false })
-    
     setProfile(prof)
     setProjects(proj || [])
     setLoading(false)
@@ -56,14 +56,21 @@ export default function PublicProfilePage() {
           </div>
 
           <div className="flex gap-3 justify-center md:justify-start pt-4">
-            {profile.github_url && <a href={profile.github_url} target="_blank" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">GitHub</a>}
-            {profile.linkedin_url && <a href={profile.linkedin_url} target="_blank" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">LinkedIn</a>}
-            <button 
-              onClick={() => router.push(`/dashboard/chat/${id}`)}
-              className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-[6px_6px_0px_0px_rgba(79,70,229,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-            >
-              Iniciar Conexão ↗
-            </button>
+            {profile.github_url && <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">GitHub</a>}
+            {profile.linkedin_url && <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">LinkedIn</a>}
+            {myId && id === myId ? (
+              <span className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] cursor-not-allowed">
+                Seu perfil
+              </span>
+            ) : (
+              <button 
+                type="button"
+                onClick={() => router.push(`/dashboard/chat/${id}`)}
+                className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-[6px_6px_0px_0px_rgba(79,70,229,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+              >
+                Iniciar Conexão ↗
+              </button>
+            )}
           </div>
         </div>
       </header>

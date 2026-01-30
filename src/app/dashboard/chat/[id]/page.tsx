@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 export default function ChatRoomPage() {
   const { id: receiver_id } = useParams()
+  const router = useRouter()
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [receiver, setReceiver] = useState<any>(null)
@@ -16,6 +17,10 @@ export default function ChatRoomPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setMe(user.id)
+    if (receiver_id === user.id) {
+      router.replace('/dashboard/chat')
+      return
+    }
 
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', receiver_id).single()
     setReceiver(prof)
@@ -41,7 +46,7 @@ export default function ChatRoomPage() {
 
   const send = async (e: any) => {
     e.preventDefault()
-    if (!newMessage.trim() || !me) return
+    if (!newMessage.trim() || !me || receiver_id === me) return
     await supabase.from('messages').insert([{ sender_id: me, receiver_id, content: newMessage }])
     setNewMessage('')
   }
