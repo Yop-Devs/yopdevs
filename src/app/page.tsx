@@ -75,9 +75,13 @@ function LandingPageContent() {
         setMessage({ type: 'success', text: 'Link enviado para o e-mail informado.' })
       }
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
+      const isEmailError = /confirm.*email|sending.*email|email.*(send|error)/i.test(msg)
       setMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.',
+        text: isEmailError
+          ? 'O envio do e-mail de confirmação falhou. Verifique o e-mail ou tente fazer login — se a confirmação estiver desativada no painel, o acesso já pode estar liberado.'
+          : msg,
       })
     } finally {
       setLoading(false)
