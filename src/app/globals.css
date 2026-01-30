@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #f8fafc; /* slate-50 */
-  --color-foreground: #0f172a; /* slate-900 */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-yop-purple: #6d28d9;
+  --color-yop-violet: #7c3aed;
+  --color-yop-indigo: #4f46e5;
+  --color-yop-blue: #2563eb;
+  --color-yop-navy: #1e3a5f;
+  --color-yop-black: #0f172a;
 }
 
 @layer base {

@@ -7,7 +7,20 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        yop: {
+          purple: "#6d28d9",
+          violet: "#7c3aed",
+          indigo: "#4f46e5",
+          blue: "#2563eb",
+          navy: "#1e3a5f",
+          black: "#0f172a",
+          light: "#f8fafc",
+          white: "#ffffff",
+        },
+      },
+    },
   },
   plugins: [],
 };
