@@ -11,16 +11,20 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
+  const [error, setError] = useState('')
+
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+    setError('')
+    setMessage('')
+
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
     })
 
-    if (error) {
-      alert(error.message)
+    if (err) {
+      setError(err.message)
     } else {
       setMessage('Verifique seu e-mail para redefinir a senha.')
     }
@@ -31,9 +35,15 @@ export default function ForgotPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl">
         <h2 className="text-2xl font-bold text-center text-gray-900 mb-4">Recuperar Senha</h2>
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 text-sm font-medium border border-red-200">
+            {error}
+          </div>
+        )}
         {message ? (
-          <div className="text-green-600 text-center font-medium">{message}</div>
-        ) : (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">{message}</div>
+        ) : null}
+        {!message ? (
           <form onSubmit={handleReset} className="space-y-4">
             <p className="text-gray-500 text-sm">Insira seu e-mail para receber um link de redefinição.</p>
             <input
@@ -52,7 +62,7 @@ export default function ForgotPassword() {
               {loading ? 'Enviando...' : 'ENVIAR LINK'}
             </button>
           </form>
-        )}
+        ) : null}
         <div className="mt-4 text-center">
           <Link href="/" className="text-indigo-600 text-sm hover:underline">Voltar para o login</Link>
         </div>

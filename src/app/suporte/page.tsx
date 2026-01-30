@@ -6,18 +6,33 @@ export default function SupportPage() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle')
 
+  const [error, setError] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus('sending')
-    
-    await fetch('/api/send', {
-      method: 'POST',
-      body: JSON.stringify(formData),
-    })
+    setError(null)
 
-    setStatus('success')
-    setFormData({ name: '', email: '', message: '' })
-    setTimeout(() => setStatus('idle'), 5000)
+    try {
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        setError(data?.error?.message ?? 'Falha ao enviar. Tente novamente.')
+        setStatus('idle')
+        return
+      }
+      setStatus('success')
+      setFormData({ name: '', email: '', message: '' })
+      setTimeout(() => setStatus('idle'), 5000)
+    } catch {
+      setError('Erro de conexão. Verifique sua internet e tente novamente.')
+      setStatus('idle')
+    }
   }
 
   return (
@@ -28,8 +43,13 @@ export default function SupportPage() {
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Protocolo de Atendimento</p>
         </div>
 
+        {error && (
+          <div className="mb-6 px-4 py-3 rounded-2xl bg-red-500/20 text-red-300 border border-red-500/30 text-sm font-medium">
+            {error}
+          </div>
+        )}
         {status === 'success' ? (
-          <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-2xl text-center animate-in zoom-in">
+          <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-2xl text-center">
             <p className="text-indigo-400 text-sm font-bold uppercase italic">Mensagem Enviada com Sucesso!</p>
             <p className="text-slate-500 text-[10px] mt-2 font-mono">Responderemos em até 24 horas.</p>
           </div>

@@ -1,16 +1,18 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
+    setMessage(null)
     if (password !== confirmPassword) {
-      alert("As senhas não coincidem!")
+      setMessage({ type: 'error', text: 'As senhas não coincidem!' })
       return
     }
 
@@ -18,11 +20,13 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      
-      alert("Senha atualizada com sucesso! Você será redirecionado para o login.")
-      window.location.href = '/'
-    } catch (err: any) {
-      alert(`Erro: ${err.message}`)
+      setMessage({ type: 'success', text: 'Senha atualizada com sucesso! Redirecionando...' })
+      setTimeout(() => { window.location.href = '/' }, 1500)
+    } catch (err: unknown) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.',
+      })
     } finally {
       setLoading(false)
     }
@@ -43,6 +47,11 @@ export default function ResetPasswordPage() {
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Defina sua nova senha de acesso</p>
         </div>
 
+        {message && (
+          <div className={`mb-6 px-4 py-3 rounded-2xl text-sm font-medium ${message.type === 'success' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
+            {message.text}
+          </div>
+        )}
         <form onSubmit={handleUpdatePassword} className="space-y-4">
           <input 
             type="password" 

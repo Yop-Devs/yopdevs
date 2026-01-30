@@ -1,57 +1,84 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 export default function LandingPage() {
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Estados do Formulário
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [birthDate, setBirthDate] = useState('')
 
+  const closeModal = useCallback(() => {
+    setShowModal(false)
+    setMessage(null)
+  }, [])
+
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (err === 'auth-code-error') {
+      setShowModal(true)
+      setMode('login')
+      setMessage({ type: 'error', text: 'Falha ao confirmar login. Tente novamente.' })
+      window.history.replaceState({}, '', '/')
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!showModal) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showModal, closeModal])
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setMessage(null)
 
     try {
       if (mode === 'signup') {
         if (password !== confirmPassword) throw new Error("As senhas não coincidem!")
-        
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { 
-            data: { 
-              full_name: fullName,
-              birth_date: birthDate 
-            } 
-          }
+          options: {
+            data: { full_name: fullName, birth_date: birthDate },
+          },
         })
         if (error) throw error
-        alert("Cadastro realizado! Verifique seu e-mail para confirmar.")
+        setMessage({ type: 'success', text: 'Cadastro realizado! Verifique seu e-mail para confirmar.' })
       } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         if (data.session) {
-          await supabase.auth.setSession({ 
-            access_token: data.session.access_token, 
-            refresh_token: data.session.refresh_token 
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
           })
           window.location.href = '/dashboard'
         }
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email)
         if (error) throw error
-        alert("Link enviado para o e-mail informado.")
+        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado.' })
       }
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.',
+      })
     } finally {
       setLoading(false)
     }
@@ -131,16 +158,22 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* MODAL SISTEM - Otimizado para rolagem Mobile */}
+      {/* MODAL - Fecha com Escape e clique fora */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowModal(false)}></div>
-          <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[40px] p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300 overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={closeModal} aria-hidden="true" />
+          <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[40px] p-8 md:p-10 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">
+              <h2 id="modal-title" className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">
                 {mode === 'login' ? 'Faça Login' : mode === 'signup' ? 'Cadastre-se' : 'Resetar Senha'}
               </h2>
             </div>
+
+            {message && (
+              <div className={`mb-6 px-4 py-3 rounded-2xl text-sm font-medium ${message.type === 'success' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
+                {message.text}
+              </div>
+            )}
 
             <form onSubmit={handleAuth} className="space-y-4">
               {mode === 'signup' && (
@@ -170,11 +203,11 @@ export default function LandingPage() {
             </form>
 
             <div className="mt-8 flex flex-col gap-4 text-center">
-              <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors">
+              <button type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage(null); }} className="text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors">
                 {mode === 'login' ? 'Não possui acesso? Cadastre-se AGORA!' : 'Já possui conta? FAÇA LOGIN'}
               </button>
               {mode === 'login' && (
-                <button onClick={() => setMode('reset')} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-white">Esqueci minha chave de segurança</button>
+                <button type="button" onClick={() => { setMode('reset'); setMessage(null); }} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-white">Esqueci minha chave de segurança</button>
               )}
             </div>
           </div>
