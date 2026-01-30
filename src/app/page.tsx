@@ -69,7 +69,10 @@ function LandingPageContent() {
           }
           return
         }
-        const isEmailSendError = /confirm.*email|sending.*email|email.*(send|error)/i.test(signUpError.message)
+        const msg = signUpError.message ?? ''
+        const isEmailSendError =
+          /confirm.*email|sending.*email|email.*(send|error)|error sending confirmation email/i.test(msg) ||
+          signUpError.status === 500
         if (isEmailSendError) {
           const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
           if (!loginError && loginData.session) {
@@ -78,6 +81,13 @@ function LandingPageContent() {
               refresh_token: loginData.session.refresh_token,
             })
             window.location.href = '/dashboard'
+            return
+          }
+          if (loginError?.message && /confirm|confirmed|verif/i.test(loginError.message)) {
+            setMessage({
+              type: 'success',
+              text: 'Conta criada. O e-mail de confirmação não pôde ser enviado. Use "Esqueci minha chave de segurança" com este e-mail para acessar.',
+            })
             return
           }
         }
