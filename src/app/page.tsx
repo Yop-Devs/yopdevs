@@ -142,7 +142,7 @@ function LandingPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-100 text-slate-900 overflow-x-hidden">
       {/* Header com Termos, Privacidade, Suporte em destaque */}
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -239,7 +239,7 @@ function LandingPageContent() {
       </section>
 
       {/* Últimas do fórum + projetos */}
-      <section className="py-12 md:py-16 px-4 md:px-6 bg-slate-50">
+      <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-200">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-center text-xl md:text-2xl font-black text-slate-900 mb-1">
             Atividade recente
@@ -336,7 +336,7 @@ function LandingPageContent() {
               { t: 'Fórum', d: 'Discussões sobre arquitetura, escala, IA e teses de mercado. Troque ideias com devs e empreendedores.', i: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
               { t: 'Alertas', d: 'Notificações quando alguém curte, comenta ou demonstra interesse. Não perca nenhuma oportunidade.', i: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
             ].map((item, idx) => (
-              <div key={idx} className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-violet-100 transition-all">
+              <div key={idx} className="p-8 rounded-3xl bg-slate-100 border border-slate-200 hover:border-violet-200 transition-all">
                 <div className="w-11 h-11 rounded-xl bg-violet-100 flex items-center justify-center mb-5">
                   <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.i} /></svg>
                 </div>
@@ -349,12 +349,12 @@ function LandingPageContent() {
       </section>
 
       {/* CTA final */}
-      <section className="py-14 md:py-20 px-4 md:px-6 bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700">
+      <section className="py-14 md:py-20 px-4 md:px-6 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 border-t border-slate-700">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-black text-white mb-3">
             Pronto para entrar na rede?
           </h2>
-          <p className="text-white/90 text-sm md:text-base mb-6 max-w-lg mx-auto">
+          <p className="text-slate-300 text-sm md:text-base mb-6 max-w-lg mx-auto">
             Cadastre-se em minutos. Poste no fórum, crie projetos e converse com a comunidade.
           </p>
           <button
@@ -367,18 +367,18 @@ function LandingPageContent() {
       </section>
 
       {/* Footer — Termos, Privacidade e Suporte em destaque */}
-      <footer className="bg-gradient-to-b from-violet-900 to-indigo-900 text-slate-200 py-10 px-4 md:px-6">
+      <footer className="bg-slate-800 text-slate-200 py-10 px-4 md:px-6 border-t border-slate-700">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <Logo variant="light" size="sm" />
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
-            <Link href="/termos" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Termos de Uso</Link>
-            <Link href="/privacidade" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Privacidade</Link>
-            <Link href="/suporte" className="text-sm font-bold text-white hover:text-violet-300 transition-colors">Suporte</Link>
+            <Link href="/termos" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Termos de Uso</Link>
+            <Link href="/privacidade" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Privacidade</Link>
+            <Link href="/suporte" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Suporte</Link>
           </nav>
           <p className="text-xs text-slate-500">
             © 2026. Todos os direitos reservados.
@@ -389,7 +389,7 @@ function LandingPageContent() {
       {/* Modal login/signup */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="absolute inset-0 bg-violet-900/50 backdrop-blur-sm" onClick={closeModal} aria-hidden="true" />
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal} aria-hidden="true" />
           <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h2 id="modal-title" className="text-2xl font-black text-slate-900 mb-6 text-center">
               {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Resetar senha'}
@@ -440,7 +440,7 @@ function LandingPageContent() {
 export default function LandingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="text-violet-600 text-sm font-bold animate-pulse">Carregando...</div>
       </div>
     }>

@@ -33,7 +33,7 @@ export default function DashboardPage() {
   useEffect(() => { loadData() }, [])
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-slate-50 font-mono text-[10px] text-slate-400 uppercase tracking-widest">
+    <div className="flex h-screen items-center justify-center bg-slate-100 font-mono text-[10px] text-slate-500 uppercase tracking-widest">
       Carregando_Sessão_Segura...
     </div>
   )
@@ -41,7 +41,7 @@ export default function DashboardPage() {
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-10 space-y-10">
       {/* Header Profissional */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
         <div>
           <h1 className="leading-none"><Logo variant="dark" size="lg" /></h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
@@ -66,18 +66,18 @@ export default function DashboardPage() {
         
         {/* Coluna de Conteúdo Principal */}
         <div className="lg:col-span-8 space-y-8">
-          <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700 p-10 rounded-2xl text-white border border-violet-200/20 shadow-lg relative overflow-hidden min-h-[280px] flex flex-col justify-center">
+          <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-10 rounded-2xl text-white border border-slate-600 shadow-lg relative overflow-hidden min-h-[280px] flex flex-col justify-center">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Sessão em Tempo Real</span>
+                <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse"></div>
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Sessão em Tempo Real</span>
               </div>
               
               <h2 className="text-3xl font-bold tracking-tight mb-4 uppercase italic">
                 Sua rede ativa
               </h2>
               
-              <p className="text-slate-400 max-w-xl text-sm leading-relaxed font-medium">
+              <p className="text-slate-300 max-w-xl text-sm leading-relaxed font-medium">
                 Poste no fórum, crie projetos e converse com amigos. Todas as ferramentas estão disponíveis para você.
               </p>
             </div>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
-          <div className="bg-slate-50 p-6 rounded-xl border border-slate-200/50">
+          <div className="bg-slate-100 p-6 rounded-xl border border-slate-200">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Protocolo de Segurança</h4>
             <p className="text-[10px] text-slate-500 leading-relaxed font-medium italic">Sua sessão está criptografada de ponta a ponta via Supabase Auth Protocol v4.0.</p>
           </div>

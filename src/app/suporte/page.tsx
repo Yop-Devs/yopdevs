@@ -34,7 +34,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Link href="/" className="flex items-center gap-2">

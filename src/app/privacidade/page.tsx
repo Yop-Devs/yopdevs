@@ -4,7 +4,7 @@ import Logo from '@/components/Logo'
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-6 md:p-12">
+    <div className="min-h-screen bg-slate-100 text-slate-900 p-6 md:p-12">
       <div className="max-w-3xl mx-auto space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <Link href="/" className="flex items-center gap-2">

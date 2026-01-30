@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-slate-50 font-semibold text-sm text-[#4c1d95]">
+    <div className="flex h-screen items-center justify-center bg-slate-100 font-semibold text-sm text-slate-700">
       Verificando acesso...
     </div>
   )
@@ -71,27 +71,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-100 text-slate-900 overflow-hidden">
       
-      {/* OVERLAY MOBILE (Escurece o fundo quando o menu abre) */}
+      {/* OVERLAY MOBILE */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-800/50 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* SIDEBAR - Agora com classes responsivas */}
+      {/* SIDEBAR - Corporativo escuro */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white flex flex-col border-r border-slate-200 transition-transform duration-300
+        fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 flex flex-col border-r border-slate-700 transition-transform duration-300
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Logo variant="dark" size="sm" />
+            <Logo variant="light" size="sm" />
           </Link>
-          <button className="lg:hidden text-slate-400" onClick={() => setIsSidebarOpen(false)}>
+          <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
-              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-[#4c1d95] text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
                 <span className="flex items-center gap-3 min-w-0">
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                   <span className="truncate">{item.name}</span>
@@ -115,12 +115,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center gap-3">
+        <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
-            <p className="text-[8px] text-violet-400 font-semibold uppercase tracking-wider">{profile?.role || 'Membro'}</p>
+            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">{profile?.role || 'Membro'}</p>
           </div>
-          <button onClick={handleSignOut} className="text-slate-500 hover:text-red-400">
+          <button onClick={handleSignOut} className="text-slate-400 hover:text-red-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
           </button>
         </div>
@@ -129,19 +129,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ÁREA DE CONTEÚDO PRINCIPAL */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* HEADER MOBILE (Barra superior que só aparece no celular) */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden shrink-0">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-600">
+        {/* HEADER MOBILE */}
+        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 lg:hidden shrink-0">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-300 hover:text-white">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <Logo variant="dark" size="sm" />
-          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-[10px]">
+          <Logo variant="light" size="sm" />
+          <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-black text-[10px] text-white">
             {profile?.full_name?.[0]}
           </div>
         </header>
 
         {/* CONTEÚDO DA PÁGINA */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100">
           {children}
         </main>
       </div>

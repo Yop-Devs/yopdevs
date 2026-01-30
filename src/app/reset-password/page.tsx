@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
       <div className="mb-8 text-center">
         <Logo variant="dark" size="lg" />
         <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">Defina sua nova senha</p>
