@@ -79,6 +79,14 @@ export default function VerAmigosPage() {
     if (!error) setRequestSent((prev) => ({ ...prev, [toId]: true }))
   }
 
+  const removeFriend = async (friendId: string) => {
+    if (!myId || friendId === myId) return
+    await supabase.from('friend_requests')
+      .delete()
+      .or(`and(from_id.eq.${myId},to_id.eq.${friendId}),and(from_id.eq.${friendId},to_id.eq.${myId})`)
+    loadData()
+  }
+
   const filteredUsers = allUsers.filter((m) => {
     const matchesSearch = !filter || m.full_name?.toLowerCase().includes(filter.toLowerCase()) || m.specialties?.toLowerCase().includes(filter.toLowerCase())
     const matchesRole = !roleFilter || m.role === roleFilter
@@ -126,7 +134,7 @@ export default function VerAmigosPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {friends.map((member) => (
-                <FriendCard key={member.id} member={member} myId={myId} isMe={!!myId && member.id === myId} isFriend={true} requestSent={false} onAdd={() => {}} />
+                <FriendCard key={member.id} member={member} myId={myId} isMe={!!myId && member.id === myId} isFriend={true} requestSent={false} onAdd={() => {}} onRemoveFriend={() => removeFriend(member.id)} />
               ))}
             </div>
           )}
@@ -189,6 +197,7 @@ export default function VerAmigosPage() {
                   isFriend={isFriend(member.id)}
                   requestSent={!!requestSent[member.id]}
                   onAdd={() => sendFriendRequest(member.id)}
+                  onRemoveFriend={undefined}
                 />
               ))}
             </div>
@@ -206,6 +215,7 @@ function FriendCard({
   isFriend,
   requestSent,
   onAdd,
+  onRemoveFriend,
 }: {
   member: any
   myId: string | null
@@ -213,6 +223,7 @@ function FriendCard({
   isFriend: boolean
   requestSent: boolean
   onAdd: () => void
+  onRemoveFriend?: () => void
 }) {
   return (
     <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-8 flex flex-col items-center text-center hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] transition-all group relative overflow-hidden">
@@ -230,19 +241,26 @@ function FriendCard({
           <span key={spec} className="text-[8px] font-black border-2 border-slate-900 px-2 py-0.5 rounded-lg uppercase tracking-tighter">{spec.trim()}</span>
         ))}
       </div>
-      <div className="w-full grid grid-cols-2 gap-3">
-        <Link href={`/dashboard/perfil/${member.id}`} className="py-3 border-2 border-slate-900 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">Ver Portfólio</Link>
-        {isMe ? (
-          <span className="py-3 bg-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase text-center cursor-not-allowed">Você</span>
-        ) : (
-          <>
-            <Link href={`/dashboard/chat/${member.id}`} className="py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-600 transition-all shadow-md text-center">Conectar</Link>
-            {!isFriend && (
-              <button type="button" onClick={onAdd} disabled={requestSent} className="py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
-                {requestSent ? 'Enviado' : 'Adicionar amigo'}
-              </button>
-            )}
-          </>
+      <div className="w-full space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Link href={`/dashboard/perfil/${member.id}`} className="py-3 border-2 border-slate-900 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">Ver Portfólio</Link>
+          {isMe ? (
+            <span className="py-3 bg-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase text-center cursor-not-allowed">Você</span>
+          ) : (
+            <>
+              <Link href={`/dashboard/chat/${member.id}`} className="py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-600 transition-all shadow-md text-center">Conectar</Link>
+              {!isFriend && (
+                <button type="button" onClick={onAdd} disabled={requestSent} className="py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {requestSent ? 'Enviado' : 'Adicionar amigo'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        {isFriend && onRemoveFriend && (
+          <button type="button" onClick={onRemoveFriend} className="w-full py-2.5 border-2 border-red-200 text-red-600 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-all">
+            Desfazer amizade
+          </button>
         )}
       </div>
     </div>

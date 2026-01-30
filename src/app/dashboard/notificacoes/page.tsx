@@ -12,6 +12,19 @@ export default function NotificationsPage() {
   const [senderNames, setSenderNames] = useState<Record<string, string>>({})
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
 
+  const getTypeLabel = (type: string): string => {
+    switch (type) {
+      case 'CHAT': return 'Mensagem'
+      case 'LIKE': case 'COMMENT_LIKE': return 'Curtida'
+      case 'FORUM_REPLY': return 'Comentário'
+      case 'INTEREST': return 'Interesse no projeto'
+      case 'FRIEND_REQUEST': return 'Solicitação de amizade'
+      case 'FRIEND_ACCEPTED': return 'Amizade aceita'
+      case 'NEWS': return 'Novidade'
+      default: return 'Notificação'
+    }
+  }
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'LIKE': return <span className="p-2 bg-pink-50 text-pink-600 rounded-lg border-2 border-pink-200">❤</span>
@@ -41,10 +54,13 @@ export default function NotificationsPage() {
     const idsToFetch = new Set<string>()
     notifs.forEach((n) => {
       if (n.from_user_id && n.from_user_id !== user.id) idsToFetch.add(n.from_user_id)
-      if (n.type === 'CHAT' && n.link) {
+      if (n.metadata?.sender_id && n.metadata.sender_id !== user.id) idsToFetch.add(n.metadata.sender_id)
+      if (n.metadata?.from_user_id && n.metadata.from_user_id !== user.id) idsToFetch.add(n.metadata.from_user_id)
+      if ((n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')) && n.link) {
         const match = n.link.match(/\/dashboard\/chat\/([a-f0-9-]+)/i)
         if (match?.[1]) idsToFetch.add(match[1])
       }
+      if (n.type === 'CHAT' && !n.from_user_id && !n.link && n.metadata?.sender_id) idsToFetch.add(n.metadata.sender_id)
     })
 
     if (idsToFetch.size > 0) {
@@ -72,9 +88,11 @@ export default function NotificationsPage() {
     if (n.link) router.push(n.link)
   }
 
-  const getSenderId = (n: { type?: string; from_user_id?: string | null; link?: string | null }) => {
+  const getSenderId = (n: { type?: string; from_user_id?: string | null; link?: string | null; metadata?: { sender_id?: string; from_user_id?: string } }) => {
     if (n.from_user_id) return n.from_user_id
-    if (n.type === 'CHAT' && n.link) {
+    if (n.metadata?.sender_id) return n.metadata.sender_id
+    if (n.metadata?.from_user_id) return n.metadata.from_user_id
+    if ((n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')) && n.link) {
       const m = n.link.match(/\/dashboard\/chat\/([a-f0-9-]+)/i)
       return m?.[1] ?? null
     }
@@ -82,7 +100,8 @@ export default function NotificationsPage() {
   }
 
   const getDisplayContent = (n: { type?: string; content?: string }, senderId: string | null) => {
-    if (n.type === 'CHAT' && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma mensagem`
+    const isMsg = n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')
+    if (isMsg && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma mensagem`
     if (n.type === 'FRIEND_REQUEST' && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma solicitação de amizade`
     if (n.type === 'FRIEND_ACCEPTED' && senderId && senderNames[senderId]) return `${senderNames[senderId]} aceitou sua solicitação de amizade`
     if (n.type === 'COMMENT_LIKE' && senderId && senderNames[senderId]) return `${senderNames[senderId]} curtiu sua resposta no fórum`
@@ -114,16 +133,24 @@ export default function NotificationsPage() {
           const senderId = getSenderId(n)
           const isFriend = senderId ? friendIds.has(senderId) : false
           const displayContent = getDisplayContent(n, senderId)
-          const isChat = n.type === 'CHAT'
+          const isChat = n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')
+          const typeLabel = getTypeLabel(n.type)
           return (
             <div
               key={n.id}
-              className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group"
+              role="button"
+              tabIndex={0}
+              onClick={() => handleNotificationClick(n)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(n); } }}
+              className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer"
             >
               <div className="flex flex-1 min-w-0 items-center gap-6">
                 <div className="shrink-0">{getIcon(n.type)}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{displayContent}</p>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 border border-indigo-200 rounded px-2 py-0.5 bg-indigo-50">
+                    {typeLabel}
+                  </span>
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight mt-2">{displayContent}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {senderId && (
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded border-2 uppercase ${isFriend ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-300 text-slate-500 bg-slate-50'}`}>
@@ -136,17 +163,17 @@ export default function NotificationsPage() {
                 <div className={`w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-indigo-600 animate-pulse'}`} title={n.is_read ? '' : 'Não lida'} />
               </div>
               {isChat && n.link && (
-                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
                   Ver mensagem
                 </button>
               )}
-              {(n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link && (
-                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+              {!isChat && (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
                   Ver solicitações
                 </button>
               )}
               {(n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
-                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
                   Ver fórum
                 </button>
               )}

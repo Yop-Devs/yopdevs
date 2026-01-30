@@ -21,9 +21,11 @@ ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can see own requests" ON friend_requests;
 DROP POLICY IF EXISTS "Users can insert own outgoing" ON friend_requests;
 DROP POLICY IF EXISTS "Users can update incoming" ON friend_requests;
+DROP POLICY IF EXISTS "Users can delete own request" ON friend_requests;
 CREATE POLICY "Users can see own requests" ON friend_requests FOR SELECT USING (auth.uid() = from_id OR auth.uid() = to_id);
 CREATE POLICY "Users can insert own outgoing" ON friend_requests FOR INSERT WITH CHECK (auth.uid() = from_id);
 CREATE POLICY "Users can update incoming" ON friend_requests FOR UPDATE USING (auth.uid() = to_id);
+CREATE POLICY "Users can delete own request" ON friend_requests FOR DELETE USING (auth.uid() = from_id OR auth.uid() = to_id);
 
 -- Fórum: curtir comentários
 CREATE TABLE IF NOT EXISTS post_comment_likes (
@@ -47,7 +49,7 @@ CREATE POLICY "Auth can delete own like" ON post_comment_likes FOR DELETE USING 
 
 -- ========== TRIGGERS DE NOTIFICAÇÃO (descomente e rode um por vez no SQL Editor) ==========
 
--- 1) Mensagem no chat
+-- 1) Mensagem no chat (link e from_user_id são obrigatórios para o nome do remetente aparecer na tela)
 -- CREATE OR REPLACE FUNCTION notify_on_new_message()
 -- RETURNS TRIGGER AS $$
 -- BEGIN
