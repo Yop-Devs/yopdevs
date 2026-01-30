@@ -88,7 +88,7 @@ export default function NotificationsPage() {
     if (n.link) router.push(n.link)
   }
 
-  const getSenderId = (n: { type?: string; from_user_id?: string | null; link?: string | null; metadata?: { sender_id?: string; from_user_id?: string } }) => {
+  const getSenderId = (n: { type?: string; content?: string; from_user_id?: string | null; link?: string | null; metadata?: { sender_id?: string; from_user_id?: string } }) => {
     if (n.from_user_id) return n.from_user_id
     if (n.metadata?.sender_id) return n.metadata.sender_id
     if (n.metadata?.from_user_id) return n.metadata.from_user_id
