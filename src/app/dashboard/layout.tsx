@@ -76,20 +76,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* OVERLAY MOBILE (Escurece o fundo quando o menu abre) */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-800/50 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* SIDEBAR - Agora com classes responsivas */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 flex flex-col border-r border-slate-800 transition-transform duration-300
+        fixed inset-y-0 left-0 z-50 w-64 bg-white flex flex-col border-r border-slate-200 transition-transform duration-300
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Logo variant="light" size="sm" />
+            <Logo variant="dark" size="sm" />
           </Link>
           <button className="lg:hidden text-slate-400" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
-              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-[#4c1d95] text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-[#4c1d95] text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
                 <span className="flex items-center gap-3 min-w-0">
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                   <span className="truncate">{item.name}</span>

@@ -26,22 +26,22 @@ export default function EquityPortfolioPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto py-12 px-6 space-y-12">
-      <header className="border-b-2 border-slate-900 pb-8">
-        <h1 className="text-4xl font-black italic uppercase tracking-tighter">Equity Portfolio</h1>
+      <header className="border-b-2 border-slate-200 pb-8">
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-800">Equity Portfolio</h1>
         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Ativos e participações societárias rastreadas</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {investments.map((item) => (
-          <div key={item.id} className="bg-white border-2 border-slate-900 p-8 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+          <div key={item.id} className="bg-white border-2 border-slate-200 p-8 rounded-2xl shadow-sm hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between">
             <div className="space-y-4">
               <div className="flex justify-between items-start">
-                <span className="text-[9px] font-black px-2 py-1 bg-indigo-600 text-white rounded uppercase tracking-tighter">
+                <span className="text-[9px] font-black px-2 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">
                   {item.projects?.category}
                 </span>
-                <span className="text-2xl font-black text-slate-900">{item.equity_share}%</span>
+                <span className="text-2xl font-black text-slate-800">{item.equity_share}%</span>
               </div>
-              <h3 className="text-xl font-black uppercase italic text-slate-900 leading-tight">
+              <h3 className="text-xl font-black uppercase italic text-slate-800 leading-tight">
                 {item.projects?.title}
               </h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status: <span className="text-green-500">{item.status || 'EM OPERAÇÃO'}</span></p>

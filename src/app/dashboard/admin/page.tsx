@@ -60,7 +60,7 @@ export default function MasterAdminPage() {
       <div className="max-w-[1400px] mx-auto px-8 py-20 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 mb-4">Acesso restrito</h1>
         <p className="text-slate-500 mb-8">Apenas administradores podem acessar este painel.</p>
-        <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] hover:bg-slate-800 transition-colors">
+        <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-[#4c1d95] text-white rounded-xl font-bold uppercase text-[10px] hover:bg-violet-800 transition-colors shadow-md">
           Voltar ao dashboard
         </button>
       </div>
@@ -69,7 +69,7 @@ export default function MasterAdminPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-12 font-sans">
-      <header className="border-b-2 border-slate-900 pb-8 flex justify-between items-end">
+      <header className="border-b-2 border-slate-200 pb-8 flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-black italic uppercase tracking-tighter">Master Control</h1>
           <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Governança de Dados e Integridade da Rede</p>
@@ -82,13 +82,13 @@ export default function MasterAdminPage() {
       </header>
 
       {/* GESTÃO DE USUÁRIOS */}
-      <section className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-        <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
+      <section className="bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-6 bg-gradient-to-r from-[#4c1d95] to-indigo-700 text-white flex justify-between items-center shadow-md">
           <h2 className="text-xs font-black uppercase tracking-widest italic">Base de Operadores</h2>
         </div>
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b-2 border-slate-900 text-[10px] font-black uppercase text-slate-400">
+            <tr className="border-b-2 border-slate-200 text-[10px] font-black uppercase text-slate-500">
               <th className="p-6">Identidade</th>
               <th className="p-6">Status/Cargo</th>
               <th className="p-6 text-right">Ações de Segurança</th>
@@ -103,7 +103,7 @@ export default function MasterAdminPage() {
                 </td>
                 <td className="p-6">
                   <span className={`text-[9px] font-black px-2 py-1 rounded border-2 ${
-                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-slate-50 border-slate-900 text-slate-900'
+                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-700'
                   }`}>
                     {u.role || 'PENDENTE'}
                   </span>
@@ -119,13 +119,13 @@ export default function MasterAdminPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* MODERAÇÃO FÓRUM */}
-        <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <div className="p-6 bg-slate-50 border-b-2 border-slate-900">
+        <div className="bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-6 bg-slate-50 border-b-2 border-slate-200">
             <h2 className="text-xs font-black uppercase tracking-widest">Publicações do Fórum</h2>
           </div>
           <div className="p-4 space-y-4 h-[400px] overflow-y-auto">
             {content.posts.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-4 border-2 border-slate-100 rounded-xl hover:border-slate-900 transition-all">
+              <div key={p.id} className="flex justify-between items-center p-4 border-2 border-slate-100 rounded-xl hover:border-violet-200 transition-all">
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Autor: {p.profiles?.full_name}</p>
@@ -139,13 +139,13 @@ export default function MasterAdminPage() {
         </div>
 
         {/* MODERAÇÃO MARKETPLACE */}
-        <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <div className="p-6 bg-slate-50 border-b-2 border-slate-900">
+        <div className="bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-6 bg-slate-50 border-b-2 border-slate-200">
             <h2 className="text-xs font-black uppercase tracking-widest">Vultures / Projetos</h2>
           </div>
           <div className="p-4 space-y-4 h-[400px] overflow-y-auto">
             {content.projects.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-4 border-2 border-slate-100 rounded-xl hover:border-slate-900 transition-all">
+              <div key={p.id} className="flex justify-between items-center p-4 border-2 border-slate-100 rounded-xl hover:border-violet-200 transition-all">
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Dono: {p.profiles?.full_name}</p>

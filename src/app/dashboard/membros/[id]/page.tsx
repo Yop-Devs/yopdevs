@@ -31,8 +31,8 @@ export default function PublicProfilePage() {
   return (
     <div className="max-w-[1200px] mx-auto py-16 px-8 space-y-12">
       {/* HEADER DO DOSSIÊ */}
-      <header className="flex flex-col md:flex-row items-center md:items-start gap-10 border-b-4 border-slate-900 pb-12">
-        <div className="w-48 h-48 bg-white border-4 border-slate-900 rounded-[2.5rem] overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] shrink-0">
+      <header className="flex flex-col md:flex-row items-center md:items-start gap-10 border-b border-slate-200 pb-12">
+        <div className="w-48 h-48 bg-white border-2 border-slate-200 rounded-[2.5rem] overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] shrink-0">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} className="w-full h-full object-cover" alt="Avatar" />
           ) : (
@@ -45,7 +45,7 @@ export default function PublicProfilePage() {
             <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
               {profile.full_name}
             </h1>
-            <span className="px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg tracking-widest shadow-md">
+            <span className="px-4 py-1.5 bg-[#4c1d95] text-white text-[10px] font-black uppercase rounded-lg tracking-widest shadow-md">
               {profile.role || 'MEMBRO'}
             </span>
           </div>
@@ -56,8 +56,8 @@ export default function PublicProfilePage() {
           </div>
 
           <div className="flex gap-3 justify-center md:justify-start pt-4">
-            {profile.github_url && <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">GitHub</a>}
-            {profile.linkedin_url && <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="p-3 border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">LinkedIn</a>}
+            {profile.github_url && <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">GitHub</a>}
+            {profile.linkedin_url && <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-black text-[10px] uppercase">LinkedIn</a>}
             {myId && id === myId ? (
               <span className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] cursor-not-allowed">
                 Seu perfil
@@ -66,7 +66,7 @@ export default function PublicProfilePage() {
               <button 
                 type="button"
                 onClick={() => router.push(`/dashboard/chat/${id}`)}
-                className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-[6px_6px_0px_0px_rgba(79,70,229,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                className="px-8 py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-[10px] uppercase tracking-[0.2em] shadow-md hover:bg-violet-800 transition-all"
               >
                 Iniciar Conexão ↗
               </button>
@@ -78,14 +78,14 @@ export default function PublicProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* COLUNA: BIOGRAFIA E TECH STACK */}
         <div className="lg:col-span-4 space-y-8">
-          <section className="bg-white border-2 border-slate-900 p-8 rounded-3xl shadow-sm">
+          <section className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] mb-6 border-b border-slate-100 pb-3">Tese de Carreira</h3>
             <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
               "{profile.bio || "Este membro ainda não publicou sua tese profissional no protocolo YOP."}"
             </p>
           </section>
 
-          <section className="bg-slate-900 text-white p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <section className="bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 rounded-3xl shadow-lg">
             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] mb-6 text-indigo-400">Especialidades Técnicas</h3>
             <div className="flex flex-wrap gap-2">
               {profile.specialties?.split(',').map((spec: string) => (
@@ -103,13 +103,13 @@ export default function PublicProfilePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {projects.map((p) => (
-              <div key={p.id} className="bg-white border-2 border-slate-900 p-6 rounded-2xl hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all flex flex-col justify-between">
+              <div key={p.id} className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-lg transition-all flex flex-col justify-between">
                 <div>
                   <span className="text-[8px] font-black px-2 py-0.5 bg-slate-100 rounded uppercase mb-3 inline-block tracking-tighter">{p.category}</span>
                   <h4 className="text-xl font-black uppercase italic mb-2 leading-tight">{p.title}</h4>
                   <p className="text-xs text-slate-500 font-medium line-clamp-3 mb-6">"{p.description}"</p>
                 </div>
-                <button onClick={() => router.push('/dashboard/projetos')} className="text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:underline text-left">
+                <button onClick={() => router.push('/dashboard/projetos')} className="text-[9px] font-black uppercase tracking-widest text-violet-300 hover:underline text-left">
                   Ver Detalhes do Equity ↗
                 </button>
               </div>

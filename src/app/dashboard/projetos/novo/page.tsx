@@ -63,7 +63,7 @@ export default function NewProjectPage() {
         <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Estruture sua oferta de equity para o mercado</p>
       </header>
 
-      <form onSubmit={handleSubmit} className="bg-white p-10 border-2 border-slate-900 rounded-2xl space-y-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <form onSubmit={handleSubmit} className="bg-white p-10 border border-slate-200 rounded-2xl space-y-8 shadow-lg">
         {status && (
           <div className={`p-4 border-2 rounded-xl text-[9px] font-black uppercase tracking-widest animate-pulse ${
             status.type === 'success' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-red-50 border-red-500 text-red-700'
@@ -74,13 +74,13 @@ export default function NewProjectPage() {
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Título do Projeto / Empresa</label>
-          <input required placeholder="Ex: FinCore - Gateway de Pagamentos" className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+          <input required placeholder="Ex: FinCore - Gateway de Pagamentos" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#4c1d95] transition-all" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Setor</label>
-            <select className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none appearance-none bg-white" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+            <select className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none appearance-none bg-white" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
               <option value="SaaS">SaaS</option>
               <option value="Fintech">Fintech</option>
               <option value="AI/ML">AI / Machine Learning</option>
@@ -89,21 +89,21 @@ export default function NewProjectPage() {
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Equity Oferecido (%)</label>
-            <input required type="number" step="0.1" placeholder="Ex: 15.0" className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none" value={formData.equity_offered} onChange={e => setFormData({...formData, equity_offered: parseFloat(e.target.value)})} />
+            <input required type="number" step="0.1" placeholder="Ex: 15.0" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.equity_offered} onChange={e => setFormData({...formData, equity_offered: parseFloat(e.target.value)})} />
           </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tech Stack Requerida (Separada por vírgula)</label>
-          <input required placeholder="React, Node.js, PostgreSQL, AWS" className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none" value={formData.tech_stack} onChange={e => setFormData({...formData, tech_stack: e.target.value})} />
+          <input required placeholder="React, Node.js, PostgreSQL, AWS" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.tech_stack} onChange={e => setFormData({...formData, tech_stack: e.target.value})} />
         </div>
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tese de Negócio e Desafios</label>
-          <textarea required rows={5} placeholder="Descreva o ROI esperado e o que você busca em um sócio técnico..." className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-medium outline-none resize-none" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+          <textarea required rows={5} placeholder="Descreva o ROI esperado e o que você busca em um sócio técnico..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium outline-none resize-none" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
         </div>
 
-        <button type="submit" disabled={saving} className="w-full py-5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl active:scale-95">
+        <button type="submit" disabled={saving} className="w-full py-5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-xl active:scale-95">
           {saving ? 'TRANSMITINDO_DADOS...' : 'EXECUTAR LANÇAMENTO DE VENTURE'}
         </button>
       </form>

@@ -76,14 +76,14 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-[1200px] mx-auto py-16 px-8 space-y-12">
-      <header className="flex justify-between items-end border-b-4 border-slate-900 pb-8">
+      <header className="flex justify-between items-end border-b border-slate-200 pb-8">
         <div>
           <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">Configurações de Identidade</h1>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2 italic">Gerenciamento de credenciais e ativos digitais</p>
         </div>
         
         {status && (
-          <div className={`px-6 py-3 border-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-bounce ${
+          <div className={`px-6 py-3 border-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-md animate-bounce ${
             status.type === 'success' ? 'bg-green-50 border-green-500 text-green-600' : 'bg-red-50 border-red-500 text-red-600'
           }`}>
             {status.text}
@@ -95,24 +95,24 @@ export default function ProfilePage() {
         {/* COLUNA ESQUERDA: AVATAR E STATUS */}
         <aside className="lg:col-span-4 space-y-8">
           <div className="relative group w-full aspect-square max-w-[320px] mx-auto lg:mx-0">
-            <div className="w-full h-full bg-white border-4 border-slate-900 rounded-[2.5rem] overflow-hidden flex items-center justify-center shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="w-full h-full bg-white border-2 border-slate-200 rounded-[2.5rem] overflow-hidden flex items-center justify-center shadow-md">
               {formData.avatar_url ? (
                 <img src={formData.avatar_url} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-8xl font-black text-slate-100">{formData.full_name?.[0]}</span>
               )}
             </div>
-            <label className="absolute inset-0 bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center cursor-pointer rounded-[2.5rem] backdrop-blur-sm text-white">
+            <label className="absolute inset-0 bg-slate-800/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center cursor-pointer rounded-[2.5rem] backdrop-blur-sm text-white">
               <input type="file" className="hidden" onChange={uploadAvatar} disabled={uploading} accept="image/*" />
               <span className="text-2xl mb-2">📸</span>
               <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Aguarde...' : 'Alterar Imagem'}</span>
             </label>
           </div>
 
-          <div className="p-6 border-2 border-slate-900 rounded-2xl bg-slate-50 space-y-4">
+          <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50 space-y-4">
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status de Disponibilidade</p>
             <select 
-              className="w-full p-3 bg-white border-2 border-slate-900 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer"
+              className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer"
               value={formData.availability_status}
               onChange={e => setFormData({...formData, availability_status: e.target.value})}
             >
@@ -128,40 +128,40 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Nome de Exibição</label>
-              <input className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none focus:bg-slate-50 transition-all" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
+              <input className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-slate-50 transition-all" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Localização (Cidade/Estado)</label>
-              <input placeholder="Ex: São Paulo, SP" className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
+              <input placeholder="Ex: São Paulo, SP" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Especialidades Técnicas (Tags separadas por vírgula)</label>
-            <input placeholder="React, Python, Arquitetura Cloud, Venture Capital..." className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-bold outline-none italic" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
+            <input placeholder="React, Python, Arquitetura Cloud, Venture Capital..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none italic" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">GitHub</label>
-              <input type="url" placeholder="https://..." className="p-4 border-2 border-slate-900 rounded-xl text-xs font-semibold w-full outline-none" value={formData.github_url} onChange={e => setFormData({...formData, github_url: e.target.value})} />
+              <input type="url" placeholder="https://..." className="p-4 border border-slate-200 rounded-xl text-xs font-semibold w-full outline-none" value={formData.github_url} onChange={e => setFormData({...formData, github_url: e.target.value})} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">LinkedIn</label>
-              <input type="url" placeholder="https://..." className="p-4 border-2 border-slate-900 rounded-xl text-xs font-semibold w-full outline-none" value={formData.linkedin_url} onChange={e => setFormData({...formData, linkedin_url: e.target.value})} />
+              <input type="url" placeholder="https://..." className="p-4 border border-slate-200 rounded-xl text-xs font-semibold w-full outline-none" value={formData.linkedin_url} onChange={e => setFormData({...formData, linkedin_url: e.target.value})} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Site / Portfólio</label>
-              <input type="url" placeholder="https://..." className="p-4 border-2 border-slate-900 rounded-xl text-xs font-semibold w-full outline-none" value={formData.website_url} onChange={e => setFormData({...formData, website_url: e.target.value})} />
+              <input type="url" placeholder="https://..." className="p-4 border border-slate-200 rounded-xl text-xs font-semibold w-full outline-none" value={formData.website_url} onChange={e => setFormData({...formData, website_url: e.target.value})} />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tese de Carreira / Bio Profissional</label>
-            <textarea rows={6} className="w-full p-4 border-2 border-slate-900 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50 transition-all" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} placeholder="Descreva sua tese de valor e o que você constrói..." />
+            <textarea rows={6} className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50 transition-all" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} placeholder="Descreva sua tese de valor e o que você constrói..." />
           </div>
 
-          <button type="submit" className="w-full lg:w-auto px-20 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all active:scale-95 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none">
+          <button type="submit" className="w-full lg:w-auto px-20 py-5 bg-[#4c1d95] text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-violet-800 transition-all active:scale-95 shadow-md hover:shadow-lg">
             SALVAR ALTERAÇÕES
           </button>
         </form>

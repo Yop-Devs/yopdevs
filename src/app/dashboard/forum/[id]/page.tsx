@@ -110,9 +110,9 @@ export default function PostDetailPage() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-6 space-y-10 pb-32">
       {/* Tópico Principal */}
-      <article className="bg-white border-2 border-slate-900 rounded-2xl p-10 shadow-sm relative">
+      <article className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm relative">
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-900 overflow-hidden flex items-center justify-center font-black text-slate-400">
+          <div className="w-12 h-12 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center font-black text-slate-400">
             {post.profiles?.avatar_url ? <img src={post.profiles.avatar_url} className="w-full h-full object-cover" /> : post.profiles?.full_name?.[0]}
           </div>
           <div>
@@ -162,8 +162,8 @@ export default function PostDetailPage() {
           {comments.map((comment) => {
             const likeInfo = likesByComment[comment.id] ?? { count: 0, iLiked: false }
             return (
-              <div key={comment.id} className="bg-slate-50/50 border-2 border-slate-900 p-6 rounded-2xl flex gap-5 hover:bg-white transition-colors shadow-sm">
-                <div className="w-10 h-10 bg-white rounded-lg border-2 border-slate-900 shrink-0 flex items-center justify-center text-xs font-black text-slate-300 overflow-hidden">
+              <div key={comment.id} className="bg-slate-50/50 border border-slate-200 p-6 rounded-2xl flex gap-5 hover:bg-white transition-colors shadow-sm">
+                <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 shrink-0 flex items-center justify-center text-xs font-black text-slate-300 overflow-hidden">
                   {comment.profiles?.avatar_url ? <img src={comment.profiles.avatar_url} className="w-full h-full object-cover" alt="" /> : comment.profiles?.full_name?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -185,16 +185,16 @@ export default function PostDetailPage() {
         </div>
 
         {/* Input para Nova Resposta */}
-        <form onSubmit={sendComment} className="mt-12 bg-white border-2 border-slate-900 p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <form onSubmit={sendComment} className="mt-12 bg-white border border-slate-200 p-6 rounded-3xl shadow-lg">
           <textarea 
             rows={4}
-            className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium focus:border-indigo-600 outline-none resize-none transition-all"
+            className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium focus:border-[#4c1d95] outline-none resize-none transition-all"
             placeholder="Adicione sua visão técnica ou solução..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
           <div className="flex justify-end mt-4">
-            <button type="submit" className="px-10 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-lg">
+            <button type="submit" className="px-10 py-3 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all active:scale-95 shadow-lg">
               Publicar Resposta
             </button>
           </div>

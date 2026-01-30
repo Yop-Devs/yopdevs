@@ -88,7 +88,7 @@ export default function ProfilePage() {
                 <span className="text-slate-400 font-bold text-2xl">{formData.full_name?.[0] || 'U'}</span>
               )}
             </div>
-            <label className="absolute inset-0 flex items-center justify-center bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
+            <label className="absolute inset-0 flex items-center justify-center bg-slate-800/70 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
               <input type="file" accept="image/*" className="hidden" onChange={uploadAvatar} disabled={uploading} />
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">{uploading ? 'Aguarde...' : 'Alterar'}</span>
             </label>
@@ -103,24 +103,24 @@ export default function ProfilePage() {
           <section className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nome Completo</label>
-              <input type="text" className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-slate-900 outline-none transition-all" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} />
+              <input type="text" className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} />
             </div>
 
             <div className="grid grid-cols-1 gap-4">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bio Profissional</label>
-              <textarea rows={4} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-slate-900 outline-none transition-all resize-none" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+              <textarea rows={4} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all resize-none" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
             </div>
           </section>
 
           <section className="pt-6 border-t border-slate-200 space-y-4">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest">Links Externos</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="url" placeholder="GitHub URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-slate-900 outline-none w-full" value={formData.github_url} onChange={(e) => setFormData({...formData, github_url: e.target.value})} />
-              <input type="url" placeholder="LinkedIn URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-slate-900 outline-none w-full" value={formData.linkedin_url} onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})} />
+              <input type="url" placeholder="GitHub URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.github_url} onChange={(e) => setFormData({...formData, github_url: e.target.value})} />
+              <input type="url" placeholder="LinkedIn URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.linkedin_url} onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})} />
             </div>
           </section>
 
-          <button type="submit" disabled={saving} className="bg-slate-900 text-white px-8 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="bg-[#4c1d95] text-white px-8 py-3 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md active:scale-95 disabled:opacity-50">
             {saving ? 'Sincronizando...' : 'Confirmar Alterações'}
           </button>
         </form>

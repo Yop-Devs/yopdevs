@@ -38,7 +38,7 @@ export default function ChatListPage() {
 
   return (
     <div className="max-w-[1000px] mx-auto py-12 px-6 space-y-10">
-      <header className="border-b-2 border-slate-900 pb-8 flex justify-between items-end">
+      <header className="border-b border-slate-200 pb-6 flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">Comunicações</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Canais diretos com parceiros e desenvolvedores</p>
@@ -48,9 +48,9 @@ export default function ChatListPage() {
       <div className="grid grid-cols-1 gap-4">
         {contacts.map((contact) => (
           <Link href={`/dashboard/chat/${contact.id}`} key={contact.id}>
-            <div className="bg-white border-2 border-slate-900 p-6 rounded-2xl flex items-center justify-between hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all group">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center justify-between hover:shadow-md hover:border-violet-200 transition-all group">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 bg-slate-50 border-2 border-slate-900 rounded-xl overflow-hidden flex items-center justify-center font-black text-slate-300">
+                <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black text-slate-300">
                   {contact.avatar_url ? <img src={contact.avatar_url} className="w-full h-full object-cover" /> : contact.full_name?.[0]}
                 </div>
                 <div>
@@ -60,7 +60,7 @@ export default function ChatListPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[9px] font-black text-green-500 uppercase tracking-widest bg-green-50 px-2 py-1 rounded border border-green-100">Online</span>
-                <svg className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
+                <svg className="w-5 h-5 text-slate-300 group-hover:text-violet-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
               </div>
             </div>
           </Link>
@@ -69,7 +69,7 @@ export default function ChatListPage() {
         {contacts.length === 0 && (
           <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-3xl">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Nenhum_Canal_Ativo</p>
-            <Link href="/dashboard/projetos" className="text-indigo-600 text-[10px] font-black uppercase underline mt-4 block">Explorar Marketplace para Iniciar Contatos</Link>
+            <Link href="/dashboard/projetos" className="text-[#4c1d95] text-[10px] font-bold uppercase underline mt-4 block">Explorar Marketplace para Iniciar Contatos</Link>
           </div>
         )}
       </div>

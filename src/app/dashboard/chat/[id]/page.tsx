@@ -66,8 +66,8 @@ export default function ChatRoomPage() {
 
   return (
     <div className="flex flex-col h-[85vh] max-w-[1000px] mx-auto py-6">
-      <header className="bg-white border-2 border-slate-900 p-6 rounded-t-3xl flex items-center gap-4">
-        <div className="w-12 h-12 bg-slate-50 border-2 border-slate-900 rounded-xl overflow-hidden flex items-center justify-center font-black">
+      <header className="bg-white border border-slate-200 p-6 rounded-t-3xl flex items-center gap-4">
+        <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black">
           {receiver?.avatar_url ? <img src={receiver.avatar_url} className="w-full h-full object-cover" /> : receiver?.full_name?.[0]}
         </div>
         <div>
@@ -76,11 +76,11 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto bg-white border-x-2 border-slate-900 p-8 space-y-6">
+      <div className="flex-1 overflow-y-auto bg-white border-x border-slate-200 p-8 space-y-6">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.sender_id === me ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[75%] p-5 border-2 rounded-2xl shadow-sm text-sm font-medium leading-relaxed ${
-              m.sender_id === me ? 'bg-slate-900 border-slate-900 text-white rounded-br-none' : 'bg-slate-50 border-slate-200 text-slate-800 rounded-bl-none'
+              m.sender_id === me ? 'bg-[#4c1d95] border-[#4c1d95] text-white rounded-br-none' : 'bg-slate-50 border-slate-200 text-slate-800 rounded-bl-none'
             }`}>
               {m.content}
               <p className="text-[7px] font-black uppercase mt-3 opacity-40 italic tracking-widest text-right">
@@ -95,10 +95,10 @@ export default function ChatRoomPage() {
       {isFriend === false && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-b-3xl text-center">
           <p className="text-sm font-bold text-amber-800">Só é possível enviar mensagens para amigos.</p>
-          <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-indigo-600 underline font-black">Membros</Link> e aguarde a aceitação.</p>
+          <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-violet-600 underline font-black">Membros</Link> e aguarde a aceitação.</p>
         </div>
       )}
-      <form onSubmit={send} className="bg-white border-2 border-slate-900 p-4 rounded-b-3xl flex gap-3 shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+      <form onSubmit={send} className="bg-white border border-slate-200 p-4 rounded-b-3xl flex gap-3 shadow-lg">
         <input
           className="flex-1 bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-300 disabled:opacity-60"
           placeholder="Escreva sua mensagem..."
@@ -106,7 +106,7 @@ export default function ChatRoomPage() {
           onChange={e => setNewMessage(e.target.value)}
           disabled={!isFriend}
         />
-        <button type="submit" disabled={!isFriend} className="bg-slate-900 text-white px-10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all active:scale-95 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+        <button type="submit" disabled={!isFriend} className="bg-[#4c1d95] text-white px-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all active:scale-95 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
           ENVIAR
         </button>
       </form>

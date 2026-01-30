@@ -367,7 +367,7 @@ function LandingPageContent() {
       </section>
 
       {/* Footer — Termos, Privacidade e Suporte em destaque */}
-      <footer className="bg-slate-900 text-slate-300 py-10 px-4 md:px-6">
+      <footer className="bg-gradient-to-b from-violet-900 to-indigo-900 text-slate-200 py-10 px-4 md:px-6">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
@@ -389,7 +389,7 @@ function LandingPageContent() {
       {/* Modal login/signup */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal} aria-hidden="true" />
+          <div className="absolute inset-0 bg-violet-900/50 backdrop-blur-sm" onClick={closeModal} aria-hidden="true" />
           <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h2 id="modal-title" className="text-2xl font-black text-slate-900 mb-6 text-center">
               {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Resetar senha'}
@@ -418,7 +418,7 @@ function LandingPageContent() {
                   )}
                 </>
               )}
-              <button type="submit" disabled={loading} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all disabled:opacity-60">
+              <button type="submit" disabled={loading} className="w-full py-4 bg-[#4c1d95] text-white rounded-xl font-bold text-sm hover:bg-violet-800 transition-all disabled:opacity-60">
                 {loading ? 'Processando...' : mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Enviar link'}
               </button>
             </form>

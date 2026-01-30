@@ -45,7 +45,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="leading-none"><Logo variant="dark" size="lg" /></h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
-            Sessão ativa: <span className="text-indigo-600">{profile?.full_name}</span>
+            Sessão ativa: <span className="text-violet-600">{profile?.full_name}</span>
           </p>
         </div>
         
@@ -53,10 +53,10 @@ export default function DashboardPage() {
           <Link href="/dashboard/perfil" className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
             Configurações
           </Link>
-          <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg transition-all">
+          <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-violet-800 shadow-lg transition-all">
             Lançar Projeto
           </Link>
-          <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-lg shadow-slate-200 transition-all">
+          <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 shadow-md transition-all">
             Novo Post
           </Link>
         </div>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         
         {/* Coluna de Conteúdo Principal */}
         <div className="lg:col-span-8 space-y-8">
-          <div className="bg-[#0f172a] p-10 rounded-2xl text-white border border-slate-800 shadow-2xl relative overflow-hidden min-h-[280px] flex flex-col justify-center">
+          <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700 p-10 rounded-2xl text-white border border-violet-200/20 shadow-lg relative overflow-hidden min-h-[280px] flex flex-col justify-center">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
@@ -82,7 +82,7 @@ export default function DashboardPage() {
               </p>
             </div>
             
-            <div className={`absolute right-[-20px] bottom-[-40px] text-[120px] font-bold opacity-[0.06] pointer-events-none select-none text-[#4c1d95] uppercase tracking-tight ${fredoka.className}`}>
+            <div className={`absolute right-[-20px] bottom-[-40px] text-[120px] font-bold opacity-20 pointer-events-none select-none text-white uppercase tracking-tight ${fredoka.className}`}>
               YOP
             </div>
           </div>
@@ -94,8 +94,8 @@ export default function DashboardPage() {
                 <p className="text-slate-500 text-sm font-medium mb-2">Nenhuma atividade recente.</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">Seja o primeiro a lançar um projeto ou criar um tópico no fórum.</p>
                 <div className="flex gap-3 justify-center mt-4">
-                  <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-indigo-600 hover:underline uppercase">Lançar projeto</Link>
-                  <Link href="/dashboard/forum/novo" className="text-[10px] font-black text-indigo-600 hover:underline uppercase">Novo tópico</Link>
+                  <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Lançar projeto</Link>
+                  <Link href="/dashboard/forum/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Novo tópico</Link>
                 </div>
               </div>
             ) : (
@@ -103,14 +103,14 @@ export default function DashboardPage() {
                 {latestProjects.map((p) => (
                   <Link key={p.id} href="/dashboard/projetos" className="block p-5 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group">
                     <p className="text-[9px] font-bold text-indigo-500 mb-1 uppercase tracking-tighter">Novo projeto</p>
-                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.title}</h4>
+                    <h4 className="font-bold text-slate-800 group-hover:text-violet-600 transition-colors">{p.title}</h4>
                     <p className="text-[9px] text-slate-400 mt-1">{p.category || 'Venture'} • {new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
                   </Link>
                 ))}
                 {latestPosts.map((p) => (
                   <Link key={p.id} href={`/dashboard/forum/${p.id}`} className="block p-5 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all group">
                     <p className="text-[9px] font-bold text-indigo-500 mb-1 uppercase tracking-tighter">Novo no fórum</p>
-                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.title}</h4>
+                    <h4 className="font-bold text-slate-800 group-hover:text-violet-600 transition-colors">{p.title}</h4>
                     <p className="text-[9px] text-slate-400 mt-1">{p.category || 'Geral'} • {new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
                   </Link>
                 ))}

@@ -186,7 +186,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-[1000px] mx-auto py-12 px-6 space-y-10">
-      <header className="border-b-2 border-slate-900 pb-8 flex flex-wrap justify-between items-end gap-4">
+      <header className="border-b border-slate-200 pb-6 flex flex-wrap justify-between items-end gap-4">
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">NOTIFICAÇÕES</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP Devs</p>
@@ -223,7 +223,7 @@ export default function NotificationsPage() {
               tabIndex={0}
               onClick={() => handleNotificationClick(n)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(n); } }}
-              className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer"
+              className="w-full text-left bg-white border border-slate-200 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-md hover:border-violet-200 transition-all group cursor-pointer"
             >
               <div className="flex shrink-0 items-center">
                 <input type="checkbox" checked={selectedIds.has(n.id)} onChange={() => toggleSelect(n.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
