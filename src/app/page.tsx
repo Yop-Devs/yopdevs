@@ -50,15 +50,38 @@ function LandingPageContent() {
       if (mode === 'signup') {
         if (password !== confirmPassword) throw new Error("As senhas não coincidem!")
 
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { full_name: fullName, birth_date: birthDate },
           },
         })
-        if (error) throw error
-        setMessage({ type: 'success', text: 'Cadastro realizado! Verifique seu e-mail para confirmar.' })
+        if (!signUpError) {
+          if (signUpData.session) {
+            await supabase.auth.setSession({
+              access_token: signUpData.session.access_token,
+              refresh_token: signUpData.session.refresh_token,
+            })
+            window.location.href = '/dashboard'
+          } else {
+            setMessage({ type: 'success', text: 'Cadastro realizado! Verifique seu e-mail para confirmar.' })
+          }
+          return
+        }
+        const isEmailSendError = /confirm.*email|sending.*email|email.*(send|error)/i.test(signUpError.message)
+        if (isEmailSendError) {
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+          if (!loginError && loginData.session) {
+            await supabase.auth.setSession({
+              access_token: loginData.session.access_token,
+              refresh_token: loginData.session.refresh_token,
+            })
+            window.location.href = '/dashboard'
+            return
+          }
+        }
+        throw signUpError
       } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -76,13 +99,7 @@ function LandingPageContent() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
-      const isEmailError = /confirm.*email|sending.*email|email.*(send|error)/i.test(msg)
-      setMessage({
-        type: 'error',
-        text: isEmailError
-          ? 'O envio do e-mail de confirmação falhou. Verifique o e-mail ou tente fazer login — se a confirmação estiver desativada no painel, o acesso já pode estar liberado.'
-          : msg,
-      })
+      setMessage({ type: 'error', text: msg })
     } finally {
       setLoading(false)
     }
