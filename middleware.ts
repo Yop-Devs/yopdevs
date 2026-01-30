@@ -26,11 +26,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  // Atualiza a sessão se existir em cookies (ex.: após OAuth/callback).
+  // Não redirecionamos aqui: o login com email/senha salva a sessão no localStorage,
+  // então o middleware não vê cookies. A proteção de /dashboard é feita no
+  // dashboard layout (client-side), que lê a sessão do localStorage.
+  await supabase.auth.getUser()
 
   return response
 }
