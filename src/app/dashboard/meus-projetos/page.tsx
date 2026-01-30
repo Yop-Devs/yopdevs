@@ -8,6 +8,7 @@ import Link from 'next/link'
 export default function MyProjectsPage() {
   const [myProjects, setMyProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function loadMyProjects() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -37,6 +38,14 @@ export default function MyProjectsPage() {
     setLoading(false)
   }
 
+  const deleteProject = async (projectId: string) => {
+    if (!confirm('Excluir este projeto? Esta ação não pode ser desfeita.')) return
+    setDeletingId(projectId)
+    const { error } = await supabase.from('projects').delete().eq('id', projectId)
+    setDeletingId(null)
+    if (!error) loadMyProjects()
+  }
+
   useEffect(() => {
     loadMyProjects()
   }, [])
@@ -62,11 +71,21 @@ export default function MyProjectsPage() {
           {myProjects.map((project) => (
             <div key={project.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-50 bg-gray-50/50">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-2">
                   <h3 className="text-xl font-bold text-gray-900">{project.title}</h3>
-                  <span className="text-xs font-bold px-3 py-1 bg-white border rounded-full text-gray-500">
-                    {project.project_interests?.length || 0} Candidatos
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-3 py-1 bg-white border rounded-full text-gray-500">
+                      {project.project_interests?.length || 0} Candidatos
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => deleteProject(project.id)}
+                      disabled={deletingId === project.id}
+                      className="text-xs font-bold px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full hover:bg-red-100 disabled:opacity-60 transition-colors"
+                    >
+                      {deletingId === project.id ? 'Excluindo...' : 'Excluir projeto'}
+                    </button>
+                  </div>
                 </div>
               </div>
 

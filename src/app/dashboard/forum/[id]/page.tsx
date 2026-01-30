@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -13,6 +13,8 @@ export default function PostDetailPage() {
   const [myId, setMyId] = useState<string | null>(null)
   const [likesByComment, setLikesByComment] = useState<Record<string, { count: number; iLiked: boolean }>>({})
   const [postLike, setPostLike] = useState<{ count: number; iLiked: boolean }>({ count: 0, iLiked: false })
+  const [deleting, setDeleting] = useState(false)
+  const router = useRouter()
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -80,6 +82,16 @@ export default function PostDetailPage() {
     }
   }
 
+  const deletePost = async () => {
+    if (!myId || !id || post?.author_id !== myId) return
+    if (!confirm('Excluir esta publicação? As respostas também serão removidas. Esta ação não pode ser desfeita.')) return
+    setDeleting(true)
+    const { error } = await supabase.from('posts').delete().eq('id', id).eq('author_id', myId)
+    setDeleting(false)
+    if (!error) router.push('/dashboard/forum')
+    else setStatus({ type: 'error', text: 'Não foi possível excluir. Tente novamente.' })
+  }
+
   const toggleLike = async (commentId: string) => {
     if (!myId) return
     const cur = likesByComment[commentId]
@@ -111,7 +123,7 @@ export default function PostDetailPage() {
 
         <h1 className="text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-6 leading-tight">{post.title}</h1>
         <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">{post.content}</p>
-        <div className="mt-6 pt-4 border-t border-slate-200">
+        <div className="mt-6 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={togglePostLike}
@@ -122,6 +134,16 @@ export default function PostDetailPage() {
             <span>{postLike.count}</span>
             <span>{postLike.iLiked ? 'Descurtir postagem' : 'Curtir postagem'}</span>
           </button>
+          {post.author_id === myId && (
+            <button
+              type="button"
+              onClick={deletePost}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-all disabled:opacity-60"
+            >
+              Excluir minha publicação
+            </button>
+          )}
         </div>
       </article>
 

@@ -13,6 +13,7 @@ export default function NotificationsPage() {
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const getTypeLabel = (type: string): string => {
     switch (type) {
@@ -104,22 +105,28 @@ export default function NotificationsPage() {
 
   const deleteOne = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    setDeleteError(null)
     const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', myId!)
     if (!error) {
       setNotifications((prev) => prev.filter((n) => n.id !== id))
       setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    } else {
+      setDeleteError('Não foi possível apagar. Rode no Supabase a política "Users can delete own notifications".')
     }
   }
 
   const deleteSelected = async () => {
     if (selectedIds.size === 0) return
     setDeleting(true)
+    setDeleteError(null)
     const { error } = await supabase.from('notifications').delete().in('id', Array.from(selectedIds)).eq('user_id', myId!)
     if (!error) {
       setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)))
       setSelectedIds(new Set())
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    } else {
+      setDeleteError('Não foi possível apagar. Rode no Supabase a política "Users can delete own notifications".')
     }
     setDeleting(false)
   }
@@ -128,11 +135,14 @@ export default function NotificationsPage() {
     if (!myId) return
     if (!confirm('Apagar todas as notificações? Esta ação não pode ser desfeita.')) return
     setDeleting(true)
+    setDeleteError(null)
     const { error } = await supabase.from('notifications').delete().eq('user_id', myId)
     if (!error) {
       setNotifications([])
       setSelectedIds(new Set())
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+    } else {
+      setDeleteError('Não foi possível apagar. Rode no Supabase a política "Users can delete own notifications".')
     }
     setDeleting(false)
   }
@@ -194,6 +204,11 @@ export default function NotificationsPage() {
         </div>
       </header>
 
+      {deleteError && (
+        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 text-sm font-bold mb-4">
+          {deleteError}
+        </div>
+      )}
       <div className="space-y-4">
         {notifications.map((n) => {
           const senderId = getSenderId(n)

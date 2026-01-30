@@ -3,6 +3,11 @@ ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link text;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_user_id uuid REFERENCES auth.users(id);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS metadata jsonb;
 
+-- Permite que o usuário apague suas próprias notificações (sem isso, o DELETE não persiste no servidor)
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can delete own notifications" ON notifications;
+CREATE POLICY "Users can delete own notifications" ON notifications FOR DELETE USING (auth.uid() = user_id);
+
 -- Tabela de solicitações de amizade
 CREATE TABLE IF NOT EXISTS friend_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,6 +71,14 @@ DROP POLICY IF EXISTS "Auth can delete own post like" ON post_likes;
 CREATE POLICY "Anyone can read post likes" ON post_likes FOR SELECT USING (true);
 CREATE POLICY "Auth can insert post like" ON post_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Auth can delete own post like" ON post_likes FOR DELETE USING (auth.uid() = user_id);
+
+-- Permite que o autor exclua sua própria publicação no fórum (a tabela posts já deve ter RLS ativo)
+DROP POLICY IF EXISTS "Users can delete own post" ON posts;
+CREATE POLICY "Users can delete own post" ON posts FOR DELETE USING (auth.uid() = author_id);
+
+-- Permite que o dono exclua seu próprio projeto (a tabela projects já deve ter RLS ativo)
+DROP POLICY IF EXISTS "Users can delete own project" ON projects;
+CREATE POLICY "Users can delete own project" ON projects FOR DELETE USING (auth.uid() = owner_id);
 
 -- ========== TRIGGERS DE NOTIFICAÇÃO (descomente e rode um por vez no SQL Editor) ==========
 

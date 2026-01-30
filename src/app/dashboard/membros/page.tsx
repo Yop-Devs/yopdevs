@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 type Tab = 'amigos' | 'solicitacoes' | 'procurar'
-type RoleFilter = '' | 'DEV' | 'BUSINESS'
 
 export default function VerAmigosPage() {
   const [tab, setTab] = useState<Tab>('amigos')
@@ -14,7 +13,6 @@ export default function VerAmigosPage() {
   const [allUsers, setAllUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('')
   const [myId, setMyId] = useState<string | null>(null)
   const [requestSent, setRequestSent] = useState<Record<string, boolean>>({})
 
@@ -89,8 +87,7 @@ export default function VerAmigosPage() {
 
   const filteredUsers = allUsers.filter((m) => {
     const matchesSearch = !filter || m.full_name?.toLowerCase().includes(filter.toLowerCase()) || m.specialties?.toLowerCase().includes(filter.toLowerCase())
-    const matchesRole = !roleFilter || m.role === roleFilter
-    return matchesSearch && matchesRole && m.role !== 'BANNED' && m.id !== myId
+    return matchesSearch && m.role !== 'BANNED' && m.id !== myId
   })
 
   const isFriend = (id: string) => friends.some((f) => f.id === id)
@@ -157,7 +154,7 @@ export default function VerAmigosPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-slate-900 uppercase tracking-tight">{r.from?.full_name || 'Usuário'}</p>
-                    <p className="text-[9px] text-slate-400 uppercase">{r.from?.role || 'Membro'}</p>
+                    <p className="text-[9px] text-slate-400 uppercase">Membro</p>
                   </div>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => acceptRequest(r.id)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500">Aceitar</button>
@@ -173,11 +170,6 @@ export default function VerAmigosPage() {
       {tab === 'procurar' && (
         <>
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setRoleFilter('')} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${!roleFilter ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-900'}`}>Todos</button>
-              <button type="button" onClick={() => setRoleFilter('DEV')} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${roleFilter === 'DEV' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-900'}`}>Devs</button>
-              <button type="button" onClick={() => setRoleFilter('BUSINESS')} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${roleFilter === 'BUSINESS' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-900'}`}>Empresários</button>
-            </div>
             <input type="text" placeholder="Pesquisar por nome ou especialidade..." className="px-6 py-4 bg-white border-2 border-slate-900 rounded-2xl text-[10px] font-black uppercase outline-none focus:ring-4 focus:ring-indigo-100 transition-all w-full md:w-96" onChange={(e) => setFilter(e.target.value)} />
           </div>
 
@@ -234,7 +226,7 @@ function FriendCard({
         {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full object-cover" alt="" /> : <span className="text-4xl font-black text-slate-200 flex items-center justify-center h-full uppercase">{member.full_name?.[0]}</span>}
       </div>
       <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900 mb-1">{member.full_name}</h3>
-      <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest mb-4">{member.role || 'MEMBRO'}</p>
+      <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest mb-4">Membro</p>
       <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-6 h-10 italic">{member.bio || 'Sem bio.'}</p>
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         {member.specialties?.split(',').slice(0, 3).map((spec: string) => (
