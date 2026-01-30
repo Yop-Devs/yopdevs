@@ -9,7 +9,6 @@ export const metadata = {
   },
   description: 'Rede exclusiva para conexões entre CTOs e empresários. Marketplace de equity, fóruns técnicos e notificações de alto impacto.',
   manifest: '/manifest.json',
-  themeColor: '#4f46e5',
   openGraph: {
     title: 'YOP DEVS — Equity & Growth',
     description: 'Infraestrutura para mentes brilhantes. Conectamos engenharia de software com tese estratégica de negócios.',
@@ -18,13 +17,19 @@ export const metadata = {
   robots: 'index, follow',
 }
 
+export const viewport = {
+  themeColor: '#4f46e5',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-br">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#4f46e5" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </head>
       <body className="antialiased overflow-x-hidden">
         {children}

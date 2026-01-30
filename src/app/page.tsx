@@ -1,10 +1,10 @@
 "use client"
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default function LandingPage() {
+function LandingPageContent() {
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
   const [loading, setLoading] = useState(false)
@@ -303,5 +303,17 @@ export default function LandingPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">
+        <div className="text-indigo-400 text-[10px] font-black uppercase tracking-widest animate-pulse">Carregando...</div>
+      </div>
+    }>
+      <LandingPageContent />
+    </Suspense>
   )
 }
