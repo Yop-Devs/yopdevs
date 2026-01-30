@@ -18,7 +18,7 @@ export default function NovoPostPage() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      const { error } = await supabase.from('posts').insert([{ ...formData, user_id: user.id }])
+      const { error } = await supabase.from('posts').insert([{ ...formData, author_id: user.id }])
       if (error) {
         setStatus({ type: 'error', text: `ERRO DE PUBLICAÇÃO: ${error.message.toUpperCase()}` })
         setSaving(false)
