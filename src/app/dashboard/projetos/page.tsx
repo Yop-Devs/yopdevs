@@ -35,6 +35,9 @@ export default function MarketplacePage() {
       type: 'INTEREST',
       content: `${user.email || 'Um membro'} demonstrou interesse no seu projeto "${project.title}".`,
       is_read: false,
+      link: `/dashboard/chat/${user.id}`,
+      from_user_id: user.id,
+      metadata: { project_id: project.id, project_title: project.title },
     })
     if (!error) setInterestSent((prev) => ({ ...prev, [project.id]: true }))
   }

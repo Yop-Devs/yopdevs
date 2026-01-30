@@ -168,10 +168,10 @@ export default function DashboardPage() {
                 Fórum
               </Link>
               <Link href="/dashboard/membros" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
-                Membros
+                Ver Amigos
               </Link>
               <Link href="/dashboard/notificacoes" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
-                Alertas
+                Notificações
               </Link>
             </div>
           </div>

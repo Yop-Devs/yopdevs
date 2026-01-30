@@ -10,15 +10,38 @@ export default function PostDetailPage() {
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [myId, setMyId] = useState<string | null>(null)
+  const [likesByComment, setLikesByComment] = useState<Record<string, { count: number; iLiked: boolean }>>({})
 
   async function loadData() {
-    // Carrega o post e o autor
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setMyId(user.id)
+
     const { data: p } = await supabase.from('posts').select('*, profiles(full_name, avatar_url)').eq('id', id).single()
-    // Carrega a thread de comentários
     const { data: c } = await supabase.from('post_comments').select('*, profiles(full_name, avatar_url)').eq('post_id', id).order('created_at', { ascending: true })
-    
     setPost(p)
-    setComments(c || [])
+    const commentList = c || []
+    setComments(commentList)
+
+    if (commentList.length > 0) {
+      const commentIds = commentList.map((x) => x.id)
+      const { data: allLikes } = await supabase.from('post_comment_likes').select('comment_id, user_id').in('comment_id', commentIds)
+      const countByComment: Record<string, number> = {}
+      const myLiked = new Set<string>()
+      ;(allLikes || []).forEach((r) => {
+        if (r.comment_id) {
+          countByComment[r.comment_id] = (countByComment[r.comment_id] || 0) + 1
+          if (user && r.user_id === user.id) myLiked.add(r.comment_id)
+        }
+      })
+      const next: Record<string, { count: number; iLiked: boolean }> = {}
+      commentIds.forEach((cid) => {
+        next[cid] = { count: countByComment[cid] || 0, iLiked: myLiked.has(cid) }
+      })
+      setLikesByComment(next)
+    } else {
+      setLikesByComment({})
+    }
   }
 
   useEffect(() => { loadData() }, [id])
@@ -26,12 +49,8 @@ export default function PostDetailPage() {
   const sendComment = async (e: any) => {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    
     if (user && newComment.trim()) {
-      const { error } = await supabase.from('post_comments').insert([
-        { post_id: id, user_id: user.id, content: newComment }
-      ])
-
+      const { error } = await supabase.from('post_comments').insert([{ post_id: id, user_id: user.id, content: newComment }])
       if (error) {
         setStatus({ type: 'error', text: 'FALHA AO TRANSMITIR RESPOSTA.' })
       } else {
@@ -40,6 +59,19 @@ export default function PostDetailPage() {
         loadData()
       }
       setTimeout(() => setStatus(null), 3000)
+    }
+  }
+
+  const toggleLike = async (commentId: string) => {
+    if (!myId) return
+    const cur = likesByComment[commentId]
+    const iLiked = cur?.iLiked ?? false
+    if (iLiked) {
+      await supabase.from('post_comment_likes').delete().eq('comment_id', commentId).eq('user_id', myId)
+      setLikesByComment((prev) => ({ ...prev, [commentId]: { count: Math.max(0, (prev[commentId]?.count ?? 0) - 1), iLiked: false } }))
+    } else {
+      await supabase.from('post_comment_likes').insert([{ comment_id: commentId, user_id: myId }])
+      setLikesByComment((prev) => ({ ...prev, [commentId]: { count: (prev[commentId]?.count ?? 0) + 1, iLiked: true } }))
     }
   }
 
@@ -75,17 +107,29 @@ export default function PostDetailPage() {
         </div>
         
         <div className="space-y-4">
-          {comments.map((comment) => (
-            <div key={comment.id} className="bg-slate-50/50 border-2 border-slate-900 p-6 rounded-2xl flex gap-5 hover:bg-white transition-colors shadow-sm">
-              <div className="w-10 h-10 bg-white rounded-lg border-2 border-slate-900 shrink-0 flex items-center justify-center text-xs font-black text-slate-300 overflow-hidden">
-                 {comment.profiles?.avatar_url ? <img src={comment.profiles.avatar_url} className="w-full h-full object-cover" /> : comment.profiles?.full_name?.[0]}
+          {comments.map((comment) => {
+            const likeInfo = likesByComment[comment.id] ?? { count: 0, iLiked: false }
+            return (
+              <div key={comment.id} className="bg-slate-50/50 border-2 border-slate-900 p-6 rounded-2xl flex gap-5 hover:bg-white transition-colors shadow-sm">
+                <div className="w-10 h-10 bg-white rounded-lg border-2 border-slate-900 shrink-0 flex items-center justify-center text-xs font-black text-slate-300 overflow-hidden">
+                  {comment.profiles?.avatar_url ? <img src={comment.profiles.avatar_url} className="w-full h-full object-cover" alt="" /> : comment.profiles?.full_name?.[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter mb-2">{comment.profiles?.full_name}</p>
+                  <p className="text-sm text-slate-600 font-medium leading-relaxed">{comment.content}</p>
+                  <button
+                    type="button"
+                    onClick={() => toggleLike(comment.id)}
+                    className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 transition-all ${likeInfo.iLiked ? 'bg-pink-50 border-pink-300 text-pink-600' : 'bg-white border-slate-200 text-slate-500 hover:border-pink-200'}`}
+                  >
+                    <span>{likeInfo.iLiked ? '❤' : '🤍'}</span>
+                    <span>{likeInfo.count}</span>
+                    <span>{likeInfo.iLiked ? 'Descurtir' : 'Curtir'}</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter mb-2">{comment.profiles?.full_name}</p>
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">{comment.content}</p>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Input para Nova Resposta */}

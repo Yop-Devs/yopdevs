@@ -34,7 +34,7 @@ export default function ChatRoomPage() {
     const channel = supabase.channel(`chat_${receiver_id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
         if ((p.new.sender_id === user.id && p.new.receiver_id === receiver_id) || (p.new.sender_id === receiver_id && p.new.receiver_id === user.id)) {
-          setMessages(prev => [...prev, p.new])
+          setMessages((prev) => (prev.some((m) => m.id === p.new.id) ? prev : [...prev, p.new]))
         }
       }).subscribe()
 
@@ -47,8 +47,10 @@ export default function ChatRoomPage() {
   const send = async (e: any) => {
     e.preventDefault()
     if (!newMessage.trim() || !me || receiver_id === me) return
-    await supabase.from('messages').insert([{ sender_id: me, receiver_id, content: newMessage }])
+    const content = newMessage.trim()
     setNewMessage('')
+    const { data: inserted } = await supabase.from('messages').insert([{ sender_id: me, receiver_id, content }]).select('*').single()
+    if (inserted) setMessages((prev) => (prev.some((m) => m.id === inserted.id) ? prev : [...prev, inserted]))
   }
 
   return (
