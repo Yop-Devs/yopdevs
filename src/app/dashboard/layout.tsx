@@ -8,23 +8,43 @@ import Link from 'next/link'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false) // Controle do menu mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
+
+  const fetchUnreadCount = async (userId: string) => {
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+    setUnreadCount(count ?? 0)
+  }
 
   useEffect(() => {
     async function checkAccess() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/'); return; }
 
+      if (typeof window !== 'undefined') (window as any).__notifUserId = session.user.id
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single()
-      
       setProfile(profileData)
+      await fetchUnreadCount(session.user.id)
       setLoading(false)
     }
     checkAccess()
   }, [router])
+
+  useEffect(() => {
+    const handler = () => {
+      const uid = typeof window !== 'undefined' && (window as any).__notifUserId
+      if (uid) fetchUnreadCount(uid)
+    }
+    window.addEventListener('notifications-updated', handler)
+    return () => window.removeEventListener('notifications-updated', handler)
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -74,12 +94,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-          {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => (
-            <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all ${pathname === item.href ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
-              {item.name}
-            </Link>
-          ))}
+          {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => {
+            const isNotifications = item.href === '/dashboard/notificacoes'
+            return (
+              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all ${pathname === item.href ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                <span className="flex items-center gap-3 min-w-0">
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
+                  <span className="truncate">{item.name}</span>
+                </span>
+                {isNotifications && unreadCount > 0 && (
+                  <span className="shrink-0 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center gap-3">

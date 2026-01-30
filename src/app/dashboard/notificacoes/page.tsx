@@ -9,6 +9,8 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [myId, setMyId] = useState<string | null>(null)
+  const [senderNames, setSenderNames] = useState<Record<string, string>>({})
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -16,28 +18,76 @@ export default function NotificationsPage() {
       case 'CHAT': return <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border-2 border-indigo-200">✉</span>
       case 'NEWS': return <span className="p-2 bg-amber-50 text-amber-600 rounded-lg border-2 border-amber-200">⚡</span>
       case 'INTEREST': return <span className="p-2 bg-green-50 text-green-600 rounded-lg border-2 border-green-200">★</span>
+      case 'FRIEND_REQUEST': return <span className="p-2 bg-violet-50 text-violet-600 rounded-lg border-2 border-violet-200">👋</span>
+      case 'FRIEND_ACCEPTED': return <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg border-2 border-emerald-200">✓</span>
+      case 'COMMENT_LIKE': return <span className="p-2 bg-pink-50 text-pink-600 rounded-lg border-2 border-pink-200">❤</span>
+      case 'FORUM_REPLY': return <span className="p-2 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-200">💬</span>
       default: return <span className="p-2 bg-slate-50 text-slate-600 rounded-lg border-2 border-slate-200">⚙</span>
     }
   }
 
   async function loadNotifications() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setMyId(user.id)
-      const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-      setNotifications(data || [])
+    if (!user) {
+      setLoading(false)
+      return
     }
+    setMyId(user.id)
+
+    const { data: list } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+    const notifs = list || []
+    setNotifications(notifs)
+
+    const idsToFetch = new Set<string>()
+    notifs.forEach((n) => {
+      if (n.from_user_id && n.from_user_id !== user.id) idsToFetch.add(n.from_user_id)
+      if (n.type === 'CHAT' && n.link) {
+        const match = n.link.match(/\/dashboard\/chat\/([a-f0-9-]+)/i)
+        if (match?.[1]) idsToFetch.add(match[1])
+      }
+    })
+
+    if (idsToFetch.size > 0) {
+      const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', Array.from(idsToFetch))
+      const names: Record<string, string> = {}
+      ;(profs || []).forEach((p) => { names[p.id] = p.full_name || 'Usuário' })
+      setSenderNames(names)
+    }
+
+    const { data: frData } = await supabase.from('friend_requests').select('from_id, to_id').or(`from_id.eq.${user.id},to_id.eq.${user.id}`).eq('status', 'accepted')
+    const fIds = new Set<string>()
+    ;(frData || []).forEach((f) => fIds.add(f.from_id === user.id ? f.to_id : f.from_id))
+    setFriendIds(fIds)
     setLoading(false)
   }
 
   const markAsRead = async (id: string) => {
     await supabase.from('notifications').update({ is_read: true }).eq('id', id)
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
   }
 
   const handleNotificationClick = (n: { id: string; link?: string | null; type?: string }) => {
     markAsRead(n.id)
     if (n.link) router.push(n.link)
+  }
+
+  const getSenderId = (n: { type?: string; from_user_id?: string | null; link?: string | null }) => {
+    if (n.from_user_id) return n.from_user_id
+    if (n.type === 'CHAT' && n.link) {
+      const m = n.link.match(/\/dashboard\/chat\/([a-f0-9-]+)/i)
+      return m?.[1] ?? null
+    }
+    return null
+  }
+
+  const getDisplayContent = (n: { type?: string; content?: string }, senderId: string | null) => {
+    if (n.type === 'CHAT' && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma mensagem`
+    if (n.type === 'FRIEND_REQUEST' && senderId && senderNames[senderId]) return `${senderNames[senderId]} enviou uma solicitação de amizade`
+    if (n.type === 'FRIEND_ACCEPTED' && senderId && senderNames[senderId]) return `${senderNames[senderId]} aceitou sua solicitação de amizade`
+    if (n.type === 'COMMENT_LIKE' && senderId && senderNames[senderId]) return `${senderNames[senderId]} curtiu sua resposta no fórum`
+    if (n.type === 'FORUM_REPLY' && senderId && senderNames[senderId]) return `${senderNames[senderId]} respondeu no seu tópico do fórum`
+    return n.content || 'Nova notificação'
   }
 
   const sendFriendRequest = async (fromUserId: string) => {
@@ -60,31 +110,59 @@ export default function NotificationsPage() {
       </header>
 
       <div className="space-y-4">
-        {notifications.map((n) => (
-          <div
-            key={n.id}
-            className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group"
-          >
-            <button type="button" onClick={() => handleNotificationClick(n)} className="flex flex-1 min-w-0 items-center gap-6 text-left cursor-pointer">
-              <div className="shrink-0">{getIcon(n.type)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{n.content}</p>
-                <p className="text-[9px] text-slate-400 font-mono mt-1 uppercase italic">{new Date(n.created_at).toLocaleString('pt-BR')}</p>
+        {notifications.map((n) => {
+          const senderId = getSenderId(n)
+          const isFriend = senderId ? friendIds.has(senderId) : false
+          const displayContent = getDisplayContent(n, senderId)
+          const isChat = n.type === 'CHAT'
+          return (
+            <div
+              key={n.id}
+              className="w-full text-left bg-white border-2 border-slate-900 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group"
+            >
+              <div className="flex flex-1 min-w-0 items-center gap-6">
+                <div className="shrink-0">{getIcon(n.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{displayContent}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {senderId && (
+                      <span className={`text-[8px] font-black px-2 py-0.5 rounded border-2 uppercase ${isFriend ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-300 text-slate-500 bg-slate-50'}`}>
+                        {isFriend ? 'Amigo' : 'Usuário'}
+                      </span>
+                    )}
+                    <p className="text-[9px] text-slate-400 font-mono uppercase italic">{new Date(n.created_at).toLocaleString('pt-BR')}</p>
+                  </div>
+                </div>
+                <div className={`w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-indigo-600 animate-pulse'}`} title={n.is_read ? '' : 'Não lida'} />
               </div>
-              <div className={`w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-indigo-600 animate-pulse'}`} title={n.is_read ? '' : 'Clique para abrir'} />
-            </button>
-            {n.type === 'INTEREST' && n.from_user_id && n.from_user_id !== myId && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); sendFriendRequest(n.from_user_id); }}
-                disabled={!!n._friendRequestSent}
-                className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {n._friendRequestSent ? 'Solicitação enviada' : 'Adicionar como amigo'}
-              </button>
-            )}
-          </div>
-        ))}
+              {isChat && n.link && (
+                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+                  Ver mensagem
+                </button>
+              )}
+              {(n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link && (
+                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+                  Ver solicitações
+                </button>
+              )}
+              {(n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
+                <button type="button" onClick={() => handleNotificationClick(n)} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
+                  Ver fórum
+                </button>
+              )}
+              {n.type === 'INTEREST' && n.from_user_id && n.from_user_id !== myId && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); sendFriendRequest(n.from_user_id); }}
+                  disabled={!!n._friendRequestSent}
+                  className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {n._friendRequestSent ? 'Solicitação enviada' : 'Adicionar como amigo'}
+                </button>
+              )}
+            </div>
+          )
+        })}
 
         {notifications.length === 0 && (
           <div className="text-center py-24 border-4 border-dotted border-slate-100 rounded-[2rem]">
