@@ -189,18 +189,6 @@ CREATE TRIGGER on_forum_reply_insert AFTER INSERT ON post_comments FOR EACH ROW 
 -- Para notificações em tempo real no app: no Supabase Dashboard > Database > Replication,
 -- inclua a tabela "notifications" na publicação "supabase_realtime" (se ainda não estiver).
 
--- Chat com imagens: bucket "chat-images" — rode as políticas abaixo no SQL Editor (Storage já criado).
--- Garante que RLS está ativo e cria políticas de upload (authenticated) e leitura (pública).
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow authenticated upload chat-images" ON storage.objects;
-CREATE POLICY "Allow authenticated upload chat-images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'chat-images');
-
-DROP POLICY IF EXISTS "Allow public read chat-images" ON storage.objects;
-CREATE POLICY "Allow public read chat-images"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'chat-images');
+-- Chat com imagens: bucket "chat-images". Políticas não podem ser criadas pelo SQL Editor (must be owner).
+-- Crie pelo Dashboard: Storage > chat-images > Policies (INSERT para authenticated, SELECT para public).
+-- Ver supabase-storage-chat-images-policies.sql para o passo a passo.

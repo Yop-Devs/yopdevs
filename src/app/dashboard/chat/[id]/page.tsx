@@ -6,7 +6,64 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const CHAT_BUCKET = 'chat-images'
-const MAX_IMAGE_BYTES = 512 * 1024 // 512KB para economizar Storage
+const MAX_IMAGE_BYTES = 400 * 1024 // ~400KB alvo após compressão (economia no Supabase)
+const MAX_DIMENSION = 800 // largura/altura máx. em px
+
+/** Redimensiona e comprime imagem para o chat (economiza Storage). */
+async function resizeImageForChat(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let w = img.naturalWidth
+      let h = img.naturalHeight
+      if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+        if (w > h) {
+          h = Math.round((h * MAX_DIMENSION) / w)
+          w = MAX_DIMENSION
+        } else {
+          w = Math.round((w * MAX_DIMENSION) / h)
+          h = MAX_DIMENSION
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Canvas não disponível'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, w, h)
+      let q = 0.85
+      const tryBlob = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Falha ao comprimir'))
+              return
+            }
+            if (blob.size <= MAX_IMAGE_BYTES || q <= 0.45) {
+              resolve(blob)
+              return
+            }
+            q -= 0.15
+            tryBlob()
+          },
+          'image/jpeg',
+          Math.max(0.4, q)
+        )
+      }
+      tryBlob()
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Imagem inválida'))
+    }
+    img.src = url
+  })
+}
 
 const EMOJIS = ['😀', '😊', '👍', '❤️', '🔥', '👋', '😂', '😍', '✨', '🎉', '💪', '🙏', '😎', '🤔', '✅', '❌', '💬', '📌', '🔗', '📷']
 
@@ -113,23 +170,24 @@ export default function ChatRoomPage() {
       setUploadError('Envie apenas imagens (JPG, PNG, GIF, WebP).')
       return
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setUploadError(`Imagem deve ter no máximo ${MAX_IMAGE_BYTES / 1024}KB para economizar espaço.`)
-      return
-    }
     setUploading(true)
     setUploadError(null)
-    const ext = file.name.split('.').pop() || 'jpg'
-    const path = `${me}/${receiver_id}/${Date.now()}.${ext}`
-    const { error: uploadErr } = await supabase.storage.from(CHAT_BUCKET).upload(path, file, { upsert: false })
+    try {
+      const blob = await resizeImageForChat(file)
+      const path = `${me}/${receiver_id}/${Date.now()}.jpg`
+      const { error: uploadErr } = await supabase.storage.from(CHAT_BUCKET).upload(path, blob, { upsert: false, contentType: 'image/jpeg' })
     if (uploadErr) {
       setUploadError('Falha ao enviar imagem. Crie o bucket "chat-images" no Supabase Storage (público para leitura).')
       setUploading(false)
       return
     }
     const { data: urlData } = supabase.storage.from(CHAT_BUCKET).getPublicUrl(path)
-    setUploading(false)
     await send({ preventDefault: () => {} } as React.FormEvent, urlData.publicUrl)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Erro ao processar imagem.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -217,7 +275,7 @@ export default function ChatRoomPage() {
             onClick={() => fileInputRef.current?.click()}
             disabled={!isFriend || uploading}
             className="p-2 rounded-xl border-2 border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 transition-all"
-            title="Enviar imagem (máx. 512KB)"
+            title="Enviar imagem (redimensionada automaticamente)"
           >
             📷
           </button>
@@ -225,7 +283,7 @@ export default function ChatRoomPage() {
             {uploading ? '...' : 'Enviar'}
           </button>
         </div>
-        <p className="text-[9px] text-slate-400">Links viram clicáveis. Imagens: máx. 512KB (economia de espaço).</p>
+        <p className="text-[9px] text-slate-400">Links viram clicáveis. Imagens: redimensionadas e comprimidas automaticamente para economizar espaço.</p>
       </form>
     </div>
   )

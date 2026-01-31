@@ -56,6 +56,7 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!file || !user) return
 
+      // Perfil: mantém qualidade original (sem redimensionar/comprimir)
       const fileName = `${user.id}-${Date.now()}.${file.name.split('.').pop()}`
       await supabase.storage.from('avatars').upload(fileName, file)
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)

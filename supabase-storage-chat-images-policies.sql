@@ -1,16 +1,18 @@
--- Políticas do bucket "chat-images" (chat com imagens)
--- Rode no SQL Editor do Supabase após criar o bucket "chat-images" no Storage.
-
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow authenticated upload chat-images" ON storage.objects;
-CREATE POLICY "Allow authenticated upload chat-images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'chat-images');
-
-DROP POLICY IF EXISTS "Allow public read chat-images" ON storage.objects;
-CREATE POLICY "Allow public read chat-images"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'chat-images');
+-- Políticas do bucket "chat-images"
+-- O Supabase não permite criar políticas em storage.objects pelo SQL Editor (erro: must be owner).
+-- Crie as políticas pelo Dashboard:
+--
+-- 1. Supabase Dashboard > Storage > chat-images > Policies
+-- 2. "New Policy" > "For full customization"
+--
+-- Política 1 - Upload (INSERT):
+--   Name: Allow authenticated upload chat-images
+--   Allowed operation: INSERT
+--   Target roles: authenticated
+--   WITH CHECK expression: bucket_id = 'chat-images'
+--
+-- Política 2 - Leitura (SELECT):
+--   Name: Allow public read chat-images
+--   Allowed operation: SELECT
+--   Target roles: public (ou anon)
+--   USING expression: bucket_id = 'chat-images'

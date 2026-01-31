@@ -47,6 +47,7 @@ export default function ProfilePage() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
+      // Perfil: mantém qualidade original (sem redimensionar/comprimir)
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
       if (uploadError) throw uploadError
 
