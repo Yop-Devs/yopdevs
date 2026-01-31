@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ConfirmModal from '@/components/ConfirmModal'
 
 const CHAT_BUCKET = 'chat-images'
 const MAX_IMAGE_BYTES = 400 * 1024 // ~400KB alvo após compressão (economia no Supabase)
@@ -98,6 +99,10 @@ export default function ChatRoomPage() {
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
 
   const fetchMessages = async (myId: string, otherId: string) => {
     const { data } = await supabase.from('messages')
@@ -193,6 +198,44 @@ export default function ChatRoomPage() {
     inputRef.current?.focus()
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelectedIds(new Set(messages.map((m) => m.id)))
+  }
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return
+    setDeleting(true)
+    const ids = Array.from(selectedIds)
+    const { error } = await supabase.from('messages').delete().in('id', ids)
+    setDeleting(false)
+    if (!error) {
+      setMessages((prev) => prev.filter((m) => !selectedIds.has(m.id)))
+      setSelectedIds(new Set())
+      setSelectionMode(false)
+    }
+  }
+
+  const deleteAll = async () => {
+    if (!me || !receiver_id) return
+    setConfirmDeleteAll(false)
+    setDeleting(true)
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .or(`and(sender_id.eq.${me},receiver_id.eq.${receiver_id}),and(sender_id.eq.${receiver_id},receiver_id.eq.${me})`)
+    setDeleting(false)
+    if (!error) setMessages([])
+  }
+
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -231,11 +274,64 @@ export default function ChatRoomPage() {
           <h2 className="text-xs sm:text-sm font-black uppercase italic tracking-tight text-slate-900 truncate">{receiver?.full_name || 'Protocolando...'}</h2>
           <p className="text-[8px] sm:text-[9px] font-bold text-green-500 uppercase tracking-widest mt-0.5 italic">● Conexão Criptografada</p>
         </div>
+        {messages.length > 0 && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setSelectionMode((v) => !v); if (!selectionMode) setSelectedIds(new Set()) }}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-[9px] font-bold uppercase hover:bg-slate-100 transition-colors"
+            >
+              {selectionMode ? 'Cancelar' : 'Selecionar'}
+            </button>
+            {!selectionMode && (
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteAll(true)}
+                className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-[9px] font-bold uppercase hover:bg-red-50 transition-colors"
+                title="Apagar todas as mensagens"
+              >
+                Apagar todas
+              </button>
+            )}
+          </div>
+        )}
       </header>
+
+      {selectionMode && (
+        <div className="bg-violet-50 border-b border-violet-200 px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-violet-800 uppercase">
+            {selectedIds.size} selecionada{selectedIds.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={selectAll} className="text-[9px] font-bold text-violet-600 uppercase hover:underline">
+              Selecionar todas
+            </button>
+            <button
+              type="button"
+              onClick={deleteSelected}
+              disabled={selectedIds.size === 0 || deleting}
+              className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-bold uppercase hover:bg-red-600 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? 'Apagando...' : 'Apagar selecionadas'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto bg-white border-x border-slate-200 p-4 sm:p-8 space-y-4 sm:space-y-6">
         {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.sender_id === me ? 'justify-end' : 'justify-start'}`}>
+          <div key={m.id} className={`flex ${m.sender_id === me ? 'justify-end' : 'justify-start'} gap-2 items-start`}>
+            {selectionMode && (
+              <label className="shrink-0 mt-2 flex items-center justify-center w-6 h-6 rounded border-2 border-slate-300 cursor-pointer hover:border-violet-500 has-[:checked]:bg-violet-600 has-[:checked]:border-violet-600 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(m.id)}
+                  onChange={() => toggleSelect(m.id)}
+                  className="sr-only"
+                />
+                {selectedIds.has(m.id) && <span className="text-white text-xs">✓</span>}
+              </label>
+            )}
             <div className={`max-w-[85%] sm:max-w-[75%] p-3 sm:p-5 border-2 rounded-xl sm:rounded-2xl shadow-sm text-xs sm:text-sm font-medium leading-relaxed ${
               m.sender_id === me ? 'bg-[#4c1d95] border-[#4c1d95] text-white rounded-br-none' : 'bg-slate-50 border-slate-200 text-slate-800 rounded-bl-none'
             }`}>
@@ -321,6 +417,17 @@ export default function ChatRoomPage() {
         </div>
         <p className="text-[8px] sm:text-[9px] text-slate-400 hidden sm:block">Links clicáveis. Imagens comprimidas automaticamente.</p>
       </form>
+
+      <ConfirmModal
+        open={confirmDeleteAll}
+        onClose={() => setConfirmDeleteAll(false)}
+        title="Apagar todas as mensagens"
+        message="Todas as mensagens desta conversa serão apagadas para você e para o outro usuário. Esta ação não pode ser desfeita."
+        confirmLabel="Apagar todas"
+        cancelLabel="Cancelar"
+        onConfirm={deleteAll}
+        variant="danger"
+      />
     </div>
   )
 }
