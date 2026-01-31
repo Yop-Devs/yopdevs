@@ -36,10 +36,15 @@ export default function MasterAdminPage() {
       setLoading(false)
       return
     }
-    const { data: p } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const { data: p, error: profilesError } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    if (profilesError) {
+      const { data: fallback } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
+      setUsers(fallback || [])
+    } else {
+      setUsers(p || [])
+    }
     const { data: posts } = await supabase.from('posts').select('*, profiles(full_name)').order('created_at', { ascending: false })
     const { data: projects } = await supabase.from('projects').select('*, profiles(full_name)').order('created_at', { ascending: false })
-    setUsers(p || [])
     setContent({ posts: posts || [], projects: projects || [] })
     setLoading(false)
   }
@@ -135,6 +140,13 @@ export default function MasterAdminPage() {
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-slate-100">
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-8 text-center text-slate-500 text-sm">
+                  Nenhum perfil encontrado. Se você acabou de criar o painel, rode no Supabase (SQL Editor) o arquivo <strong>supabase-rls-profiles-read.sql</strong> para permitir que admins leiam a lista de usuários.
+                </td>
+              </tr>
+            )}
             {users.map(u => (
               <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                 <td className="p-6">

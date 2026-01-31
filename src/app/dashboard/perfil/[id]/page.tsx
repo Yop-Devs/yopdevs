@@ -1,14 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-export default function ProfilePage() {
+export default function ProfileByIdPage() {
+  const params = useParams()
+  const router = useRouter()
+  const id = params?.id as string | undefined
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
@@ -18,26 +24,40 @@ export default function ProfilePage() {
     avatar_url: '',
   })
 
+  const isOwnProfile = !!id && !!currentUserId && id === currentUserId
+
   useEffect(() => {
+    if (!id) {
+      router.replace('/dashboard/perfil')
+      return
+    }
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        if (data) setFormData({
-          full_name: data.full_name || '',
-          bio: data.bio || '',
-          github_url: data.github_url || '',
-          linkedin_url: data.linkedin_url || '',
-          website_url: data.website_url || '',
-          avatar_url: data.avatar_url || '',
-        })
+      setCurrentUserId(user?.id ?? null)
+      if (!user) {
+        setLoading(false)
+        return
       }
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single()
+      if (error || !data) {
+        setLoading(false)
+        return
+      }
+      setFormData({
+        full_name: data.full_name || '',
+        bio: data.bio || '',
+        github_url: data.github_url || '',
+        linkedin_url: data.linkedin_url || '',
+        website_url: data.website_url || '',
+        avatar_url: data.avatar_url || '',
+      })
       setLoading(false)
     }
     loadProfile()
-  }, [])
+  }, [id, router])
 
   const uploadAvatar = async (event: any) => {
+    if (!isOwnProfile) return
     try {
       setUploading(true)
       const file = event.target.files[0]
@@ -47,13 +67,14 @@ export default function ProfilePage() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
-      // Perfil: mantém qualidade original (sem redimensionar/comprimir)
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file)
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }))
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+      setStatus({ type: 'success', text: 'Foto atualizada.' })
+      setTimeout(() => setStatus(null), 3000)
     } catch (error: any) {
       setStatus({ type: 'error', text: 'Erro no upload: ' + (error?.message || 'Tente novamente.') })
       setTimeout(() => setStatus(null), 5000)
@@ -63,7 +84,9 @@ export default function ProfilePage() {
   }
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true)
+    e.preventDefault()
+    if (!isOwnProfile) return
+    setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { error } = await supabase.from('profiles').update(formData).eq('id', user.id)
@@ -75,7 +98,64 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
-  if (loading) return <div className="p-8 text-slate-400 font-mono text-xs">INITIALIZING_SESSION...</div>
+  if (loading) return <div className="p-8 text-slate-400 font-mono text-xs">Carregando perfil...</div>
+
+  if (!formData.full_name && !formData.bio && !formData.avatar_url) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-6 text-center">
+        <h1 className="text-xl font-bold text-slate-900 mb-2">Perfil não encontrado</h1>
+        <p className="text-slate-500 text-sm mb-6">Este usuário não existe ou o perfil ainda não foi preenchido.</p>
+        <Link href="/dashboard/membros" className="text-[#4c1d95] font-bold hover:underline">Voltar aos membros</Link>
+      </div>
+    )
+  }
+
+  if (!isOwnProfile) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-6">
+        <header className="mb-12 border-b border-slate-200 pb-8">
+          <Link href="/dashboard/membros" className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-[#4c1d95] mb-4 inline-block">← Voltar aos membros</Link>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Portfólio</h1>
+          <p className="text-slate-500 text-sm mt-1">Perfil de {formData.full_name || 'Membro'}</p>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          <aside className="space-y-6">
+            <div className="w-32 h-32 mx-auto lg:mx-0 bg-slate-200 rounded-xl overflow-hidden border border-slate-300 flex items-center justify-center">
+              {formData.avatar_url ? (
+                <img src={formData.avatar_url} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <span className="text-slate-400 font-bold text-2xl">{formData.full_name?.[0] || '?'}</span>
+              )}
+            </div>
+          </aside>
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nome</p>
+              <p className="text-lg font-bold text-slate-900">{formData.full_name || '—'}</p>
+            </div>
+            {formData.bio && (
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bio</p>
+                <p className="text-slate-700 whitespace-pre-wrap">{formData.bio}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-4 pt-4">
+              {formData.github_url && (
+                <a href={formData.github_url} target="_blank" rel="noopener noreferrer" className="text-[#4c1d95] font-bold text-sm hover:underline">GitHub</a>
+              )}
+              {formData.linkedin_url && (
+                <a href={formData.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[#4c1d95] font-bold text-sm hover:underline">LinkedIn</a>
+              )}
+              {formData.website_url && (
+                <a href={formData.website_url} target="_blank" rel="noopener noreferrer" className="text-[#4c1d95] font-bold text-sm hover:underline">Site</a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
@@ -114,23 +194,20 @@ export default function ProfilePage() {
           <section className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nome Completo</label>
-              <input type="text" className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} />
+              <input type="text" className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} />
             </div>
-
             <div className="grid grid-cols-1 gap-4">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bio Profissional</label>
-              <textarea rows={4} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all resize-none" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+              <textarea rows={4} className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none transition-all resize-none" value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} />
             </div>
           </section>
-
           <section className="pt-6 border-t border-slate-200 space-y-4">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest">Links Externos</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="url" placeholder="GitHub URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.github_url} onChange={(e) => setFormData({...formData, github_url: e.target.value})} />
-              <input type="url" placeholder="LinkedIn URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.linkedin_url} onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})} />
+              <input type="url" placeholder="GitHub URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.github_url} onChange={(e) => setFormData({ ...formData, github_url: e.target.value })} />
+              <input type="url" placeholder="LinkedIn URL" className="bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#4c1d95] outline-none w-full" value={formData.linkedin_url} onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })} />
             </div>
           </section>
-
           <button type="submit" disabled={saving} className="bg-[#4c1d95] text-white px-8 py-3 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md active:scale-95 disabled:opacity-50">
             {saving ? 'Sincronizando...' : 'Confirmar Alterações'}
           </button>
