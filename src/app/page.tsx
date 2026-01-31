@@ -12,10 +12,6 @@ function LandingPageContent() {
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [latestPosts, setLatestPosts] = useState<{ id: string; title: string; category: string; created_at: string; profiles?: { full_name: string } }[]>([])
-  const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; category: string; created_at: string }[]>([])
-  const [feedLoading, setFeedLoading] = useState(true)
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -62,33 +58,6 @@ function LandingPageContent() {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [showModal, closeModal])
-
-  useEffect(() => {
-    async function fetchFeed() {
-      try {
-        const [postsRes, projectsRes] = await Promise.all([
-          supabase.from('posts').select('id, title, category, created_at, profiles(full_name)').order('created_at', { ascending: false }).limit(6),
-          supabase.from('projects').select('id, title, category, created_at').order('created_at', { ascending: false }).limit(4),
-        ])
-        if (postsRes.data) {
-          const normalized = postsRes.data.map((p: { id: string; title: string; category: string; created_at: string; profiles?: { full_name: string } | { full_name: string }[] }) => ({
-            id: p.id,
-            title: p.title,
-            category: p.category,
-            created_at: p.created_at,
-            profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles,
-          }))
-          setLatestPosts(normalized)
-        }
-        if (projectsRes.data) setLatestProjects(projectsRes.data)
-      } catch {
-        // RLS pode bloquear; mantém arrays vazios
-      } finally {
-        setFeedLoading(false)
-      }
-    }
-    fetchFeed()
-  }, [])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -280,89 +249,6 @@ function LandingPageContent() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Últimas do fórum + projetos */}
-      <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-200">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-center text-xl md:text-2xl font-black text-slate-900 mb-1">
-            Atividade recente
-          </h2>
-          <p className="text-center text-slate-600 text-sm mb-8 max-w-xl mx-auto">
-            Últimas discussões no fórum e projetos lançados na rede.
-          </p>
-
-          {feedLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="rounded-2xl bg-white border border-slate-100 p-8 animate-pulse">
-                <div className="h-5 bg-slate-200 rounded w-1/3 mb-4" />
-                <div className="h-4 bg-slate-100 rounded w-full mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-2/3" />
-              </div>
-              <div className="rounded-2xl bg-white border border-slate-100 p-8 animate-pulse">
-                <div className="h-5 bg-slate-200 rounded w-1/3 mb-4" />
-                <div className="h-4 bg-slate-100 rounded w-full mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-2/3" />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-violet-600 mb-4">Fórum</h3>
-                {latestPosts.length === 0 ? (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center text-slate-500">
-                    <p className="text-sm">Nenhuma discussão recente. Entre na rede e seja o primeiro a postar.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {latestPosts.map((post) => (
-                      <li key={post.id}>
-                        <Link
-                          href={`/dashboard/forum/${post.id}`}
-                          className="block rounded-2xl bg-white border border-slate-100 p-5 hover:border-violet-200 hover:shadow-md transition-all group"
-                        >
-                          <h4 className="font-bold text-slate-900 group-hover:text-violet-700 transition-colors line-clamp-1">{post.title}</h4>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {post.profiles?.full_name ?? 'Membro'} · {post.category ?? 'Geral'} · {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 mb-4">Projetos</h3>
-                {latestProjects.length === 0 ? (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center text-slate-500">
-                    <p className="text-sm">Nenhum projeto recente. Crie sua conta e lance o primeiro.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {latestProjects.map((proj) => (
-                      <li key={proj.id}>
-                        <Link
-                          href="/dashboard/projetos"
-                          className="block rounded-2xl bg-white border border-slate-100 p-5 hover:border-indigo-200 hover:shadow-md transition-all group"
-                        >
-                          <h4 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors line-clamp-1">{proj.title}</h4>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {proj.category ?? 'Projeto'} · {new Date(proj.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-          <p className="text-center mt-8">
-            <button onClick={() => { setMode('signup'); setShowModal(true); }} className="text-sm font-bold text-violet-600 hover:text-violet-700 underline">
-              Entrar na rede para ver tudo e participar
-            </button>
-          </p>
         </div>
       </section>
 
