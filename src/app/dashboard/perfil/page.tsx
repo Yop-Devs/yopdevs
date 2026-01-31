@@ -8,6 +8,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
   
+  const [profileRole, setProfileRole] = useState<string>('')
   const [formData, setFormData] = useState({ 
     full_name: '', 
     bio: '', 
@@ -24,16 +25,19 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        if (data) setFormData({
-          full_name: data.full_name || '',
-          bio: data.bio || '',
-          github_url: data.github_url || '',
-          linkedin_url: data.linkedin_url || '',
-          website_url: data.website_url || '',
-          avatar_url: data.avatar_url || '',
-          location: data.location || '',
-          specialties: data.specialties || ''
-        })
+        if (data) {
+          setProfileRole(data.role || '')
+          setFormData({
+            full_name: data.full_name || '',
+            bio: data.bio || '',
+            github_url: data.github_url || '',
+            linkedin_url: data.linkedin_url || '',
+            website_url: data.website_url || '',
+            avatar_url: data.avatar_url || '',
+            location: data.location || '',
+            specialties: data.specialties || ''
+          })
+        }
       }
       setLoading(false)
     }
@@ -85,7 +89,17 @@ export default function ProfilePage() {
     <div className="max-w-[1200px] mx-auto py-16 px-8 space-y-12">
       <header className="flex justify-between items-end border-b border-slate-200 pb-8">
         <div>
-          <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">Configurações de Identidade</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">Configurações de Identidade</h1>
+            {profileRole && (
+              <span className={`text-[9px] font-black px-3 py-1.5 rounded-xl border-2 uppercase tracking-widest ${
+                profileRole === 'ADMIN' ? 'bg-violet-100 border-violet-400 text-violet-700' :
+                profileRole === 'BANNED' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-slate-100 border-slate-300 text-slate-600'
+              }`}>
+                {profileRole === 'ADMIN' ? 'Admin' : profileRole === 'BANNED' ? 'Restrito' : 'Membro'}
+              </span>
+            )}
+          </div>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2 italic">Gerenciamento de credenciais e ativos digitais</p>
         </div>
         

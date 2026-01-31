@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function NotificationsPage() {
   const router = useRouter()
@@ -14,6 +15,8 @@ export default function NotificationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false)
+  const [filterType, setFilterType] = useState<string>('')
 
   const getTypeLabel = (type: string): string => {
     switch (type) {
@@ -131,12 +134,17 @@ export default function NotificationsPage() {
     setDeleting(false)
   }
 
-  const deleteAll = async () => {
+  const requestDeleteAll = () => {
+    if (!myId || notifications.length === 0) return
+    setConfirmDeleteAllOpen(true)
+  }
+
+  const executeDeleteAll = async () => {
     if (!myId) return
-    if (!confirm('Apagar todas as notificações? Esta ação não pode ser desfeita.')) return
     setDeleting(true)
     setDeleteError(null)
     const { error } = await supabase.from('notifications').delete().eq('user_id', myId)
+    setConfirmDeleteAllOpen(false)
     if (!error) {
       setNotifications([])
       setSelectedIds(new Set())
@@ -180,6 +188,10 @@ export default function NotificationsPage() {
     if (!error) setNotifications((prev) => prev.map((n) => (n.from_user_id === fromUserId ? { ...n, _friendRequestSent: true } : n)))
   }
 
+  const filteredNotifications = filterType
+    ? notifications.filter((n) => (n.type === filterType) || (filterType === 'LIKE' && (n.type === 'COMMENT_LIKE' || n.type === 'LIKE')))
+    : notifications
+
   useEffect(() => { loadNotifications() }, [])
 
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase text-center tracking-[0.4em]">Acessando_Logs_do_Kernel...</div>
@@ -190,15 +202,24 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">NOTIFICAÇÕES</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP Devs</p>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="mt-3 px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-bold uppercase outline-none focus:border-[#4c1d95]">
+            <option value="">Todas</option>
+            <option value="CHAT">Mensagem</option>
+            <option value="LIKE">Curtida</option>
+            <option value="FORUM_REPLY">Comentário</option>
+            <option value="INTEREST">Interesse no projeto</option>
+            <option value="FRIEND_REQUEST">Solicitação de amizade</option>
+            <option value="FRIEND_ACCEPTED">Amizade aceita</option>
+          </select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={toggleSelectAll} className="px-4 py-2 border-2 border-slate-200 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">
-            {selectedIds.size === notifications.length && notifications.length > 0 ? 'Desmarcar todas' : 'Selecionar todas'}
+            {selectedIds.size === filteredNotifications.length && filteredNotifications.length > 0 ? 'Desmarcar todas' : 'Selecionar todas'}
           </button>
           <button type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || deleting} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-[9px] font-black uppercase hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             Apagar selecionadas {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
           </button>
-          <button type="button" onClick={deleteAll} disabled={notifications.length === 0 || deleting} className="px-4 py-2 bg-red-100 text-red-700 border-2 border-red-200 rounded-xl text-[9px] font-black uppercase hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+          <button type="button" onClick={requestDeleteAll} disabled={notifications.length === 0 || deleting} className="px-4 py-2 bg-red-100 text-red-700 border-2 border-red-200 rounded-xl text-[9px] font-black uppercase hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             Apagar todas
           </button>
         </div>
@@ -210,7 +231,7 @@ export default function NotificationsPage() {
         </div>
       )}
       <div className="space-y-4">
-        {notifications.map((n) => {
+        {filteredNotifications.map((n) => {
           const senderId = getSenderId(n)
           const isFriend = senderId ? friendIds.has(senderId) : false
           const displayContent = getDisplayContent(n, senderId)
@@ -276,12 +297,24 @@ export default function NotificationsPage() {
           )
         })}
 
-        {notifications.length === 0 && (
+        {filteredNotifications.length === 0 && (
           <div className="text-center py-24 border-4 border-dotted border-slate-100 rounded-[2rem]">
-            <p className="text-xs font-black text-slate-300 uppercase tracking-[0.5em]">Nenhum_Registro_Encontrado</p>
+            <p className="text-xs font-black text-slate-300 uppercase tracking-[0.5em]">{filterType ? 'Nenhuma notificação deste tipo.' : 'Nenhum_Registro_Encontrado'}</p>
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmDeleteAllOpen}
+        onClose={() => setConfirmDeleteAllOpen(false)}
+        title="Apagar todas as notificações"
+        message="Esta ação não pode ser desfeita. Todas as notificações serão removidas da sua rede."
+        confirmLabel="Apagar todas"
+        cancelLabel="Cancelar"
+        onConfirm={executeDeleteAll}
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   )
 }

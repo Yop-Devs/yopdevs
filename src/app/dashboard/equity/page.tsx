@@ -22,13 +22,13 @@ export default function EquityPortfolioPage() {
 
   useEffect(() => { loadPortfolio() }, [])
 
-  if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">LOAD_EQUITY_LEDGER...</div>
+  if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-widest">Carregando carteira...</div>
 
   return (
     <div className="max-w-[1200px] mx-auto py-12 px-6 space-y-12">
       <header className="border-b-2 border-slate-200 pb-8">
-        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-800">Equity Portfolio</h1>
-        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Ativos e participações societárias rastreadas</p>
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-800">Carteira de Equity</h1>
+        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Ativos e participações societárias rastreadas na rede YOP</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -44,11 +44,11 @@ export default function EquityPortfolioPage() {
               <h3 className="text-xl font-black uppercase italic text-slate-800 leading-tight">
                 {item.projects?.title}
               </h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status: <span className="text-green-500">{item.status || 'EM OPERAÇÃO'}</span></p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status: <span className="text-green-600">{item.status || 'Em operação'}</span></p>
             </div>
             
             <div className="mt-8 pt-6 border-t border-slate-100">
-              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 font-mono">Blockchain_Hash</p>
+              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 font-mono">ID do ativo</p>
               <p className="text-[9px] font-mono text-slate-400 truncate">{item.id}</p>
             </div>
           </div>

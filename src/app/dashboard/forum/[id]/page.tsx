@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -14,6 +15,7 @@ export default function PostDetailPage() {
   const [likesByComment, setLikesByComment] = useState<Record<string, { count: number; iLiked: boolean }>>({})
   const [postLike, setPostLike] = useState<{ count: number; iLiked: boolean }>({ count: 0, iLiked: false })
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const router = useRouter()
 
   async function loadData() {
@@ -82,12 +84,17 @@ export default function PostDetailPage() {
     }
   }
 
-  const deletePost = async () => {
+  const requestDeletePost = () => {
     if (!myId || !id || post?.author_id !== myId) return
-    if (!confirm('Excluir esta publicação? As respostas também serão removidas. Esta ação não pode ser desfeita.')) return
+    setConfirmDeleteOpen(true)
+  }
+
+  const executeDeletePost = async () => {
+    if (!myId || !id || post?.author_id !== myId) return
     setDeleting(true)
     const { error } = await supabase.from('posts').delete().eq('id', id).eq('author_id', myId)
     setDeleting(false)
+    setConfirmDeleteOpen(false)
     if (!error) router.push('/dashboard/forum')
     else setStatus({ type: 'error', text: 'Não foi possível excluir. Tente novamente.' })
   }
@@ -137,7 +144,7 @@ export default function PostDetailPage() {
           {post.author_id === myId && (
             <button
               type="button"
-              onClick={deletePost}
+              onClick={requestDeletePost}
               disabled={deleting}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-all disabled:opacity-60"
             >
@@ -200,6 +207,18 @@ export default function PostDetailPage() {
           </div>
         </form>
       </section>
+
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        title="Excluir publicação"
+        message="As respostas também serão removidas. Esta ação não pode ser desfeita."
+        confirmLabel="Excluir publicação"
+        cancelLabel="Manter publicação"
+        onConfirm={executeDeletePost}
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   )
 }

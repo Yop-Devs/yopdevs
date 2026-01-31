@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+const SECTOR_OPTIONS = ['', 'SaaS', 'Fintech', 'AI/ML', 'Web3']
+
 export default function MarketplacePage() {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterSector, setFilterSector] = useState('')
+  const [filterEquityMin, setFilterEquityMin] = useState<number | ''>('')
   const [interestSent, setInterestSent] = useState<Record<string, boolean>>({})
   const [myId, setMyId] = useState<string | null>(null)
 
@@ -45,7 +49,10 @@ export default function MarketplacePage() {
                          p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.tech_stack?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    return matchesSearch
+    const matchesSector = !filterSector || (p.category && p.category === filterSector)
+    const equity = typeof p.equity_offered === 'number' ? p.equity_offered : parseFloat(p.equity_offered) || 0
+    const matchesEquity = filterEquityMin === '' || equity >= Number(filterEquityMin)
+    return matchesSearch && matchesSector && matchesEquity
   })
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
@@ -65,6 +72,24 @@ export default function MarketplacePage() {
             className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] transition-all w-72 shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select 
+            value={filterSector} 
+            onChange={(e) => setFilterSector(e.target.value)}
+            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-40"
+          >
+            <option value="">Todos os setores</option>
+            {SECTOR_OPTIONS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <input 
+            type="number" 
+            min={0} 
+            max={100} 
+            step={1}
+            placeholder="Equity mín. %" 
+            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-28"
+            value={filterEquityMin === '' ? '' : filterEquityMin}
+            onChange={(e) => setFilterEquityMin(e.target.value === '' ? '' : Number(e.target.value))}
           />
           <Link href="/dashboard/projetos/novo" className="px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md">
             Lançar Projeto

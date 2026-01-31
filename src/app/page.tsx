@@ -27,6 +27,23 @@ function LandingPageContent() {
     setMessage(null)
   }, [])
 
+  function getAuthErrorMessage(err: unknown): string {
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
+    if (msg.includes('already registered') || msg.includes('user already registered') || msg.includes('already been registered'))
+      return 'Já existe uma conta com este e-mail. Faça login ou use "Esqueci minha senha".'
+    if (msg.includes('password') && (msg.includes('6') || msg.includes('least')))
+      return 'A senha deve ter no mínimo 6 caracteres.'
+    if (msg.includes('invalid login') || msg.includes('invalid credentials'))
+      return 'E-mail ou senha incorretos. Tente novamente.'
+    if (msg.includes('email not confirmed') || msg.includes('confirm your email'))
+      return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada ou use "Esqueci minha senha".'
+    if (msg.includes('invalid email') || msg.includes('valid email'))
+      return 'Informe um e-mail válido.'
+    if (msg.includes('signup') && msg.includes('disabled'))
+      return 'Cadastros estão temporariamente desativados. Entre em contato com o suporte.'
+    return err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
+  }
+
   useEffect(() => {
     const err = searchParams.get('error')
     if (err === 'auth-code-error') {
@@ -75,11 +92,29 @@ function LandingPageContent() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setMessage(null)
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres.' })
+        return
+      }
+      if (password !== confirmPassword) {
+        setMessage({ type: 'error', text: 'As senhas não coincidem. Digite a mesma senha nos dois campos.' })
+        return
+      }
+      if (!email.trim()) {
+        setMessage({ type: 'error', text: 'Informe seu e-mail.' })
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        setMessage({ type: 'error', text: 'Informe um e-mail válido.' })
+        return
+      }
+    }
+    setLoading(true)
     try {
       if (mode === 'signup') {
-        if (password !== confirmPassword) throw new Error("As senhas não coincidem!")
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -117,10 +152,15 @@ function LandingPageContent() {
           })
           return
         }
-        throw signUpError
+        setMessage({ type: 'error', text: getAuthErrorMessage(signUpError) })
+        return
       } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        if (error) {
+          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+          setLoading(false)
+          return
+        }
         if (data.session) {
           await supabase.auth.setSession({
             access_token: data.session.access_token,
@@ -129,13 +169,21 @@ function LandingPageContent() {
           window.location.href = '/dashboard'
         }
       } else {
+        if (!email.trim()) {
+          setMessage({ type: 'error', text: 'Informe seu e-mail para receber o link de redefinição.' })
+          setLoading(false)
+          return
+        }
         const { error } = await supabase.auth.resetPasswordForEmail(email)
-        if (error) throw error
-        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado.' })
+        if (error) {
+          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+          setLoading(false)
+          return
+        }
+        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado. Verifique sua caixa de entrada.' })
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
-      setMessage({ type: 'error', text: msg })
+      setMessage({ type: 'error', text: getAuthErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -389,7 +437,7 @@ function LandingPageContent() {
               {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Resetar senha'}
             </h2>
             {message && (
-              <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <div role="alert" aria-live="polite" className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                 {message.text}
               </div>
             )}
@@ -406,9 +454,14 @@ function LandingPageContent() {
               <input type="email" placeholder="E-mail" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} required />
               {mode !== 'reset' && (
                 <>
-                  <input type="password" placeholder="Senha" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <input type="password" placeholder="Senha (mín. 6 caracteres)" minLength={6} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   {mode === 'signup' && (
-                    <input type="password" placeholder="Confirmar senha" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <>
+                      <input type="password" placeholder="Confirmar senha" minLength={6} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                      {confirmPassword && password !== confirmPassword && (
+                        <p className="text-xs text-red-600 font-medium">As senhas não coincidem.</p>
+                      )}
+                    </>
                   )}
                 </>
               )}

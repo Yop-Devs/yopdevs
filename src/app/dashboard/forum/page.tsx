@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-type SortBy = 'recent' | 'comments'
+type SortBy = 'recent' | 'comments' | 'likes'
 
 export default function ForumPage() {
   const [posts, setPosts] = useState<any[]>([])
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('recent')
@@ -23,11 +24,17 @@ export default function ForumPage() {
       setPosts(data)
       if (data.length > 0) {
         const ids = data.map((p) => p.id)
-        const { data: comments } = await supabase.from('post_comments').select('post_id').in('post_id', ids)
+        const [commentsRes, likesRes] = await Promise.all([
+          supabase.from('post_comments').select('post_id').in('post_id', ids),
+          supabase.from('post_likes').select('post_id').in('post_id', ids),
+        ])
         const counts: Record<string, number> = {}
-        ids.forEach((id) => { counts[id] = 0 })
-        comments?.forEach((c) => { counts[c.post_id] = (counts[c.post_id] || 0) + 1 })
+        const likes: Record<string, number> = {}
+        ids.forEach((id) => { counts[id] = 0; likes[id] = 0 })
+        commentsRes.data?.forEach((c) => { counts[c.post_id] = (counts[c.post_id] || 0) + 1 })
+        likesRes.data?.forEach((l) => { likes[l.post_id] = (likes[l.post_id] || 0) + 1 })
         setCommentCounts(counts)
+        setLikeCounts(likes)
       }
     }
     setLoading(false)
@@ -42,6 +49,11 @@ export default function ForumPage() {
         const ca = commentCounts[a.id] || 0
         const cb = commentCounts[b.id] || 0
         return cb - ca
+      }
+      if (sortBy === 'likes') {
+        const la = likeCounts[a.id] || 0
+        const lb = likeCounts[b.id] || 0
+        return lb - la
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
@@ -77,6 +89,13 @@ export default function ForumPage() {
               className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'comments' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}
             >
               Mais comentados
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('likes')}
+              className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'likes' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}
+            >
+              Mais curtidos
             </button>
           </div>
           <Link href="/dashboard/forum/novo" className="px-6 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-violet-800 transition-all shadow-md">

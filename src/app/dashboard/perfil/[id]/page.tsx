@@ -7,6 +7,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -53,7 +54,8 @@ export default function ProfilePage() {
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }))
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
     } catch (error: any) {
-      alert('Erro no upload: ' + error.message)
+      setStatus({ type: 'error', text: 'Erro no upload: ' + (error?.message || 'Tente novamente.') })
+      setTimeout(() => setStatus(null), 5000)
     } finally {
       setUploading(false)
     }
@@ -64,7 +66,10 @@ export default function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { error } = await supabase.from('profiles').update(formData).eq('id', user.id)
-      if (!error) alert("Perfil atualizado! 🔒")
+      if (!error) {
+        setStatus({ type: 'success', text: 'Perfil atualizado com sucesso.' })
+        setTimeout(() => setStatus(null), 4000)
+      } else setStatus({ type: 'error', text: error.message })
     }
     setSaving(false)
   }
@@ -76,6 +81,11 @@ export default function ProfilePage() {
       <header className="mb-12 border-b border-slate-200 pb-8">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Configurações de Conta</h1>
         <p className="text-slate-500 text-sm mt-1">Gerencie sua identidade profissional e conexões.</p>
+        {status && (
+          <div className={`mt-4 rounded-xl border-2 px-4 py-3 text-sm font-bold ${status.type === 'success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
+            {status.text}
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

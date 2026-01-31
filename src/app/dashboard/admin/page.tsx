@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function MasterAdminPage() {
   const router = useRouter()
@@ -11,6 +12,8 @@ export default function MasterAdminPage() {
   const [loading, setLoading] = useState(true)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; table: string; id: string; label: string } | null>(null)
+  const [confirmBan, setConfirmBan] = useState<{ open: boolean; userId: string; userName: string } | null>(null)
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -32,8 +35,15 @@ export default function MasterAdminPage() {
     setLoading(false)
   }
 
-  const deleteItem = async (table: string, id: string) => {
+  const requestDeleteItem = (table: string, id: string, label: string) => {
+    setConfirmDelete({ open: true, table, id, label })
+  }
+
+  const executeDeleteItem = async () => {
+    if (!confirmDelete) return
+    const { table, id } = confirmDelete
     const { error } = await supabase.from(table).delete().eq('id', id)
+    setConfirmDelete(null)
     if (!error) {
       setStatusMsg(`PROTOCOLO DE EXCLUSÃO EXECUTADO: ${table.toUpperCase()}`)
       loadData()
@@ -41,11 +51,16 @@ export default function MasterAdminPage() {
     }
   }
 
-  const banUser = async (userId: string) => {
-    // Aqui você pode mudar uma coluna 'is_banned' ou apenas remover o acesso
-    const { error } = await supabase.from('profiles').update({ role: 'BANNED' }).eq('id', userId)
+  const requestBanUser = (userId: string, userName: string) => {
+    setConfirmBan({ open: true, userId, userName })
+  }
+
+  const executeBanUser = async () => {
+    if (!confirmBan) return
+    const { error } = await supabase.from('profiles').update({ role: 'BANNED' }).eq('id', confirmBan.userId)
+    setConfirmBan(null)
     if (!error) {
-      setStatusMsg("USUÁRIO RESTRITO NO FIREWALL.")
+      setStatusMsg('Usuário restrito com sucesso.')
       loadData()
       setTimeout(() => setStatusMsg(null), 3000)
     }
@@ -109,7 +124,7 @@ export default function MasterAdminPage() {
                   </span>
                 </td>
                 <td className="p-6 text-right">
-                  <button onClick={() => banUser(u.id)} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir Acesso</button>
+                  <button onClick={() => requestBanUser(u.id, u.full_name || 'Usuário')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir Acesso</button>
                 </td>
               </tr>
             ))}
@@ -130,7 +145,7 @@ export default function MasterAdminPage() {
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Autor: {p.profiles?.full_name}</p>
                 </div>
-                <button onClick={() => deleteItem('posts', p.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
+                <button onClick={() => requestDeleteItem('posts', p.id, p.title)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
@@ -150,7 +165,7 @@ export default function MasterAdminPage() {
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Dono: {p.profiles?.full_name}</p>
                 </div>
-                <button onClick={() => deleteItem('projects', p.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
+                <button onClick={() => requestDeleteItem('projects', p.id, p.title)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
@@ -158,6 +173,31 @@ export default function MasterAdminPage() {
           </div>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          open={confirmDelete.open}
+          onClose={() => setConfirmDelete(null)}
+          title={confirmDelete.table === 'posts' ? 'Excluir publicação da comunidade' : 'Excluir projeto'}
+          message={`"${confirmDelete.label}" será removido permanentemente. Esta ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          cancelLabel="Cancelar"
+          onConfirm={executeDeleteItem}
+          variant="danger"
+        />
+      )}
+      {confirmBan && (
+        <ConfirmModal
+          open={confirmBan.open}
+          onClose={() => setConfirmBan(null)}
+          title="Restringir acesso (banir)"
+          message={`O usuário "${confirmBan.userName}" não poderá acessar a rede. Esta ação pode ser revertida por um admin.`}
+          confirmLabel="Banir usuário"
+          cancelLabel="Cancelar"
+          onConfirm={executeBanUser}
+          variant="danger"
+        />
+      )}
     </div>
   )
 }
