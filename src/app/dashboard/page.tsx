@@ -45,7 +45,7 @@ export default function DashboardPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
         <div>
           <h1 className="leading-none">
-            <Image src="/logodash.png?v=3" alt="YOP DEVS" width={320} height={100} className="h-14 md:h-16 w-auto object-contain" priority unoptimized />
+            <Image src="/logodash.png?v=3" alt="YOP DEVS" width={400} height={125} className="h-20 md:h-24 w-auto object-contain" priority unoptimized />
           </h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
             Sessão ativa: <span className="text-violet-600">{profile?.full_name}</span>
