@@ -1,4 +1,5 @@
 "use client"
+import Image from 'next/image'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 export default function ResetPasswordPage() {
@@ -33,7 +34,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
       <div className="mb-8 text-center">
-        <img src="/logodash.png" alt="YOP DEVS" className="h-10 w-auto object-contain mx-auto" />
+        <Image src="/logodash.png" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
         <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">Defina sua nova senha</p>
       </div>
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-lg">

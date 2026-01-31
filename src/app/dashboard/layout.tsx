@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
@@ -88,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       `}>
         <div className="p-6 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center">
-            <img src="/logodash.png" alt="YOP DEVS" className="h-8 w-auto object-contain" />
+            <Image src="/logodash.png" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" priority unoptimized />
           </Link>
           <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -133,7 +134,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-300 hover:text-white">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <img src="/logodash.png" alt="YOP DEVS" className="h-7 w-auto object-contain" />
+          <Image src="/logodash.png" alt="YOP DEVS" width={180} height={56} className="h-10 w-auto object-contain" unoptimized />
           <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-black text-[10px] text-white">
             {profile?.full_name?.[0]}
           </div>

@@ -1,4 +1,5 @@
 "use client"
+import Image from 'next/image'
 import Link from 'next/link'
 export default function PrivacyPage() {
   return (
@@ -6,7 +7,7 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <Link href="/" className="flex items-center">
-            <img src="/logodash.png" alt="YOP DEVS" className="h-8 w-auto object-contain" />
+            <Image src="/logodash.png" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
           </Link>
           <nav className="flex gap-4 text-sm font-semibold">
             <Link href="/termos" className="text-slate-600 hover:text-[#4c1d95]">Termos de Uso</Link>
