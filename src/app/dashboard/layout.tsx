@@ -24,12 +24,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setUnreadCount(count ?? 0)
   }
 
+  const [userId, setUserId] = useState<string | null>(null)
+
   useEffect(() => {
     async function checkAccess() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/'); return; }
 
       if (typeof window !== 'undefined') (window as any).__notifUserId = session.user.id
+      setUserId(session.user.id)
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(profileData)
@@ -38,6 +41,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     checkAccess()
   }, [router])
+
+  // Realtime: badge de notificações atualiza em tempo real (web e app)
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel('notifications-badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        () => fetchUnreadCount(userId)
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId])
 
   // Heartbeat: marca usuário como online (last_seen) a cada 60s
   useEffect(() => {

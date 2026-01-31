@@ -30,10 +30,12 @@ export default function MarketplacePage() {
   const sendInterest = async (project: { id: string; title: string; owner_id: string }) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || user.id === project.owner_id) return
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    const displayName = profile?.full_name || user.email || 'Um membro'
     const { error } = await supabase.from('notifications').insert({
       user_id: project.owner_id,
       type: 'INTEREST',
-      content: `${user.email || 'Um membro'} demonstrou interesse no seu projeto "${project.title}".`,
+      content: `${displayName} tem interesse no seu projeto "${project.title}".`,
       is_read: false,
       link: `/dashboard/chat/${user.id}`,
       from_user_id: user.id,

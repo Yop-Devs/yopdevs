@@ -194,6 +194,29 @@ export default function NotificationsPage() {
 
   useEffect(() => { loadNotifications() }, [])
 
+  // Realtime: novas notificações aparecem sem recarregar (web e app)
+  useEffect(() => {
+    if (!myId) return
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${myId}` },
+        async (payload) => {
+          const newRow = payload.new as any
+          if (!newRow?.id) return
+          setNotifications((prev) => [newRow, ...prev])
+          if (newRow.from_user_id && newRow.from_user_id !== myId) {
+            const { data: prof } = await supabase.from('profiles').select('id, full_name').eq('id', newRow.from_user_id).single()
+            if (prof) setSenderNames((prev) => ({ ...prev, [prof.id]: prof.full_name || 'Usuário' }))
+          }
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('notifications-updated'))
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [myId])
+
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase text-center tracking-[0.4em]">Acessando_Logs_do_Kernel...</div>
 
   return (
