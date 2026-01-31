@@ -122,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       `}>
         <div className="p-6 flex items-center justify-center relative">
           <Link href="/dashboard" className="flex items-center justify-center w-full">
-            <Image src="/logoprincipal.png?v=1" alt="YOP DEVS" width={280} height={88} className="h-16 w-auto object-contain" priority unoptimized />
+            <Image src="/logoprincipal.png?v=2" alt="YOP DEVS" width={280} height={88} className="h-16 w-auto object-contain" priority unoptimized />
           </Link>
           <button className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>

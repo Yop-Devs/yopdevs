@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "fix-icon": "node scripts/fix-icon-background.js"
+    "fix-icon": "node scripts/fix-icon-background.js",
+    "fix-logo": "node scripts/fix-logo-background.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

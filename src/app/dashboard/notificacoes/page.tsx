@@ -220,12 +220,12 @@ export default function NotificationsPage() {
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase text-center tracking-[0.4em]">Acessando_Logs_do_Kernel...</div>
 
   return (
-    <div className="max-w-[1000px] mx-auto py-12 px-6 space-y-10">
-      <header className="border-b border-slate-200 pb-6 flex flex-wrap justify-between items-end gap-4">
+    <div className="max-w-[1000px] mx-auto py-6 sm:py-12 px-4 sm:px-6 space-y-6 sm:space-y-10">
+      <header className="border-b border-slate-200 pb-4 sm:pb-6 flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter">NOTIFICAÇÕES</h1>
-          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Monitoramento de interações na rede YOP Devs</p>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="mt-3 px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-bold uppercase outline-none focus:border-[#4c1d95]">
+          <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter">Notificações</h1>
+          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-1 sm:mt-2">Monitoramento de interações na rede YOP Devs</p>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="mt-2 sm:mt-3 px-3 py-2 sm:px-4 bg-white border-2 border-slate-200 rounded-xl text-[10px] font-bold uppercase outline-none focus:border-[#4c1d95] w-full sm:w-auto max-w-[200px]">
             <option value="">Todas</option>
             <option value="CHAT">Mensagem</option>
             <option value="LIKE">Curtida</option>
@@ -236,13 +236,13 @@ export default function NotificationsPage() {
           </select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={toggleSelectAll} className="px-4 py-2 border-2 border-slate-200 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">
-            {selectedIds.size === filteredNotifications.length && filteredNotifications.length > 0 ? 'Desmarcar todas' : 'Selecionar todas'}
+          <button type="button" onClick={toggleSelectAll} className="px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-slate-200 rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">
+            {selectedIds.size === filteredNotifications.length && filteredNotifications.length > 0 ? 'Desmarcar' : 'Selecionar'}
           </button>
-          <button type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || deleting} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-[9px] font-black uppercase hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-            Apagar selecionadas {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+          <button type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || deleting} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            Apagar sel. {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
           </button>
-          <button type="button" onClick={requestDeleteAll} disabled={notifications.length === 0 || deleting} className="px-4 py-2 bg-red-100 text-red-700 border-2 border-red-200 rounded-xl text-[9px] font-black uppercase hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+          <button type="button" onClick={requestDeleteAll} disabled={notifications.length === 0 || deleting} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-100 text-red-700 border-2 border-red-200 rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             Apagar todas
           </button>
         </div>
@@ -253,13 +253,18 @@ export default function NotificationsPage() {
           {deleteError}
         </div>
       )}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredNotifications.map((n) => {
           const senderId = getSenderId(n)
           const isFriend = senderId ? friendIds.has(senderId) : false
           const displayContent = getDisplayContent(n, senderId)
           const isChat = n.type === 'CHAT' || /mensagem|message/i.test(n.content || '')
           const typeLabel = getTypeLabel(n.type)
+          const hasAction =
+            (isChat && n.link) ||
+            (!isChat && (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link) ||
+            ((n.type === 'LIKE' || n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link) ||
+            (n.type === 'INTEREST' && n.from_user_id && n.from_user_id !== myId)
           return (
             <div
               key={n.id}
@@ -267,54 +272,61 @@ export default function NotificationsPage() {
               tabIndex={0}
               onClick={() => handleNotificationClick(n)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(n); } }}
-              className="w-full text-left bg-white border border-slate-200 p-5 rounded-2xl flex flex-wrap items-center gap-6 hover:shadow-md hover:border-violet-200 transition-all group cursor-pointer"
+              className="w-full text-left bg-white border border-slate-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl hover:shadow-md hover:border-violet-200 transition-all group cursor-pointer flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-6"
             >
-              <div className="flex shrink-0 items-center">
-                <input type="checkbox" checked={selectedIds.has(n.id)} onChange={() => toggleSelect(n.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-              </div>
-              <button type="button" onClick={(e) => deleteOne(n.id, e)} className="shrink-0 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar esta notificação">✕</button>
-              <div className="flex flex-1 min-w-0 items-center gap-6">
-                <div className="shrink-0">{getIcon(n.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 border border-indigo-200 rounded px-2 py-0.5 bg-indigo-50">
-                    {typeLabel}
-                  </span>
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight mt-2">{displayContent}</p>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {senderId && (
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded border-2 uppercase ${isFriend ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-300 text-slate-500 bg-slate-50'}`}>
-                        {isFriend ? 'Amigo' : 'Usuário'}
-                      </span>
-                    )}
-                    <p className="text-[9px] text-slate-400 font-mono uppercase italic">{new Date(n.created_at).toLocaleString('pt-BR')}</p>
-                  </div>
+              {/* Linha 1 mobile: checkbox, apagar, ícone e bolinha */}
+              <div className="flex items-start sm:items-center gap-2 sm:gap-4 flex-shrink-0">
+                <input type="checkbox" checked={selectedIds.has(n.id)} onChange={() => toggleSelect(n.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-0.5 sm:mt-0" />
+                <button type="button" onClick={(e) => deleteOne(n.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar">✕</button>
+                <div className="flex-1 sm:flex-initial flex items-center gap-2 min-w-0">
+                  <div className="shrink-0 scale-90 sm:scale-100 origin-left">{getIcon(n.type)}</div>
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-indigo-600 animate-pulse'}`} title={n.is_read ? '' : 'Não lida'} />
                 </div>
-                <div className={`w-2 h-2 rounded-full shrink-0 ${n.is_read ? 'bg-transparent' : 'bg-indigo-600 animate-pulse'}`} title={n.is_read ? '' : 'Não lida'} />
               </div>
-              {isChat && n.link && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
-                  Ver mensagem
-                </button>
-              )}
-              {!isChat && (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
-                  Ver solicitações
-                </button>
-              )}
-              {(n.type === 'LIKE' || n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 transition-all">
-                  Ver fórum
-                </button>
-              )}
-              {n.type === 'INTEREST' && n.from_user_id && n.from_user_id !== myId && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); sendFriendRequest(n.from_user_id); }}
-                  disabled={!!n._friendRequestSent}
-                  className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {n._friendRequestSent ? 'Solicitação enviada' : 'Adicionar como amigo'}
-                </button>
+              {/* Conteúdo: tipo, mensagem, meta — ocupa o resto e não fica espremido pelo botão */}
+              <div className="flex-1 min-w-0 order-2 sm:order-none">
+                <span className="inline-block text-[9px] font-black uppercase tracking-wide text-indigo-600 border border-indigo-200 rounded px-2 py-0.5 bg-indigo-50 whitespace-nowrap">
+                  {typeLabel}
+                </span>
+                <p className="text-xs sm:text-xs font-bold text-slate-900 mt-1.5 sm:mt-2 leading-snug break-words normal-case">{displayContent}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  {senderId && (
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded border uppercase ${isFriend ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-300 text-slate-500 bg-slate-50'}`}>
+                      {isFriend ? 'Amigo' : 'Usuário'}
+                    </span>
+                  )}
+                  <span className="text-[9px] text-slate-400 font-mono">{new Date(n.created_at).toLocaleString('pt-BR')}</span>
+                </div>
+              </div>
+              {/* Botão de ação: largura total no mobile, compacto */}
+              {hasAction && (
+                <div className="w-full sm:w-auto order-3 sm:flex-shrink-0">
+                  {isChat && n.link && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="w-full sm:w-auto block text-center px-3 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-500 transition-all">
+                      Ver mensagem
+                    </button>
+                  )}
+                  {!isChat && (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED') && n.link && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="w-full sm:w-auto block text-center px-3 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-500 transition-all">
+                      Ver solicitações
+                    </button>
+                  )}
+                  {(n.type === 'LIKE' || n.type === 'COMMENT_LIKE' || n.type === 'FORUM_REPLY') && n.link && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleNotificationClick(n); }} className="w-full sm:w-auto block text-center px-3 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-500 transition-all">
+                      Ver fórum
+                    </button>
+                  )}
+                  {n.type === 'INTEREST' && n.from_user_id && n.from_user_id !== myId && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); sendFriendRequest(n.from_user_id); }}
+                      disabled={!!n._friendRequestSent}
+                      className="w-full sm:w-auto block text-center px-3 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {n._friendRequestSent ? 'Solicitação enviada' : 'Adicionar como amigo'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )

@@ -39,9 +39,9 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-10 space-y-10">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-10">
       {/* Header Profissional */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b border-slate-200 pb-6 sm:pb-8">
         <div>
           <h1 className="leading-none text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">
             YOP Devs

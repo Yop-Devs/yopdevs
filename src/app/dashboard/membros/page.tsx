@@ -105,20 +105,19 @@ export default function VerAmigosPage() {
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-[0.5em]">Carregando...</div>
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-200 pb-10">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-6 sm:py-12 space-y-6 sm:space-y-10">
+      <header className="flex flex-col gap-4 sm:gap-8 border-b border-slate-200 pb-6 sm:pb-10">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Ver Amigos</h1>
-          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-3 italic">Amigos, solicitações e procurar usuários</p>
+          <h1 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter text-slate-900">Ver Amigos</h1>
+          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2 sm:mt-3 italic">Amigos, solicitações e procurar usuários</p>
         </div>
-
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(['amigos', 'solicitacoes', 'procurar'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${tab === t ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border border-slate-200 text-slate-500 hover:border-violet-400'}`}
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${tab === t ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border border-slate-200 text-slate-500 hover:border-violet-400'}`}
             >
               {t === 'amigos' ? 'Amigos' : t === 'solicitacoes' ? 'Solicitações' : 'Procurar usuário'}
             </button>
@@ -151,19 +150,21 @@ export default function VerAmigosPage() {
               <p className="text-slate-500 text-sm">Quando alguém te adicionar, aparecerá aqui.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {requests.map((r) => (
-                <div key={r.id} className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center gap-6 flex-wrap">
-                  <div className="w-14 h-14 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black text-slate-400">
-                    {r.from?.avatar_url ? <img src={r.from.avatar_url} className="w-full h-full object-cover" alt="" /> : r.from?.full_name?.[0]}
+                <div key={r.id} className="bg-white border border-slate-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                  <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black text-slate-400 shrink-0">
+                      {r.from?.avatar_url ? <img src={r.from.avatar_url} className="w-full h-full object-cover" alt="" /> : r.from?.full_name?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-slate-900 uppercase tracking-tight text-sm sm:text-base truncate">{r.from?.full_name || 'Usuário'}</p>
+                      <p className="text-[9px] text-slate-400 uppercase">Membro</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-slate-900 uppercase tracking-tight">{r.from?.full_name || 'Usuário'}</p>
-                    <p className="text-[9px] text-slate-400 uppercase">Membro</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => acceptRequest(r.id)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500">Aceitar</button>
-                    <button type="button" onClick={() => rejectRequest(r.id)} className="px-4 py-2 border-2 border-slate-300 text-slate-600 rounded-xl text-[9px] font-black uppercase hover:border-red-400 hover:text-red-600">Recusar</button>
+                  <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+                    <button type="button" onClick={() => acceptRequest(r.id)} className="flex-1 sm:flex-none px-3 py-2 bg-indigo-600 text-white rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500">Aceitar</button>
+                    <button type="button" onClick={() => rejectRequest(r.id)} className="flex-1 sm:flex-none px-3 py-2 border-2 border-slate-300 text-slate-600 rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:border-red-400 hover:text-red-600">Recusar</button>
                   </div>
                 </div>
               ))}
@@ -226,39 +227,39 @@ function FriendCard({
   onRemoveFriend?: () => void
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-[2rem] p-8 flex flex-col items-center text-center hover:shadow-lg hover:border-violet-200 transition-all group relative overflow-hidden">
-      <div className="absolute top-4 right-4">
-        <span className={`text-[8px] font-black px-2 py-1 rounded border-2 uppercase ${isOnline ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-200 text-slate-400 bg-slate-50'}`}>{isOnline ? 'Online' : 'Offline'}</span>
+    <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-[2rem] p-5 sm:p-8 flex flex-col items-center text-center hover:shadow-lg hover:border-violet-200 transition-all group relative overflow-hidden">
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
+        <span className={`text-[8px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border-2 uppercase ${isOnline ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-200 text-slate-400 bg-slate-50'}`}>{isOnline ? 'Online' : 'Offline'}</span>
       </div>
-      <div className="w-24 h-24 bg-slate-50 border-2 border-slate-200 rounded-3xl overflow-hidden mb-6 shadow-sm group-hover:scale-110 transition-transform">
-        {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full object-cover" alt="" /> : <span className="text-4xl font-black text-slate-200 flex items-center justify-center h-full uppercase">{member.full_name?.[0]}</span>}
+      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-50 border-2 border-slate-200 rounded-2xl sm:rounded-3xl overflow-hidden mb-4 sm:mb-6 shadow-sm group-hover:scale-105 sm:group-hover:scale-110 transition-transform">
+        {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full object-cover" alt="" /> : <span className="text-2xl sm:text-4xl font-black text-slate-200 flex items-center justify-center h-full uppercase">{member.full_name?.[0]}</span>}
       </div>
-      <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900 mb-1">{member.full_name}</h3>
-      <p className="text-[9px] font-bold text-violet-600 uppercase tracking-widest mb-4">Membro</p>
-      <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-6 h-10 italic">{member.bio || 'Sem bio.'}</p>
-      <div className="flex flex-wrap justify-center gap-2 mb-8">
+      <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 mb-0.5 sm:mb-1 line-clamp-1">{member.full_name}</h3>
+      <p className="text-[9px] font-bold text-violet-600 uppercase tracking-widest mb-2 sm:mb-4">Membro</p>
+      <p className="text-[11px] sm:text-xs text-slate-500 font-medium line-clamp-2 mb-4 sm:mb-6 min-h-[2rem] sm:h-10 italic">{member.bio || 'Sem bio.'}</p>
+      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-4 sm:mb-8">
         {member.specialties?.split(',').slice(0, 3).map((spec: string) => (
-          <span key={spec} className="text-[8px] font-black border-2 border-slate-200 text-slate-700 px-2 py-0.5 rounded-lg uppercase tracking-tighter">{spec.trim()}</span>
+          <span key={spec} className="text-[8px] font-black border-2 border-slate-200 text-slate-700 px-1.5 py-0.5 sm:px-2 rounded-lg uppercase tracking-tighter">{spec.trim()}</span>
         ))}
       </div>
-      <div className="w-full space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <Link href={`/dashboard/perfil/${member.id}`} className="py-3 border border-slate-200 rounded-xl text-[9px] font-bold uppercase hover:bg-slate-50 transition-all">Ver Portfólio</Link>
+      <div className="w-full space-y-2 sm:space-y-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <Link href={`/dashboard/perfil/${member.id}`} className="py-2.5 sm:py-3 border border-slate-200 rounded-lg sm:rounded-xl text-[9px] font-bold uppercase hover:bg-slate-50 transition-all text-center">Ver Portfólio</Link>
           {isMe ? (
-            <span className="py-3 bg-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase text-center cursor-not-allowed">Você</span>
+            <span className="py-2.5 sm:py-3 bg-slate-100 text-slate-400 rounded-lg sm:rounded-xl text-[9px] font-black uppercase text-center cursor-not-allowed">Você</span>
           ) : (
             <>
-              <Link href={`/dashboard/chat/${member.id}`} className="py-3 bg-[#4c1d95] text-white rounded-xl text-[9px] font-bold uppercase hover:bg-violet-800 transition-all shadow-md text-center">Conectar</Link>
+              <Link href={`/dashboard/chat/${member.id}`} className="py-2.5 sm:py-3 bg-[#4c1d95] text-white rounded-lg sm:rounded-xl text-[9px] font-bold uppercase hover:bg-violet-800 transition-all shadow-md text-center">Conectar</Link>
               {!isFriend && (
-                <button type="button" onClick={onAdd} disabled={requestSent} className="py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
-                  {requestSent ? 'Enviado' : 'Adicionar amigo'}
+                <button type="button" onClick={onAdd} disabled={requestSent} className="py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {requestSent ? 'Enviado' : 'Adicionar'}
                 </button>
               )}
             </>
           )}
         </div>
         {isFriend && onRemoveFriend && (
-          <button type="button" onClick={onRemoveFriend} className="w-full py-2.5 border-2 border-red-200 text-red-600 rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-all">
+          <button type="button" onClick={onRemoveFriend} className="w-full py-2 sm:py-2.5 border-2 border-red-200 text-red-600 rounded-lg sm:rounded-xl text-[9px] font-black uppercase hover:bg-red-50 transition-all">
             Desfazer amizade
           </button>
         )}

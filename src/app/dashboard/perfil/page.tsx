@@ -86,7 +86,7 @@ export default function ProfilePage() {
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-[0.5em]">Sync_Profile_Data...</div>
 
   return (
-    <div className="max-w-[1200px] mx-auto py-16 px-8 space-y-12">
+    <div className="max-w-[1200px] mx-auto py-8 sm:py-16 px-4 sm:px-8 space-y-8 sm:space-y-12">
       <header className="flex justify-between items-end border-b border-slate-200 pb-8">
         <div>
           <div className="flex items-center gap-3 flex-wrap">

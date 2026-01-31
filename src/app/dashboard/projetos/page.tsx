@@ -60,8 +60,8 @@ export default function MarketplacePage() {
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-200 pb-10">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-6 sm:py-12 space-y-6 sm:space-y-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-8 border-b border-slate-200 pb-6 sm:pb-10">
         <div>
           <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Marketplace</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.3em] mt-3">Explorar Ativos e Oportunidades de Equity</p>
@@ -114,7 +114,7 @@ export default function MarketplacePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {filtered.map((project) => (
-            <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
+            <div key={project.id} className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{project.category || 'Venture'}</span>
