@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (typeof window !== 'undefined') (window as any).__notifUserId = session.user.id
       setUserId(session.user.id)
       const { data: profileData } = await supabase
-        .from('profiles').select('*').eq('id', session.user.id).single()
+        .from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
       setProfile(profileData)
       await fetchUnreadCount(session.user.id)
       setLoading(false)
@@ -130,7 +130,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-          {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || (profile?.role || '').toUpperCase() === 'ADMIN').map((item) => {
+          {navItems.filter((item) => {
+            if (!('adminOnly' in item && item.adminOnly)) return true
+            const r = (profile?.role || '').toUpperCase()
+            return r === 'ADMIN' || r === 'MODERADOR'
+          }).map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
               <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
@@ -152,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
             <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">
-              {(profile?.role || '').toUpperCase() === 'ADMIN' ? 'Administrador On-line' : 'Usuário On-line'}
+              {['ADMIN', 'MODERADOR'].includes((profile?.role || '').toUpperCase()) ? 'Administrador On-line' : 'Usuário On-line'}
             </p>
           </div>
           <button
