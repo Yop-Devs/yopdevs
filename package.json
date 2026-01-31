@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "fix-icon": "node scripts/fix-icon-background.js",
-    "fix-logo": "node scripts/fix-logo-background.js"
+    "fix-logo": "node scripts/fix-logo-background.js",
+    "fix-logodash": "node scripts/fix-logodash-background.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

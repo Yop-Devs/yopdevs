@@ -196,7 +196,7 @@ function LandingPageContent() {
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="h-14 md:h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center">
-              <Image src="/logoprincipal.png?v=2" alt="YOP DEVS" width={280} height={90} className="h-14 md:h-16 w-auto object-contain" priority unoptimized />
+              <Image src="/logoprincipal.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 md:h-16 w-auto object-contain" priority unoptimized />
             </Link>
             <div className="flex items-center gap-4 md:gap-6">
               <Link href="/termos" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Termos de Uso</Link>
@@ -414,8 +414,8 @@ function LandingPageContent() {
       {/* Footer — Termos, Privacidade e Suporte em destaque */}
       <footer className="bg-slate-800 text-slate-200 py-10 px-4 md:px-6 border-t border-slate-700">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
-          <Link href="/" className="flex items-center">
-            <Image src="/logoprincipal.png?v=2" alt="YOP DEVS" width={220} height={70} className="h-11 md:h-12 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity" unoptimized />
+          <Link href="/" className="text-xl md:text-2xl font-black italic tracking-tight text-white hover:text-slate-200 transition-colors">
+            YOP Devs
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
             <Link href="/termos" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Termos de Uso</Link>
