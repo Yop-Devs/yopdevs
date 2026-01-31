@@ -19,7 +19,7 @@ export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 text-center">
       <h1 className="mb-2">
-        <Image src="/logodash.png" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
+        <Image src="/logodash.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
       </h1>
       <h2 className="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Bem-vindo à rede</h2>
       <p className="text-slate-600 mb-8 max-w-md text-sm">Poste no fórum, crie projetos e converse com amigos. Todos têm acesso às mesmas ferramentas.</p>

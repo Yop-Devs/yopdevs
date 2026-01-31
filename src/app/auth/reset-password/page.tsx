@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
       <div className="mb-10 text-center">
         <h1 className="leading-none">
-          <Image src="/logodash.png" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
+          <Image src="/logodash.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
         </h1>
         <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">
           Redefinição de senha
