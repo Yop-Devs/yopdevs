@@ -68,6 +68,28 @@ export default function DashboardPage() {
         
         {/* Coluna de Conteúdo Principal */}
         <div className="lg:col-span-8 space-y-8">
+          {/* Post fixado: Boas-vindas do administrador */}
+          <div className="bg-white border-2 border-violet-200 rounded-2xl p-6 sm:p-8 shadow-md relative overflow-hidden">
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 bg-violet-100 text-violet-700 rounded-lg text-[9px] font-black uppercase tracking-wider">
+              <span aria-hidden>📌</span> Fixado
+            </div>
+            <div className="flex gap-4 sm:gap-6">
+              <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 border-violet-200 bg-slate-100 flex items-center justify-center">
+                <img src="/icone.png" alt="YOP DEVS" className="w-full h-full object-contain" />
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-black text-slate-900 text-sm sm:text-base">YOP DEVS</span>
+                  <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded text-[9px] font-black uppercase tracking-wider">Administrador</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-2 sm:mb-3">Bem-vindo à rede</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Olá! Aqui você encontra projetos, vagas e pessoas que pensam como você. Use o <strong>fórum</strong> para tirar dúvidas e trocar ideias, o <strong>Marketplace</strong> para lançar ou encontrar oportunidades e o <strong>chat</strong> para conversar com quem você conectar. Qualquer dúvida, estamos por aqui.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-10 rounded-2xl text-white border border-slate-600 shadow-lg relative overflow-hidden min-h-[280px] flex flex-col justify-center">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-6">

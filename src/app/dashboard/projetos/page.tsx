@@ -4,13 +4,23 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const SECTOR_OPTIONS = ['', 'SaaS', 'Fintech', 'AI/ML', 'Web3']
+const TYPE_OPTIONS = [
+  { value: '', label: 'Todos os tipos' },
+  { value: 'VAGA_EMPREGO', label: 'Vaga de emprego' },
+  { value: 'NOVO_PROJETO', label: 'Novo projeto / Startup' },
+]
+
+function getTypeLabel(category: string | null | undefined): string {
+  if (category === 'VAGA_EMPREGO') return 'Vaga de emprego'
+  if (category === 'NOVO_PROJETO') return 'Novo projeto'
+  return category || 'Projeto'
+}
 
 export default function MarketplacePage() {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterSector, setFilterSector] = useState('')
+  const [filterType, setFilterType] = useState('')
   const [filterEquityMin, setFilterEquityMin] = useState<number | ''>('')
   const [interestSent, setInterestSent] = useState<Record<string, boolean>>({})
   const [myId, setMyId] = useState<string | null>(null)
@@ -51,10 +61,10 @@ export default function MarketplacePage() {
                          p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.tech_stack?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesSector = !filterSector || (p.category && p.category === filterSector)
+    const matchesType = !filterType || (p.category && p.category === filterType)
     const equity = typeof p.equity_offered === 'number' ? p.equity_offered : parseFloat(p.equity_offered) || 0
     const matchesEquity = filterEquityMin === '' || equity >= Number(filterEquityMin)
-    return matchesSearch && matchesSector && matchesEquity
+    return matchesSearch && matchesType && matchesEquity
   })
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
@@ -76,12 +86,11 @@ export default function MarketplacePage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <select 
-            value={filterSector} 
-            onChange={(e) => setFilterSector(e.target.value)}
-            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-40"
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-48"
           >
-            <option value="">Todos os setores</option>
-            {SECTOR_OPTIONS.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
+            {TYPE_OPTIONS.map(opt => <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>)}
           </select>
           <input 
             type="number" 
@@ -117,19 +126,21 @@ export default function MarketplacePage() {
             <div key={project.id} className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{project.category || 'Venture'}</span>
+                  <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{getTypeLabel(project.category)}</span>
                   <span className="text-[9px] font-mono text-slate-400 italic">ID_{project.id.substring(0,6)}</span>
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 mb-4 uppercase italic tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">{project.title}</h3>
                 <p className="text-sm text-slate-600 leading-relaxed line-clamp-4 font-medium mb-8">"{project.description}"</p>
                 
-                <div className="flex flex-wrap gap-2 mb-8">
-                  {project.tech_stack?.split(',').map((stack: string) => (
-                    <span key={stack} className="text-[8px] font-mono font-black border border-slate-200 px-2 py-0.5 rounded text-slate-400 uppercase">
-                      {stack.trim()}
-                    </span>
-                  ))}
-                </div>
+                {project.tech_stack?.trim() && (
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {project.tech_stack.split(',').map((stack: string) => (
+                      <span key={stack} className="text-[8px] font-mono font-black border border-slate-200 px-2 py-0.5 rounded text-slate-400 uppercase">
+                        {stack.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col gap-3 border-t-2 border-slate-50 pt-8">

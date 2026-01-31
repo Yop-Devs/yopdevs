@@ -4,17 +4,20 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const PROJECT_TYPES = [
+  { value: 'VAGA_EMPREGO', label: 'Vaga de emprego' },
+  { value: 'NOVO_PROJETO', label: 'Novo projeto / Startup' },
+] as const
+
 export default function NewProjectPage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'SaaS',
-    tech_stack: '',
-    equity_offered: 0
+    projectType: 'NOVO_PROJETO' as (typeof PROJECT_TYPES)[number]['value'],
   })
 
   const LIMITE_PROJETOS_POR_DIA = 3
@@ -44,14 +47,21 @@ export default function NewProjectPage() {
     }
 
     const { error } = await supabase.from('projects').insert([
-      { ...formData, owner_id: user.id }
+      {
+        owner_id: user.id,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.projectType,
+        tech_stack: '',
+        equity_offered: 0,
+      },
     ])
 
     if (error) {
       setStatus({ type: 'error', text: `FALHA NO LANÇAMENTO: ${error.message.toUpperCase()}` })
       setSaving(false)
     } else {
-      setStatus({ type: 'success', text: 'VENTURE LANÇADA COM SUCESSO. REDIRECIONANDO...' })
+      setStatus({ type: 'success', text: 'PROJETO LANÇADO COM SUCESSO. REDIRECIONANDO...' })
       setTimeout(() => router.push('/dashboard/projetos'), 2000)
     }
   }
@@ -59,8 +69,8 @@ export default function NewProjectPage() {
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
       <header className="mb-10">
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Lançar Nova Venture</h1>
-        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Estruture sua oferta de equity para o mercado</p>
+        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Lançar Projeto</h1>
+        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Título, descrição e tipo de oportunidade</p>
       </header>
 
       <form onSubmit={handleSubmit} className="bg-white p-10 border border-slate-200 rounded-2xl space-y-8 shadow-lg">
@@ -73,38 +83,44 @@ export default function NewProjectPage() {
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Título do Projeto / Empresa</label>
-          <input required placeholder="Ex: FinCore - Gateway de Pagamentos" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#4c1d95] transition-all" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Setor</label>
-            <select className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none appearance-none bg-white" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-              <option value="SaaS">SaaS</option>
-              <option value="Fintech">Fintech</option>
-              <option value="AI/ML">AI / Machine Learning</option>
-              <option value="Web3">Web3 / Crypto</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Equity Oferecido (%)</label>
-            <input required type="number" step="0.1" placeholder="Ex: 15.0" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.equity_offered} onChange={e => setFormData({...formData, equity_offered: parseFloat(e.target.value)})} />
-          </div>
+          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tipo</label>
+          <select
+            required
+            className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none appearance-none bg-white focus:border-[#4c1d95] transition-all"
+            value={formData.projectType}
+            onChange={(e) => setFormData({ ...formData, projectType: e.target.value as typeof formData.projectType })}
+          >
+            {PROJECT_TYPES.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tech Stack Requerida (Separada por vírgula)</label>
-          <input required placeholder="React, Node.js, PostgreSQL, AWS" className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.tech_stack} onChange={e => setFormData({...formData, tech_stack: e.target.value})} />
+          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Título</label>
+          <input
+            required
+            placeholder="Ex: Desenvolvedor Full Stack | Ex: FinCore - Gateway de Pagamentos"
+            className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#4c1d95] transition-all"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tese de Negócio e Desafios</label>
-          <textarea required rows={5} placeholder="Descreva o ROI esperado e o que você busca em um sócio técnico..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium outline-none resize-none" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+          <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">O que se trata</label>
+          <textarea
+            required
+            rows={5}
+            placeholder="Descreva a vaga ou o projeto: responsabilidades, stack, etapa da startup, o que você busca..."
+            className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium outline-none resize-none focus:border-[#4c1d95] transition-all"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
         </div>
 
-        <button type="submit" disabled={saving} className="w-full py-5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-xl active:scale-95">
-          {saving ? 'TRANSMITINDO_DADOS...' : 'EXECUTAR LANÇAMENTO DE VENTURE'}
+        <button type="submit" disabled={saving} className="w-full py-5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-xl active:scale-95 disabled:opacity-60">
+          {saving ? 'Enviando...' : 'Lançar'}
         </button>
       </form>
     </div>
