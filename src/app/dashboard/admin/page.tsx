@@ -14,6 +14,7 @@ export default function MasterAdminPage() {
   const [accessDenied, setAccessDenied] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; table: string; id: string; label: string } | null>(null)
   const [confirmBan, setConfirmBan] = useState<{ open: boolean; userId: string; userName: string } | null>(null)
+  const [confirmRole, setConfirmRole] = useState<{ open: boolean; userId: string; userName: string; newRole: string; title: string; message: string; confirmLabel: string; variant: 'danger' | 'default' } | null>(null)
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -74,6 +75,22 @@ export default function MasterAdminPage() {
     }
   }
 
+  const requestRoleChange = (userId: string, userName: string, newRole: string, title: string, message: string, confirmLabel: string, variant: 'danger' | 'default' = 'default') => {
+    setConfirmRole({ open: true, userId, userName, newRole, title, message, confirmLabel, variant })
+  }
+
+  const executeRoleChange = async () => {
+    if (!confirmRole) return
+    const { error } = await supabase.from('profiles').update({ role: confirmRole.newRole }).eq('id', confirmRole.userId)
+    setConfirmRole(null)
+    if (!error) {
+      const msg = confirmRole.newRole === 'BANNED' ? 'Usuário restrito.' : confirmRole.newRole === 'ADMIN' ? 'Admin definido.' : 'Usuário definido como membro.'
+      setStatusMsg(msg)
+      loadData()
+      setTimeout(() => setStatusMsg(null), 3000)
+    }
+  }
+
   useEffect(() => { loadData() }, [])
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] uppercase text-slate-400">Acessando_Nucleo_Admin...</div>
@@ -126,13 +143,25 @@ export default function MasterAdminPage() {
                 </td>
                 <td className="p-6">
                   <span className={`text-[9px] font-black px-2 py-1 rounded border-2 ${
-                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' :
+                    u.role === 'ADMIN' || u.role === 'MODERADOR' ? 'bg-violet-50 border-violet-500 text-violet-700' : 'bg-slate-50 border-slate-200 text-slate-700'
                   }`}>
                     {u.role || 'PENDENTE'}
                   </span>
                 </td>
-                <td className="p-6 text-right">
-                  <button onClick={() => requestBanUser(u.id, u.full_name || 'Usuário')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir Acesso</button>
+                <td className="p-6 text-right flex flex-wrap gap-2 justify-end">
+                  {u.role === 'BANNED' && (
+                    <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'MEMBER', 'Desbanir usuário', `"${u.full_name || 'Usuário'}" voltará a acessar a rede como membro.`, 'Desbanir', 'default')} className="text-[10px] font-black text-green-600 uppercase hover:underline">Desbanir</button>
+                  )}
+                  {(u.role === 'ADMIN' || u.role === 'MODERADOR') && (
+                    <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'MEMBER', 'Rebaixar a Membro', `"${u.full_name || 'Usuário'}" deixará de ser admin e passará a ser membro.`, 'Rebaixar a Membro', 'default')} className="text-[10px] font-black text-amber-600 uppercase hover:underline">Rebaixar a Membro</button>
+                  )}
+                  {u.role !== 'ADMIN' && u.role !== 'MODERADOR' && u.role !== 'BANNED' && (
+                    <>
+                      <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'ADMIN', 'Dar rank Admin', `"${u.full_name || 'Usuário'}" terá acesso ao painel de administração.`, 'Dar Admin', 'default')} className="text-[10px] font-black text-violet-600 uppercase hover:underline">Dar Admin</button>
+                      <button onClick={() => requestBanUser(u.id, u.full_name || 'Usuário')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -204,6 +233,18 @@ export default function MasterAdminPage() {
           cancelLabel="Cancelar"
           onConfirm={executeBanUser}
           variant="danger"
+        />
+      )}
+      {confirmRole && (
+        <ConfirmModal
+          open={confirmRole.open}
+          onClose={() => setConfirmRole(null)}
+          title={confirmRole.title}
+          message={confirmRole.message}
+          confirmLabel={confirmRole.confirmLabel}
+          cancelLabel="Cancelar"
+          onConfirm={executeRoleChange}
+          variant={confirmRole.variant}
         />
       )}
     </div>
