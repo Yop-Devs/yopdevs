@@ -23,7 +23,11 @@ export default function MasterAdminPage() {
     }
     const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     const role = (myProfile?.role || '').toUpperCase()
-    if (role !== 'ADMIN' && role !== 'MODERADOR') {
+    const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
+      ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+      : []
+    const isAdminByEmail = !!user?.email && adminEmails.includes(user.email.toLowerCase())
+    if (role !== 'ADMIN' && role !== 'MODERADOR' && !isAdminByEmail) {
       setAccessDenied(true)
       setLoading(false)
       return

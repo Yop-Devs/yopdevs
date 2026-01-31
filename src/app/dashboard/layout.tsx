@@ -25,6 +25,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const [userId, setUserId] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  const isAdminByRole = (profile?.role || '').toUpperCase() === 'ADMIN' || (profile?.role || '').toUpperCase() === 'MODERADOR'
+  const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
+    ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : []
+  const isAdminByEmail = !!userEmail && adminEmails.includes(userEmail.toLowerCase())
+  const showAdminLink = isAdminByRole || isAdminByEmail
 
   useEffect(() => {
     async function checkAccess() {
@@ -33,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       if (typeof window !== 'undefined') (window as any).__notifUserId = session.user.id
       setUserId(session.user.id)
+      setUserEmail(session.user.email ?? null)
       const { data: profileData } = await supabase
         .from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
       setProfile(profileData)
@@ -130,11 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-          {navItems.filter((item) => {
-            if (!('adminOnly' in item && item.adminOnly)) return true
-            const r = (profile?.role || '').toUpperCase()
-            return r === 'ADMIN' || r === 'MODERADOR'
-          }).map((item) => {
+          {navItems.map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
               <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
@@ -156,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
             <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">
-              {['ADMIN', 'MODERADOR'].includes((profile?.role || '').toUpperCase()) ? 'Administrador On-line' : 'Usuário On-line'}
+              {showAdminLink ? 'Administrador On-line' : 'Usuário On-line'}
             </p>
           </div>
           <button
