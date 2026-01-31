@@ -22,7 +22,7 @@ export default function MasterAdminPage() {
       return
     }
     const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (myProfile?.role !== 'ADMIN') {
+    if ((myProfile?.role || '').toUpperCase() !== 'ADMIN') {
       setAccessDenied(true)
       setLoading(false)
       return
