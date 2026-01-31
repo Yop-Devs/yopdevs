@@ -12,7 +12,7 @@ export const metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.png',
-    apple: '/logodash.png',
+    apple: '/favicon.png',
   },
   openGraph: {
     title: 'YOP DEVS — Equity & Growth',
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logodash.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
