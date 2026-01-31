@@ -97,44 +97,69 @@ export default function ChatRoomPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
 
-  async function init() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    setMe(user.id)
-    if (receiver_id === user.id) {
-      router.replace('/dashboard/chat')
-      return
-    }
-
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', receiver_id).single()
-    setReceiver(prof)
-
-    const { data: friends } = await supabase
-      .from('friend_requests')
-      .select('from_id, to_id')
-      .or(`from_id.eq.${user.id},to_id.eq.${user.id}`)
-      .eq('status', 'accepted')
-    const friendIds = new Set((friends || []).map((f) => (f.from_id === user.id ? f.to_id : f.from_id)))
-    setIsFriend(friendIds.has(receiver_id as string))
-
-    const { data: msgs } = await supabase.from('messages')
+  const fetchMessages = async (myId: string, otherId: string) => {
+    const { data } = await supabase.from('messages')
       .select('*')
-      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${receiver_id}),and(sender_id.eq.${receiver_id},receiver_id.eq.${user.id})`)
+      .or(`and(sender_id.eq.${myId},receiver_id.eq.${otherId}),and(sender_id.eq.${otherId},receiver_id.eq.${myId})`)
       .order('created_at', { ascending: true })
-    setMessages(msgs || [])
-
-    const channel = supabase.channel(`chat_${receiver_id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
-        if ((p.new.sender_id === user.id && p.new.receiver_id === receiver_id) || (p.new.sender_id === receiver_id && p.new.receiver_id === user.id)) {
-          setMessages((prev) => (prev.some((m) => m.id === p.new.id) ? prev : [...prev, p.new]))
-        }
-      }).subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return (data || []) as any[]
   }
 
-  useEffect(() => { init() }, [receiver_id])
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+    let cancelled = false
+    const POLL_INTERVAL_MS = 8000
+
+    async function run() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      setMe(user.id)
+      if (receiver_id === user.id) {
+        router.replace('/dashboard/chat')
+        return
+      }
+      const rid = receiver_id as string
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', rid).single()
+      if (!cancelled) setReceiver(prof)
+      const { data: friends } = await supabase
+        .from('friend_requests')
+        .select('from_id, to_id')
+        .or(`from_id.eq.${user.id},to_id.eq.${user.id}`)
+        .eq('status', 'accepted')
+      const friendIds = new Set((friends || []).map((f) => (f.from_id === user.id ? f.to_id : f.from_id)))
+      if (!cancelled) setIsFriend(friendIds.has(rid))
+      const msgs = await fetchMessages(user.id, rid)
+      if (!cancelled) setMessages(msgs)
+
+      channel = supabase.channel(`chat_${rid}_${user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p: any) => {
+          const n = p.new
+          if (!n || cancelled) return
+          if ((n.sender_id === user.id && n.receiver_id === rid) || (n.sender_id === rid && n.receiver_id === user.id)) {
+            setMessages((prev) => (prev.some((m) => m.id === n.id) ? prev : [...prev, n]))
+          }
+        })
+        .subscribe()
+
+      pollTimer = setInterval(async () => {
+        if (cancelled) return
+        const next = await fetchMessages(user.id, rid)
+        setMessages((prev) => {
+          if (prev.length !== next.length || next.some((m, i) => m.id !== prev[i]?.id)) return next
+          return prev
+        })
+      }, POLL_INTERVAL_MS)
+    }
+    run()
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+      if (pollTimer) clearInterval(pollTimer)
+    }
+  }, [receiver_id])
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const send = async (e: React.FormEvent, imageUrl?: string) => {
@@ -145,13 +170,19 @@ export default function ChatRoomPage() {
     if (!content && !imageUrl) return
     setNewMessage('')
     setUploadError(null)
+    setSendError(null)
     const payload: { sender_id: string; receiver_id: string; content: string; image_url?: string } = {
       sender_id: me,
       receiver_id: receiver_id as string,
       content: content || (imageUrl ? '' : '')
     }
     if (imageUrl) payload.image_url = imageUrl
-    const { data: inserted } = await supabase.from('messages').insert([payload]).select('*').single()
+    const { data: inserted, error } = await supabase.from('messages').insert([payload]).select('*').single()
+    if (error) {
+      setSendError('Falha ao enviar. Tente novamente.')
+      setNewMessage(content)
+      return
+    }
     if (inserted) setMessages((prev) => (prev.some((m) => m.id === inserted.id) ? prev : [...prev, inserted]))
   }
 
@@ -228,6 +259,11 @@ export default function ChatRoomPage() {
           {uploadError}
         </div>
       )}
+      {sendError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-2 mx-4 rounded-xl">
+          {sendError}
+        </div>
+      )}
 
       {isFriend === false && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-b-3xl text-center">
@@ -260,7 +296,7 @@ export default function ChatRoomPage() {
             className="flex-1 min-w-0 bg-slate-50 border-2 border-slate-100 px-3 py-2.5 sm:p-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-400 disabled:opacity-60"
             placeholder="Mensagem..."
             value={newMessage}
-            onChange={e => setNewMessage(e.target.value)}
+            onChange={e => { setNewMessage(e.target.value); setSendError(null) }}
             disabled={!isFriend}
           />
           <input
