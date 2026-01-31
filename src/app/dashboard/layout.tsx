@@ -27,12 +27,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userId, setUserId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
-  const isAdminByRole = (profile?.role || '').toUpperCase() === 'ADMIN' || (profile?.role || '').toUpperCase() === 'MODERADOR'
+  const roleUpper = (profile?.role || '').toUpperCase().trim()
+  const isAdminByRole = roleUpper === 'ADMIN' || roleUpper === 'MODERADOR'
+  const fullNameUpper = (profile?.full_name || '').toUpperCase()
+  const isAdminByName = fullNameUpper.includes('ADMIN') || fullNameUpper.includes('MODERADOR')
   const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
     ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
     : []
   const isAdminByEmail = !!userEmail && adminEmails.includes(userEmail.toLowerCase())
-  const showAdminLink = isAdminByRole || isAdminByEmail
+  const showAdminLink = isAdminByRole || isAdminByEmail || isAdminByName
 
   useEffect(() => {
     async function checkAccess() {

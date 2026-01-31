@@ -21,13 +21,16 @@ export default function MasterAdminPage() {
       router.push('/')
       return
     }
-    const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    const role = (myProfile?.role || '').toUpperCase()
+    const { data: myProfile } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single()
+    const role = (myProfile?.role || '').toUpperCase().trim()
+    const fullNameUpper = (myProfile?.full_name || '').toUpperCase()
+    const isAdminByRole = role === 'ADMIN' || role === 'MODERADOR'
     const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
       ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
       : []
     const isAdminByEmail = !!user?.email && adminEmails.includes(user.email.toLowerCase())
-    if (role !== 'ADMIN' && role !== 'MODERADOR' && !isAdminByEmail) {
+    const isAdminByName = fullNameUpper.includes('ADMIN') || fullNameUpper.includes('MODERADOR')
+    if (!isAdminByRole && !isAdminByEmail && !isAdminByName) {
       setAccessDenied(true)
       setLoading(false)
       return
