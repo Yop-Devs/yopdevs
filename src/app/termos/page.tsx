@@ -1,14 +1,12 @@
 "use client"
 import Link from 'next/link'
-import Logo from '@/components/Logo'
-
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 p-6 md:p-12">
       <div className="max-w-3xl mx-auto space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo variant="dark" size="sm" />
+          <Link href="/" className="flex items-center">
+            <img src="/logodash.png" alt="YOP DEVS" className="h-8 w-auto object-contain" />
           </Link>
           <nav className="flex gap-4 text-sm font-semibold">
             <Link href="/termos" className="text-[#4c1d95]">Termos de Uso</Link>

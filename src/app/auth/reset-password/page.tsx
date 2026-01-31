@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Logo from '@/components/Logo'
-
 export default function ResetPasswordPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -35,7 +33,9 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
       <div className="mb-10 text-center">
-        <h1 className="leading-none"><Logo variant="dark" size="lg" /></h1>
+        <h1 className="leading-none">
+          <img src="/logodash.png" alt="YOP DEVS" className="h-10 w-auto object-contain mx-auto" />
+        </h1>
         <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">
           Redefinição de senha
         </p>

@@ -10,6 +10,10 @@ export const metadata = {
   },
   description: 'Rede exclusiva para conexões entre CTOs e empresários. Marketplace de equity, fóruns técnicos e notificações de alto impacto.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icone.png',
+    apple: '/icone.png',
+  },
   openGraph: {
     title: 'YOP DEVS — Equity & Growth',
     description: 'Infraestrutura para mentes brilhantes. Conectamos engenharia de software com tese estratégica de negócios.',
@@ -31,6 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-br" className={fredoka.variable}>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icone.png" />
+        <link rel="apple-touch-icon" href="/icone.png" />
       </head>
       <body className="antialiased overflow-x-hidden">
         {children}

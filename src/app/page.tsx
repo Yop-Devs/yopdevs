@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import Logo from '@/components/Logo'
 
 function LandingPageContent() {
   const searchParams = useSearchParams()
@@ -147,11 +146,8 @@ function LandingPageContent() {
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="h-14 md:h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-[#4c1d95] rounded-xl flex items-center justify-center shadow-md">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </div>
-              <Logo variant="dark" size="sm" />
+            <Link href="/" className="flex items-center">
+              <img src="/logoprincipal.png" alt="YOP DEVS" className="h-9 md:h-10 w-auto object-contain" />
             </Link>
             <div className="flex items-center gap-4 md:gap-6">
               <Link href="/termos" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Termos de Uso</Link>
@@ -369,11 +365,8 @@ function LandingPageContent() {
       {/* Footer — Termos, Privacidade e Suporte em destaque */}
       <footer className="bg-slate-800 text-slate-200 py-10 px-4 md:px-6 border-t border-slate-700">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <Logo variant="light" size="sm" />
+          <Link href="/" className="flex items-center">
+            <img src="/logoprincipal.png" alt="YOP DEVS" className="h-8 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity" />
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
             <Link href="/termos" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Termos de Uso</Link>

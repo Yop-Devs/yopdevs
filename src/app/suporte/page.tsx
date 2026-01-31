@@ -1,8 +1,6 @@
 "use client"
 import { useState } from 'react'
 import Link from 'next/link'
-import Logo from '@/components/Logo'
-
 export default function SupportPage() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle')
@@ -37,8 +35,8 @@ export default function SupportPage() {
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo variant="dark" size="sm" />
+          <Link href="/" className="flex items-center">
+            <img src="/logodash.png" alt="YOP DEVS" className="h-8 w-auto object-contain" />
           </Link>
           <nav className="flex gap-4 text-sm font-semibold">
             <Link href="/termos" className="text-slate-600 hover:text-[#4c1d95]">Termos</Link>
