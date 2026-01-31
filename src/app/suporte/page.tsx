@@ -37,7 +37,7 @@ export default function SupportPage() {
       <div className="max-w-md w-full">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Link href="/" className="flex items-center">
-            <Image src="/homeimage.png" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
+            <Image src="/logoprincipal.png" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
           </Link>
           <nav className="flex gap-4 text-sm font-semibold">
             <Link href="/termos" className="text-slate-600 hover:text-[#4c1d95]">Termos</Link>

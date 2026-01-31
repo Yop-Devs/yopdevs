@@ -145,7 +145,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.filter((item) => {
+            if ('adminOnly' in item && item.adminOnly) return showAdminLink
+            return true
+          }).map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
               <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
