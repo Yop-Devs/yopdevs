@@ -16,8 +16,7 @@ export default function ProfilePage() {
     website_url: '', 
     avatar_url: '',
     location: '',
-    specialties: '',
-    availability_status: 'DISPONÍVEL'
+    specialties: ''
   })
 
   useEffect(() => {
@@ -33,8 +32,7 @@ export default function ProfilePage() {
           website_url: data.website_url || '',
           avatar_url: data.avatar_url || '',
           location: data.location || '',
-          specialties: data.specialties || '',
-          availability_status: data.availability_status || 'DISPONÍVEL'
+          specialties: data.specialties || ''
         })
       }
       setLoading(false)
@@ -67,7 +65,16 @@ export default function ProfilePage() {
   const handleSave = async (e: any) => {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('profiles').update(formData).eq('id', user?.id)
+    const { error } = await supabase.from('profiles').update({
+          full_name: formData.full_name,
+          bio: formData.bio,
+          github_url: formData.github_url,
+          linkedin_url: formData.linkedin_url,
+          website_url: formData.website_url,
+          avatar_url: formData.avatar_url,
+          location: formData.location,
+          specialties: formData.specialties
+        }).eq('id', user?.id)
     if (error) showStatus('error', error.message)
     else showStatus('success', 'PERFIL ATUALIZADO NO KERNEL.')
   }
@@ -108,19 +115,6 @@ export default function ProfilePage() {
               <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Aguarde...' : 'Alterar Imagem'}</span>
             </label>
           </div>
-
-          <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50 space-y-4">
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status de Disponibilidade</p>
-            <select 
-              className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer"
-              value={formData.availability_status}
-              onChange={e => setFormData({...formData, availability_status: e.target.value})}
-            >
-              <option value="DISPONÍVEL">🟢 Disponível para Ventures</option>
-              <option value="OCUPADO">🔴 Em Operação Focada</option>
-              <option value="MENTOR">💎 Apenas Mentoria</option>
-            </select>
-          </div>
         </aside>
 
         {/* COLUNA DIREITA: DADOS */}
@@ -137,8 +131,12 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Especialidades Técnicas (Tags separadas por vírgula)</label>
-            <input placeholder="React, Python, Arquitetura Cloud, Venture Capital..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none italic" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Especialidades (tags por vírgula)</label>
+            <input placeholder="Ex: React, Python, Venture Capital..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Bio (dev ou empresário)</label>
+            <textarea rows={4} placeholder="Breve bio ou tese: CTO, fundador, desenvolvedor full-stack..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -154,11 +152,6 @@ export default function ProfilePage() {
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Site / Portfólio</label>
               <input type="url" placeholder="https://..." className="p-4 border border-slate-200 rounded-xl text-xs font-semibold w-full outline-none" value={formData.website_url} onChange={e => setFormData({...formData, website_url: e.target.value})} />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tese de Carreira / Bio Profissional</label>
-            <textarea rows={6} className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50 transition-all" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} placeholder="Descreva sua tese de valor e o que você constrói..." />
           </div>
 
           <button type="submit" className="w-full lg:w-auto px-20 py-5 bg-[#4c1d95] text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-violet-800 transition-all active:scale-95 shadow-md hover:shadow-lg">

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import FriendsOnlineWidget from '@/components/FriendsOnlineWidget'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
@@ -38,6 +39,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     checkAccess()
   }, [router])
 
+  // Heartbeat: marca usuário como online (last_seen) a cada 60s
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null
+    const tick = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.id) {
+        await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', session.user.id)
+      }
+    }
+    tick()
+    interval = setInterval(tick, 60_000)
+    return () => { if (interval) clearInterval(interval) }
+  }, [])
+
   useEffect(() => {
     const handler = () => {
       const uid = typeof window !== 'undefined' && (window as any).__notifUserId
@@ -60,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { name: 'HOME', href: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { name: 'Fórum', href: '/dashboard/forum', icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
+    { name: 'Comunidade', href: '/dashboard/forum', icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
     { name: 'Projetos', href: '/dashboard/projetos', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
     { name: 'Meus Projetos', href: '/dashboard/meus-projetos', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { name: 'Ver Amigos', href: '/dashboard/membros', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
@@ -89,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       `}>
         <div className="p-6 flex items-center justify-center relative">
           <Link href="/dashboard" className="flex items-center justify-center w-full">
-            <Image src="/logodash.png?v=4" alt="YOP DEVS" width={280} height={88} className="h-16 w-auto object-contain" priority unoptimized />
+            <Image src="/logoprincipal.png?v=1" alt="YOP DEVS" width={280} height={88} className="h-16 w-auto object-contain" priority unoptimized />
           </Link>
           <button className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -145,6 +160,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      <FriendsOnlineWidget />
     </div>
   )
 }

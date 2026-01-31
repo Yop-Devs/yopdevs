@@ -8,12 +8,8 @@ export default function MarketplacePage() {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [interestSent, setInterestSent] = useState<Record<string, boolean>>({})
   const [myId, setMyId] = useState<string | null>(null)
-
-  // Tags pré-definidas para filtro rápido
-  const techStacks = ['React', 'Node.js', 'Python', 'Go', 'AWS', 'Mobile', 'AI']
 
   async function fetchProjects() {
     setLoading(true)
@@ -45,10 +41,11 @@ export default function MarketplacePage() {
   useEffect(() => { fetchProjects() }, [])
 
   const filtered = projects.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesTag = selectedTag ? p.tech_stack?.includes(selectedTag) : true
-    return matchesSearch && matchesTag
+    const matchesSearch = !searchTerm || p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         p.tech_stack?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    return matchesSearch
   })
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
@@ -64,8 +61,9 @@ export default function MarketplacePage() {
         <div className="flex flex-col md:flex-row items-center gap-4">
           <input 
             type="text" 
-            placeholder="Pesquisar ventures..." 
+            placeholder="Pesquisar projetos..." 
             className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] transition-all w-72 shadow-sm"
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Link href="/dashboard/projetos/novo" className="px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md">
@@ -74,32 +72,13 @@ export default function MarketplacePage() {
         </div>
       </header>
 
-      {/* Barra de Filtros Tech */}
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={() => setSelectedTag(null)}
-          className={`px-4 py-2 rounded-full border-2 text-[9px] font-black uppercase tracking-widest transition-all ${!selectedTag ? 'bg-[#4c1d95] border-[#4c1d95] text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-violet-400'}`}
-        >
-          Todos
-        </button>
-        {techStacks.map(tag => (
-          <button 
-            key={tag}
-            onClick={() => setSelectedTag(tag)}
-            className={`px-4 py-2 rounded-full border-2 text-[9px] font-black uppercase tracking-widest transition-all ${selectedTag === tag ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-violet-400'}`}
-          >
-            {tag}
-          </button>
-        ))}
-      </div>
-
       {filtered.length === 0 ? (
         <div className="text-center py-20 px-6 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
           <p className="text-slate-600 font-bold text-lg mb-2">Nenhum projeto encontrado</p>
           <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
-            {searchTerm || selectedTag ? 'Tente outro termo ou filtro.' : 'Seja o primeiro a lançar um projeto e atrair talentos.'}
+            {searchTerm ? 'Tente outro termo de pesquisa.' : 'Seja o primeiro a lançar um projeto e atrair talentos.'}
           </p>
-          {!searchTerm && !selectedTag && (
+          {!searchTerm && (
             <Link href="/dashboard/projetos/novo" className="inline-block px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all">
               Lançar projeto
             </Link>

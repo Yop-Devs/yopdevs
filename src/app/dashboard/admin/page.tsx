@@ -118,10 +118,10 @@ export default function MasterAdminPage() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* MODERAÇÃO FÓRUM */}
+        {/* MODERAÇÃO COMUNIDADE */}
         <div className="bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
           <div className="p-6 bg-slate-50 border-b-2 border-slate-200">
-            <h2 className="text-xs font-black uppercase tracking-widest">Publicações do Fórum</h2>
+            <h2 className="text-xs font-black uppercase tracking-widest">Publicações da Comunidade</h2>
           </div>
           <div className="p-4 space-y-4 h-[400px] overflow-y-auto">
             {content.posts.map(p => (

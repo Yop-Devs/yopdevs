@@ -46,7 +46,7 @@ export default function VerAmigosPage() {
       .eq('status', 'accepted')
     const friendIds = frErr ? [] : (frData || []).map((f) => (f.from_id === user.id ? f.to_id : f.from_id))
     if (friendIds.length > 0) {
-      const { data: profs } = await supabase.from('profiles').select('*').in('id', friendIds).order('full_name')
+      const { data: profs } = await supabase.from('profiles').select('id, full_name, avatar_url, bio, specialties, role, last_seen').in('id', friendIds).order('full_name')
       setFriends(profs || [])
     } else {
       setFriends([])
@@ -91,6 +91,11 @@ export default function VerAmigosPage() {
   })
 
   const isFriend = (id: string) => friends.some((f) => f.id === id)
+  const isOnline = (lastSeen: string | null | undefined): boolean => {
+    if (!lastSeen) return false
+    const diff = Date.now() - new Date(lastSeen).getTime()
+    return diff < 3 * 60 * 1000 // 3 min
+  }
   const hasPendingFromMe = async (id: string) => {
     const { data } = await supabase.from('friend_requests').select('id').eq('from_id', myId).eq('to_id', id).eq('status', 'pending').maybeSingle()
     return !!data
@@ -131,7 +136,7 @@ export default function VerAmigosPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {friends.map((member) => (
-                <FriendCard key={member.id} member={member} myId={myId} isMe={!!myId && member.id === myId} isFriend={true} requestSent={false} onAdd={() => {}} onRemoveFriend={() => removeFriend(member.id)} />
+                <FriendCard key={member.id} member={member} myId={myId} isMe={!!myId && member.id === myId} isFriend={true} isOnline={isOnline(member.last_seen)} requestSent={false} onAdd={() => {}} onRemoveFriend={() => removeFriend(member.id)} />
               ))}
             </div>
           )}
@@ -187,6 +192,7 @@ export default function VerAmigosPage() {
                   myId={myId}
                   isMe={isMe(member.id)}
                   isFriend={isFriend(member.id)}
+                  isOnline={isOnline(member.last_seen)}
                   requestSent={!!requestSent[member.id]}
                   onAdd={() => sendFriendRequest(member.id)}
                   onRemoveFriend={undefined}
@@ -205,6 +211,7 @@ function FriendCard({
   myId,
   isMe,
   isFriend,
+  isOnline,
   requestSent,
   onAdd,
   onRemoveFriend,
@@ -213,6 +220,7 @@ function FriendCard({
   myId: string | null
   isMe: boolean
   isFriend: boolean
+  isOnline?: boolean
   requestSent: boolean
   onAdd: () => void
   onRemoveFriend?: () => void
@@ -220,7 +228,7 @@ function FriendCard({
   return (
     <div className="bg-white border border-slate-200 rounded-[2rem] p-8 flex flex-col items-center text-center hover:shadow-lg hover:border-violet-200 transition-all group relative overflow-hidden">
       <div className="absolute top-4 right-4">
-        <span className={`text-[8px] font-black px-2 py-1 rounded border-2 uppercase ${member.availability_status === 'DISPONÍVEL' ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-200 text-slate-400 bg-slate-50'}`}>{member.availability_status || 'ATIVO'}</span>
+        <span className={`text-[8px] font-black px-2 py-1 rounded border-2 uppercase ${isOnline ? 'border-green-500 text-green-600 bg-green-50' : 'border-slate-200 text-slate-400 bg-slate-50'}`}>{isOnline ? 'Online' : 'Offline'}</span>
       </div>
       <div className="w-24 h-24 bg-slate-50 border-2 border-slate-200 rounded-3xl overflow-hidden mb-6 shadow-sm group-hover:scale-110 transition-transform">
         {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full object-cover" alt="" /> : <span className="text-4xl font-black text-slate-200 flex items-center justify-center h-full uppercase">{member.full_name?.[0]}</span>}

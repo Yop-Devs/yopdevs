@@ -1,3 +1,6 @@
+-- Presença online (para status Amigos: online/offline)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_seen timestamptz;
+
 -- Notificações: colunas para link e contexto (rode no SQL Editor do Supabase)
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link text;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_user_id uuid REFERENCES auth.users(id);
