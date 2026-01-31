@@ -26,14 +26,14 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">Segurança</h1>
+    <div className="max-w-md mx-auto px-4 sm:px-0">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-gray-900">Segurança</h1>
       {status && (
         <div className={`mb-6 rounded-xl border-2 px-4 py-3 text-sm font-bold ${status.type === 'success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
           {status.text}
         </div>
       )}
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+      <div className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100">
         <form onSubmit={handleUpdatePassword} className="space-y-4">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Nova Senha</label>
