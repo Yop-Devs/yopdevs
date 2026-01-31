@@ -5,6 +5,27 @@ import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const CHAT_BUCKET = 'chat-images'
+const MAX_IMAGE_BYTES = 512 * 1024 // 512KB para economizar Storage
+
+const EMOJIS = ['😀', '😊', '👍', '❤️', '🔥', '👋', '😂', '😍', '✨', '🎉', '💪', '🙏', '😎', '🤔', '✅', '❌', '💬', '📌', '🔗', '📷']
+
+function linkify(text: string, isOwn: boolean) {
+  if (!text?.trim()) return null
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+  const parts = text.split(urlRegex)
+  return parts.map((part, i) => {
+    if (part.startsWith('http://') || part.startsWith('https://')) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className={`underline break-all ${isOwn ? 'text-white/90 hover:text-white' : 'text-indigo-600 hover:text-indigo-800'}`}>
+          {part}
+        </a>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
+}
+
 export default function ChatRoomPage() {
   const { id: receiver_id } = useParams()
   const router = useRouter()
@@ -13,7 +34,12 @@ export default function ChatRoomPage() {
   const [receiver, setReceiver] = useState<any>(null)
   const [me, setMe] = useState<string | null>(null)
   const [isFriend, setIsFriend] = useState<boolean | null>(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -54,21 +80,63 @@ export default function ChatRoomPage() {
   useEffect(() => { init() }, [receiver_id])
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  const send = async (e: any) => {
+  const send = async (e: React.FormEvent, imageUrl?: string) => {
     e.preventDefault()
-    if (!newMessage.trim() || !me || receiver_id === me) return
+    if (!me || receiver_id === me) return
     if (!isFriend) return
     const content = newMessage.trim()
+    if (!content && !imageUrl) return
     setNewMessage('')
-    const { data: inserted } = await supabase.from('messages').insert([{ sender_id: me, receiver_id, content }]).select('*').single()
+    setUploadError(null)
+    const payload: { sender_id: string; receiver_id: string; content: string; image_url?: string } = {
+      sender_id: me,
+      receiver_id: receiver_id as string,
+      content: content || (imageUrl ? '' : '')
+    }
+    if (imageUrl) payload.image_url = imageUrl
+    const { data: inserted } = await supabase.from('messages').insert([payload]).select('*').single()
     if (inserted) setMessages((prev) => (prev.some((m) => m.id === inserted.id) ? prev : [...prev, inserted]))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => send(e)
+
+  const addEmoji = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji)
+    inputRef.current?.focus()
+  }
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !me || !receiver_id || !isFriend) return
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Envie apenas imagens (JPG, PNG, GIF, WebP).')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setUploadError(`Imagem deve ter no máximo ${MAX_IMAGE_BYTES / 1024}KB para economizar espaço.`)
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `${me}/${receiver_id}/${Date.now()}.${ext}`
+    const { error: uploadErr } = await supabase.storage.from(CHAT_BUCKET).upload(path, file, { upsert: false })
+    if (uploadErr) {
+      setUploadError('Falha ao enviar imagem. Crie o bucket "chat-images" no Supabase Storage (público para leitura).')
+      setUploading(false)
+      return
+    }
+    const { data: urlData } = supabase.storage.from(CHAT_BUCKET).getPublicUrl(path)
+    setUploading(false)
+    await send({ preventDefault: () => {} } as React.FormEvent, urlData.publicUrl)
   }
 
   return (
     <div className="flex flex-col h-[85vh] max-w-[1000px] mx-auto py-6">
       <header className="bg-white border border-slate-200 p-6 rounded-t-3xl flex items-center gap-4">
         <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black">
-          {receiver?.avatar_url ? <img src={receiver.avatar_url} className="w-full h-full object-cover" /> : receiver?.full_name?.[0]}
+          {receiver?.avatar_url ? <img src={receiver.avatar_url} className="w-full h-full object-cover" alt="" /> : receiver?.full_name?.[0]}
         </div>
         <div>
           <h2 className="text-sm font-black uppercase italic tracking-tight text-slate-900">{receiver?.full_name || 'Protocolando...'}</h2>
@@ -82,7 +150,12 @@ export default function ChatRoomPage() {
             <div className={`max-w-[75%] p-5 border-2 rounded-2xl shadow-sm text-sm font-medium leading-relaxed ${
               m.sender_id === me ? 'bg-[#4c1d95] border-[#4c1d95] text-white rounded-br-none' : 'bg-slate-50 border-slate-200 text-slate-800 rounded-bl-none'
             }`}>
-              {m.content}
+              {m.image_url && (
+                <a href={m.image_url} target="_blank" rel="noopener noreferrer" className="block mb-2 rounded-lg overflow-hidden">
+                  <img src={m.image_url} alt="Enviada no chat" className="max-w-full max-h-64 object-contain" />
+                </a>
+              )}
+              {m.content ? <span className="break-words whitespace-pre-wrap">{linkify(m.content, m.sender_id === me)}</span> : null}
               <p className="text-[7px] font-black uppercase mt-3 opacity-40 italic tracking-widest text-right">
                 {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
@@ -92,23 +165,67 @@ export default function ChatRoomPage() {
         <div ref={scrollRef} />
       </div>
 
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-2 mx-4 rounded-xl">
+          {uploadError}
+        </div>
+      )}
+
       {isFriend === false && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-b-3xl text-center">
           <p className="text-sm font-bold text-amber-800">Só é possível enviar mensagens para amigos.</p>
           <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-violet-600 underline font-black">Membros</Link> e aguarde a aceitação.</p>
         </div>
       )}
-      <form onSubmit={send} className="bg-white border border-slate-200 p-4 rounded-b-3xl flex gap-3 shadow-lg">
-        <input
-          className="flex-1 bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-300 disabled:opacity-60"
-          placeholder="Escreva sua mensagem..."
-          value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
-          disabled={!isFriend}
-        />
-        <button type="submit" disabled={!isFriend} className="bg-[#4c1d95] text-white px-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all active:scale-95 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
-          ENVIAR
-        </button>
+      <form onSubmit={handleSubmit} className="bg-white border border-slate-200 p-4 rounded-b-3xl flex flex-col gap-2 shadow-lg">
+        {emojiOpen && (
+          <div className="flex flex-wrap gap-1 p-2 bg-slate-50 rounded-xl border border-slate-200">
+            {EMOJIS.map((emoji, i) => (
+              <button key={i} type="button" onClick={() => addEmoji(emoji)} className="text-xl p-1 hover:bg-slate-200 rounded transition-colors">
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            onClick={() => setEmojiOpen((o) => !o)}
+            disabled={!isFriend}
+            className="p-2 rounded-xl border-2 border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 transition-all"
+            title="Emojis"
+          >
+            😀
+          </button>
+          <input
+            ref={inputRef}
+            className="flex-1 bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none focus:border-indigo-600 transition-all placeholder:text-slate-300 disabled:opacity-60"
+            placeholder="Escreva sua mensagem, cole um link..."
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            disabled={!isFriend}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!isFriend || uploading}
+            className="p-2 rounded-xl border-2 border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 transition-all"
+            title="Enviar imagem (máx. 512KB)"
+          >
+            📷
+          </button>
+          <button type="submit" disabled={(!newMessage.trim() && !uploading) || !isFriend} className="bg-[#4c1d95] text-white px-8 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all active:scale-95 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+            {uploading ? '...' : 'Enviar'}
+          </button>
+        </div>
+        <p className="text-[9px] text-slate-400">Links viram clicáveis. Imagens: máx. 512KB (economia de espaço).</p>
       </form>
     </div>
   )

@@ -1,6 +1,9 @@
 -- Presença online (para status Amigos: online/offline)
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_seen timestamptz;
 
+-- Chat: suporte a imagem na mensagem (opcional; para economizar Storage, limite tamanho no app)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url text;
+
 -- Notificações: colunas para link e contexto (rode no SQL Editor do Supabase)
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link text;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_user_id uuid REFERENCES auth.users(id);
@@ -185,3 +188,19 @@ CREATE TRIGGER on_forum_reply_insert AFTER INSERT ON post_comments FOR EACH ROW 
 
 -- Para notificações em tempo real no app: no Supabase Dashboard > Database > Replication,
 -- inclua a tabela "notifications" na publicação "supabase_realtime" (se ainda não estiver).
+
+-- Chat com imagens: bucket "chat-images" — rode as políticas abaixo no SQL Editor (Storage já criado).
+-- Garante que RLS está ativo e cria políticas de upload (authenticated) e leitura (pública).
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow authenticated upload chat-images" ON storage.objects;
+CREATE POLICY "Allow authenticated upload chat-images"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'chat-images');
+
+DROP POLICY IF EXISTS "Allow public read chat-images" ON storage.objects;
+CREATE POLICY "Allow public read chat-images"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'chat-images');
