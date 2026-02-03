@@ -32,8 +32,9 @@ export async function GET(
     )
   }
 
-  const profile = data?.profile ?? null
-  const projects = data?.projects ?? []
+  const payload = Array.isArray(data) ? data[0] : data
+  const profile = payload?.profile ?? null
+  const projects = payload?.projects ?? []
 
   if (!profile) {
     return NextResponse.json(
