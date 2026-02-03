@@ -83,9 +83,10 @@ export default function PortfolioPage({
 
   useEffect(() => {
     if (!slug) return
+    const slugStr: string = slug
     async function load() {
       try {
-        const res = await fetch(`/api/portfolio/${encodeURIComponent(slug)}`)
+        const res = await fetch(`/api/portfolio/${encodeURIComponent(slugStr)}`)
         const data = await res.json()
         if (!res.ok) {
           setError(data.error || 'Perfil não encontrado')
