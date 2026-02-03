@@ -143,6 +143,7 @@ export default function PortfolioPage({
 
   const isGabriel = slug === 'gabriel-costa-carrara'
   const displayRole = isGabriel && (profile.role === 'MEMBER' || !profile.role) ? 'CEO' : (profile.role || 'Membro da rede YOP Devs')
+  const fenixRole = isGabriel ? 'Diretor Administrativo · Fênix Consórcios' : null
   const instagramUrl = isGabriel ? 'https://instagram.com/gabriel.carrara_' : null
   const contactPhone = isGabriel ? '65 9 9226-3485' : null
   const contactTelHref = isGabriel ? 'tel:+5565992263485' : '#'
@@ -201,10 +202,15 @@ export default function PortfolioPage({
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-3">
               {profile.full_name}
             </h1>
-            <p className="text-base md:text-lg text-slate-600 font-medium max-w-xl mb-4">
+            <p className="text-base md:text-lg text-slate-600 font-medium max-w-xl mb-3">
               <span className="inline-block px-3 py-1 bg-slate-800 text-white text-sm font-bold uppercase rounded-lg tracking-wider">
                 {displayRole}
               </span>
+              {fenixRole && (
+                <span className="inline-block ml-2 px-3 py-1 bg-violet-100 text-violet-800 text-xs font-bold rounded-lg tracking-wider border border-violet-200">
+                  {fenixRole}
+                </span>
+              )}
             </p>
             {(profile.location || profile.availability_status || contactPhone) && (
               <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm font-semibold text-slate-500 uppercase tracking-wider mb-5">
@@ -273,7 +279,9 @@ export default function PortfolioPage({
           <p className="text-slate-600 text-base leading-relaxed font-medium">
             {profile.bio || (
               <span className="italic text-slate-500">
-                {profile.full_name} faz parte da rede YOP Devs — ecossistema que conecta empreendedores, desenvolvedores e investidores. Perfil em construção.
+                {isGabriel
+                  ? `${profile.full_name} é CEO e Diretor Administrativo da Fênix Consórcios. Faz parte da rede YOP Devs — ecossistema que conecta empreendedores, desenvolvedores e investidores.`
+                  : `${profile.full_name} faz parte da rede YOP Devs — ecossistema que conecta empreendedores, desenvolvedores e investidores. Perfil em construção.`}
               </span>
             )}
           </p>
