@@ -26,27 +26,59 @@ type Project = {
   created_at: string
 }
 
-// Gabriel's projects — English (CV / international), with impact and tech keywords
+// ——— International CV (ATS-friendly, ChatGPT-style) ———
+
+// Skills by category — keywords for ATS and job descriptions
+const SKILLS_CATEGORIZED_GABRIEL: Record<string, string[]> = {
+  'Languages': ['JavaScript', 'TypeScript', 'Python', 'HTML', 'CSS', 'SQL'],
+  'Frameworks & libraries': ['Next.js', 'React', 'Node.js'],
+  'Databases': ['PostgreSQL', 'Supabase'],
+  'Tools & APIs': ['Git', 'Playwright', 'Codegen', 'REST APIs', 'WhatsApp Business API', 'Automation'],
+}
+
+// Gabriel's projects — with measurable achievements where possible
 const SHOWCASE_PROJECTS_GABRIEL_EN = [
-  { title: 'TrylyApp', url: 'https://tryly.com.br', description: 'Full product lifecycle: mobile app and web platform — design, build, deploy and operate in production.', tech: ['Product', 'Web', 'Mobile'] },
-  { title: 'YOP Devs', url: 'https://yopdevs.com.br', description: 'Built and run an equity network + forum connecting entrepreneurs, developers and investors. Real-time features, auth, and project marketplace.', tech: ['Next.js', 'Supabase', 'Real-time'] },
-  { title: 'Fenix Gestora', url: 'https://fenixgestora.com.br', description: 'Custom system and company website — requirements, development and delivery for financial/consortium operations.', tech: ['Web', 'Systems'] },
-  { title: 'WhatsApp Automations (Meta)', url: '#', description: 'Payment reminders and notifications via official WhatsApp Business API. Automated billing and customer communication flows.', tech: ['API', 'Automation'] },
-  { title: 'Internal systems & integrations', url: '#', description: 'Custom automations and internal tools for companies — process design, integrations and bespoke software.', tech: ['Automation', 'Integrations'] },
+  { title: 'TrylyApp', url: 'https://tryly.com.br', description: 'Developed and delivered full-stack mobile app and web platform; full product lifecycle from design to production.', tech: ['Product', 'Web', 'Mobile'], achievement: 'App and platform in production.' },
+  { title: 'YOP Devs', url: 'https://yopdevs.com.br', description: 'Built and run equity network + forum (Next.js, Supabase). Real-time features, auth, project marketplace — connecting entrepreneurs, developers and investors.', tech: ['Next.js', 'Supabase', 'Real-time'], achievement: 'Platform built and operated end-to-end.' },
+  { title: 'Fenix Gestora', url: 'https://fenixgestora.com.br', description: 'Delivered custom system and company website for financial/consortium operations — requirements, development and deployment.', tech: ['Web', 'Systems'], achievement: 'Custom system in production.' },
+  { title: 'WhatsApp Automations (Meta)', url: '#', description: 'Implemented payment reminders and notifications via official WhatsApp Business API; automated billing and customer communication flows.', tech: ['API', 'Automation'], achievement: 'Automation flows in use.' },
+  { title: 'Internal systems & integrations', url: '#', description: 'Designed and delivered custom automations and internal tools for companies — process design, integrations and bespoke software.', tech: ['Automation', 'Integrations'], achievement: 'Internal tools delivered on scope.' },
 ]
 
-// Fallback skills for ATS and recruiters (when profile specialties empty)
+// Key achievements — measurable / outcome-focused (for summary)
+const KEY_ACHIEVEMENTS_GABRIEL = [
+  'Developed and shipped 4+ full-stack applications and platforms from idea to production.',
+  'Founded and operate YOP Devs — equity network connecting entrepreneurs, developers and investors.',
+  'Led operations and systems as Administrative Director; delivered API integrations and automation (e.g. WhatsApp Business API).',
+  'Open to relocation: Ireland, Canada, USA, New Zealand and worldwide. Ready to discuss visa and remote.',
+]
+
+// Professional summary — who, what, where, top skills (ChatGPT format)
+const PROFESSIONAL_SUMMARY_GABRIEL = {
+  who: 'CEO and builder with hands-on experience in product, full-stack development and operations.',
+  what: 'Full-stack development (React, Next.js, Node.js), product lifecycle, systems and process automation.',
+  where: 'Open to roles in Ireland, Canada, USA, New Zealand and worldwide (onsite or remote).',
+  topSkills: 'JavaScript, TypeScript, Python, Next.js, Playwright, HTML, CSS, Supabase, REST APIs, leadership and product.',
+}
+
+// Education — Technical in Informatics
+const EDUCATION_GABRIEL = {
+  degree: 'Technical Degree in Informatics (Técnico em Informática)',
+  institution: 'Brazil',
+  note: '',
+}
+
+// Languages — honest proficiency for international recruiters
+const LANGUAGES_GABRIEL = [
+  { language: 'Portuguese', level: 'Fluent' },
+  { language: 'English', level: 'Basic (currently improving)' },
+  { language: 'Spanish', level: 'Intermediate' },
+]
+
+// Fallback flat skills when profile specialties empty
 const FALLBACK_SKILLS_GABRIEL = [
   'Leadership', 'Product', 'Full-stack', 'JavaScript', 'TypeScript', 'React', 'Next.js',
   'Node.js', 'APIs', 'Supabase', 'Automation', 'Systems design', 'Operations',
-]
-
-// Key achievements for Gabriel — outcome-focused bullets
-const KEY_ACHIEVEMENTS_GABRIEL = [
-  'Built and launched multiple products (apps, platforms, internal tools) from idea to production.',
-  'Founded and run YOP Devs — equity network connecting entrepreneurs, developers and investors.',
-  'Led operations and systems as Administrative Director; delivered integrations and automation (e.g. WhatsApp API).',
-  'Open to relocation: Ireland, Canada, USA and worldwide. Ready to discuss visa and remote options.',
 ]
 
 export default function CVPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -157,8 +189,14 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             <Logo variant="dark" size="sm" />
           </Link>
           <nav className="flex items-center gap-4">
-            <a href="#about" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">About</a>
+            <a href="#about" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Summary</a>
             <a href="#experience" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Experience</a>
+            {isGabriel && (
+              <>
+                <a href="#education" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Education</a>
+                <a href="#languages" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Languages</a>
+              </>
+            )}
             <a href="#contact" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Contact</a>
             {isGabriel && (
               <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-500 hover:text-violet-600 transition-colors">
@@ -181,24 +219,25 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
 
       <section className="pt-20 md:pt-24 pb-10 md:pb-14 px-4 md:px-6 print:pt-8 print:pb-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center gap-8 md:gap-10">
-          <div className="flex-shrink-0 mx-auto md:mx-0">
-            <div className="w-40 h-40 md:w-52 md:h-52 rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-slate-200 flex items-center justify-center print:w-28 print:h-28">
+          {/* Photo: hidden on print for ATS-friendly PDF (no photos) */}
+          <div className="flex-shrink-0 mx-auto md:mx-0 print:hidden">
+            <div className="w-40 h-40 md:w-52 md:h-52 rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-slate-200 flex items-center justify-center">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-6xl md:text-7xl font-black text-slate-400 uppercase print:text-4xl">{profile.full_name?.[0] || '?'}</span>
+                <span className="text-6xl md:text-7xl font-black text-slate-400 uppercase">{profile.full_name?.[0] || '?'}</span>
               )}
             </div>
           </div>
-          <div className="text-center md:text-left">
+          <div className="text-center md:text-left flex-1">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-violet-600 mb-2">Resume · YOP Devs</p>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-2 print:text-3xl">
               {profile.full_name}
             </h1>
-            {/* Headline for hireability */}
+            {/* Where you want to work — visible to recruiters */}
             {isGabriel && (
               <p className="text-base md:text-lg text-slate-600 font-semibold max-w-xl mb-3">
-                CEO & Builder · Open to opportunities in Ireland, Canada, USA & worldwide
+                Open to: Ireland · Canada · USA · New Zealand · worldwide (onsite or remote)
               </p>
             )}
             <p className="text-base md:text-lg text-slate-600 font-medium max-w-xl mb-3">
@@ -258,19 +297,21 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
         </div>
       </section>
 
+      {/* 1. Professional Summary — who, what, where, top skills (ChatGPT format) */}
       <section id="about" className="py-10 md:py-14 px-4 md:px-6 bg-white border-y border-slate-200 print:py-8">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">About</h2>
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Summary</h2>
           <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4">Professional Summary</h3>
-          <p className="text-slate-600 text-base leading-relaxed font-medium">
-            {profile.bio || (
-              <span className={isGabriel ? '' : 'italic text-slate-500'}>
-                {isGabriel
-                  ? `${profile.full_name} is a CEO and builder with hands-on experience in product, full-stack development and operations. As Administrative Director at Fênix Consórcios, he leads systems and processes; as founder of YOP Devs, he built an equity network connecting entrepreneurs, developers and investors. He has shipped apps, platforms and automations (including WhatsApp API integrations) from idea to production. Open to full-time or contract roles in Ireland, Canada, USA and worldwide — including relocation and remote.`
-                  : `${profile.full_name} is part of the YOP Devs network — an ecosystem connecting entrepreneurs, developers and investors.`}
-              </span>
-            )}
-          </p>
+          {isGabriel ? (
+            <div className="space-y-3 text-slate-700 text-base leading-relaxed">
+              <p><strong className="text-slate-900">Who:</strong> {PROFESSIONAL_SUMMARY_GABRIEL.who}</p>
+              <p><strong className="text-slate-900">What:</strong> {PROFESSIONAL_SUMMARY_GABRIEL.what}</p>
+              <p><strong className="text-slate-900">Where:</strong> {PROFESSIONAL_SUMMARY_GABRIEL.where}</p>
+              <p><strong className="text-slate-900">Top skills:</strong> {PROFESSIONAL_SUMMARY_GABRIEL.topSkills}</p>
+            </div>
+          ) : (
+            <p className="text-slate-600">{profile.bio || `${profile.full_name} is part of the YOP Devs network.`}</p>
+          )}
           {isGabriel && KEY_ACHIEVEMENTS_GABRIEL.length > 0 && (
             <ul className="mt-6 space-y-2 text-slate-600 text-sm leading-relaxed font-medium">
               {KEY_ACHIEVEMENTS_GABRIEL.map((bullet, i) => (
@@ -284,19 +325,30 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
         </div>
       </section>
 
-      {specialties.length > 0 && (
+      {/* 2. Skills — categorized (ATS keywords: Languages, Frameworks, Databases, Tools) */}
+      {(isGabriel ? Object.keys(SKILLS_CATEGORIZED_GABRIEL).length > 0 : specialties.length > 0) && (
         <section className="py-10 md:py-14 px-4 md:px-6 print:py-8">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Skills</h2>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-2">Technologies & competencies</h3>
-            <p className="text-slate-500 text-sm mb-5">Relevant for product, engineering and leadership roles.</p>
-            <div className="flex flex-wrap gap-3">
-              {specialties.map((spec) => (
-                <span key={spec} className="px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-wider hover:border-violet-300 hover:text-violet-700 transition-all">
-                  {spec}
-                </span>
-              ))}
-            </div>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-5">Skills & technologies</h3>
+            {isGabriel ? (
+              <div className="space-y-4">
+                {Object.entries(SKILLS_CATEGORIZED_GABRIEL).map(([category, items]) => (
+                  <div key={category}>
+                    <p className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">{category}</p>
+                    <p className="text-slate-600 text-sm">{items.join(', ')}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {specialties.map((spec) => (
+                  <span key={spec} className="px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-wider">
+                    {spec}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -309,6 +361,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {SHOWCASE_PROJECTS_GABRIEL_EN.map((item) => {
                 const tech = 'tech' in item && Array.isArray(item.tech) ? item.tech : []
+                const achievement = 'achievement' in item && item.achievement ? item.achievement : null
                 const cardContent = (
                   <>
                     {tech.length > 0 && (
@@ -321,7 +374,10 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                       </div>
                     )}
                     <h4 className="text-xl font-black text-slate-900 mb-3 leading-tight">{item.title}</h4>
-                    <p className="text-slate-600 text-sm leading-relaxed mb-4">{item.description}</p>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-2">{item.description}</p>
+                    {achievement && (
+                      <p className="text-slate-700 text-xs font-semibold mb-3">✓ {achievement}</p>
+                    )}
                     {'url' in item && item.url !== '#' && (
                       <span className="text-sm font-bold text-[#4c1d95] uppercase tracking-wider">View →</span>
                     )}
@@ -344,6 +400,39 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                 )
               })}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* 4. Education — Technical / Secondary (ATS-friendly) */}
+      {isGabriel && (
+        <section id="education" className="py-10 md:py-14 px-4 md:px-6 bg-white border-y border-slate-200 print:py-8">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Education</h2>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4">Education & certifications</h3>
+            <p className="text-slate-700 font-semibold">{EDUCATION_GABRIEL.degree}</p>
+            <p className="text-slate-600 text-sm">{EDUCATION_GABRIEL.institution}</p>
+            {EDUCATION_GABRIEL.note && (
+              <p className="text-slate-500 text-xs mt-2 italic">{EDUCATION_GABRIEL.note}</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 5. Languages — honest proficiency for international recruiters */}
+      {isGabriel && (
+        <section id="languages" className="py-10 md:py-14 px-4 md:px-6 print:py-8">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Languages</h2>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4">Languages</h3>
+            <ul className="space-y-2 text-slate-700">
+              {LANGUAGES_GABRIEL.map((item) => (
+                <li key={item.language} className="flex gap-2">
+                  <span className="font-semibold text-slate-900">{item.language}</span>
+                  <span>— {item.level}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       )}
@@ -405,7 +494,8 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
               <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Website</a>
             )}
           </div>
-          <p className="text-xs text-slate-500 mb-4">Prefer to connect through a network? Join YOP Devs.</p>
+          <p className="text-xs text-slate-500 mb-2">Use &quot;Print resume&quot; above to save as PDF for applications (ATS-friendly, no photo).</p>
+          <p className="text-xs text-slate-500 mb-4">For international roles, I provide a tailored cover letter when applying.</p>
           <Link href="/" className="inline-block px-8 py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-md print:hidden">
             Join YOP Devs
           </Link>
