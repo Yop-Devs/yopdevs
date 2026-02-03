@@ -149,7 +149,8 @@ export default function PortfolioPage({
             <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </div>
+              </svg>
+            </div>
             <Logo variant="dark" size="sm" />
           </Link>
           <nav className="flex items-center gap-4">
@@ -453,7 +454,8 @@ export default function PortfolioPage({
             <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </div>
+              </svg>
+            </div>
             <Logo variant="light" size="sm" />
           </Link>
           <p className="text-sm text-slate-400">
