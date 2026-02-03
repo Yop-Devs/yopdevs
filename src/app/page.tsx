@@ -304,6 +304,8 @@ function LandingPageContent() {
             YOP Devs
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
+            <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Portfolio</Link>
+            <Link href="/cv/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Resume (EN)</Link>
             <Link href="/termos" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Termos de Uso</Link>
             <Link href="/privacidade" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Privacidade</Link>
             <Link href="/suporte" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Suporte</Link>

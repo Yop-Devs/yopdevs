@@ -171,6 +171,15 @@ export default function PortfolioPage({
             <a href="#contato" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">
               Contato
             </a>
+            {slug && (
+              <Link
+                href={`/cv/${slug}`}
+                className="text-sm font-semibold text-slate-500 hover:text-violet-600 transition-colors"
+                title="Resume in English"
+              >
+                EN
+              </Link>
+            )}
             <Link
               href="/"
               className="px-4 py-2.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all"
@@ -502,12 +511,23 @@ export default function PortfolioPage({
           <p className="text-sm text-slate-400">
             Portfolio de <strong className="text-white">{profile.full_name}</strong> · Integrado à rede YOP Devs
           </p>
-          <Link
-            href="/"
-            className="text-sm font-semibold text-slate-300 hover:text-white transition-colors"
-          >
-            Voltar ao início
-          </Link>
+          <div className="flex items-center gap-4">
+            {slug && (
+              <Link
+                href={`/cv/${slug}`}
+                className="text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                title="Resume in English"
+              >
+                English version
+              </Link>
+            )}
+            <Link
+              href="/"
+              className="text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+            >
+              Voltar ao início
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
