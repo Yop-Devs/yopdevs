@@ -1,8 +1,7 @@
 "use client"
+import Image from 'next/image'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import Logo from '@/components/Logo'
-
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -35,7 +34,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
       <div className="mb-8 text-center">
-        <Logo variant="dark" size="lg" />
+        <Image src="/logodash.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 w-auto object-contain mx-auto" unoptimized />
         <p className="text-slate-500 font-semibold text-xs uppercase tracking-wider mt-3">Defina sua nova senha</p>
       </div>
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-lg">

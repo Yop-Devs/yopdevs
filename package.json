@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fix-icon": "node scripts/fix-icon-background.js",
+    "fix-logo": "node scripts/fix-logo-background.js",
+    "fix-logodash": "node scripts/fix-logodash-background.js",
+    "fix-logo-menu": "node scripts/fix-logoprincipal-for-menu.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -28,6 +32,7 @@
     "eslint-config-next": "16.1.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "sharp": "^0.33.5",
     "typescript": "^5"
   }
 }

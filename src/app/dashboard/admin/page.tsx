@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function MasterAdminPage() {
   const router = useRouter()
@@ -11,6 +12,9 @@ export default function MasterAdminPage() {
   const [loading, setLoading] = useState(true)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; table: string; id: string; label: string } | null>(null)
+  const [confirmBan, setConfirmBan] = useState<{ open: boolean; userId: string; userName: string } | null>(null)
+  const [confirmRole, setConfirmRole] = useState<{ open: boolean; userId: string; userName: string; newRole: string; title: string; message: string; confirmLabel: string; variant: 'danger' | 'default' } | null>(null)
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -18,22 +22,42 @@ export default function MasterAdminPage() {
       router.push('/')
       return
     }
-    const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (myProfile?.role !== 'ADMIN') {
+    const { data: myProfile } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single()
+    const role = (myProfile?.role || '').toUpperCase().trim()
+    const fullNameUpper = (myProfile?.full_name || '').toUpperCase()
+    const isAdminByRole = role === 'ADMIN' || role === 'MODERADOR'
+    const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
+      ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+      : []
+    const isAdminByEmail = !!user?.email && adminEmails.includes(user.email.toLowerCase())
+    const isAdminByName = fullNameUpper.includes('ADMIN') || fullNameUpper.includes('MODERADOR')
+    if (!isAdminByRole && !isAdminByEmail && !isAdminByName) {
       setAccessDenied(true)
       setLoading(false)
       return
     }
-    const { data: p } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const { data: p, error: profilesError } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    if (profilesError) {
+      const { data: fallback } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
+      setUsers(fallback || [])
+    } else {
+      setUsers(p || [])
+    }
     const { data: posts } = await supabase.from('posts').select('*, profiles(full_name)').order('created_at', { ascending: false })
     const { data: projects } = await supabase.from('projects').select('*, profiles(full_name)').order('created_at', { ascending: false })
-    setUsers(p || [])
     setContent({ posts: posts || [], projects: projects || [] })
     setLoading(false)
   }
 
-  const deleteItem = async (table: string, id: string) => {
+  const requestDeleteItem = (table: string, id: string, label: string) => {
+    setConfirmDelete({ open: true, table, id, label })
+  }
+
+  const executeDeleteItem = async () => {
+    if (!confirmDelete) return
+    const { table, id } = confirmDelete
     const { error } = await supabase.from(table).delete().eq('id', id)
+    setConfirmDelete(null)
     if (!error) {
       setStatusMsg(`PROTOCOLO DE EXCLUSÃO EXECUTADO: ${table.toUpperCase()}`)
       loadData()
@@ -41,11 +65,32 @@ export default function MasterAdminPage() {
     }
   }
 
-  const banUser = async (userId: string) => {
-    // Aqui você pode mudar uma coluna 'is_banned' ou apenas remover o acesso
-    const { error } = await supabase.from('profiles').update({ role: 'BANNED' }).eq('id', userId)
+  const requestBanUser = (userId: string, userName: string) => {
+    setConfirmBan({ open: true, userId, userName })
+  }
+
+  const executeBanUser = async () => {
+    if (!confirmBan) return
+    const { error } = await supabase.from('profiles').update({ role: 'BANNED' }).eq('id', confirmBan.userId)
+    setConfirmBan(null)
     if (!error) {
-      setStatusMsg("USUÁRIO RESTRITO NO FIREWALL.")
+      setStatusMsg('Usuário restrito com sucesso.')
+      loadData()
+      setTimeout(() => setStatusMsg(null), 3000)
+    }
+  }
+
+  const requestRoleChange = (userId: string, userName: string, newRole: string, title: string, message: string, confirmLabel: string, variant: 'danger' | 'default' = 'default') => {
+    setConfirmRole({ open: true, userId, userName, newRole, title, message, confirmLabel, variant })
+  }
+
+  const executeRoleChange = async () => {
+    if (!confirmRole) return
+    const { error } = await supabase.from('profiles').update({ role: confirmRole.newRole }).eq('id', confirmRole.userId)
+    setConfirmRole(null)
+    if (!error) {
+      const msg = confirmRole.newRole === 'BANNED' ? 'Usuário restrito.' : confirmRole.newRole === 'ADMIN' ? 'Admin definido.' : 'Usuário definido como membro.'
+      setStatusMsg(msg)
       loadData()
       setTimeout(() => setStatusMsg(null), 3000)
     }
@@ -95,6 +140,13 @@ export default function MasterAdminPage() {
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-slate-100">
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-8 text-center text-slate-500 text-sm">
+                  Nenhum perfil encontrado. Se você acabou de criar o painel, rode no Supabase (SQL Editor) o arquivo <strong>supabase-rls-profiles-read.sql</strong> para permitir que admins leiam a lista de usuários.
+                </td>
+              </tr>
+            )}
             {users.map(u => (
               <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                 <td className="p-6">
@@ -103,13 +155,25 @@ export default function MasterAdminPage() {
                 </td>
                 <td className="p-6">
                   <span className={`text-[9px] font-black px-2 py-1 rounded border-2 ${
-                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    u.role === 'BANNED' ? 'bg-red-50 border-red-500 text-red-600' :
+                    u.role === 'ADMIN' || u.role === 'MODERADOR' ? 'bg-violet-50 border-violet-500 text-violet-700' : 'bg-slate-50 border-slate-200 text-slate-700'
                   }`}>
                     {u.role || 'PENDENTE'}
                   </span>
                 </td>
-                <td className="p-6 text-right">
-                  <button onClick={() => banUser(u.id)} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir Acesso</button>
+                <td className="p-6 text-right flex flex-wrap gap-2 justify-end">
+                  {u.role === 'BANNED' && (
+                    <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'MEMBER', 'Desbanir usuário', `"${u.full_name || 'Usuário'}" voltará a acessar a rede como membro.`, 'Desbanir', 'default')} className="text-[10px] font-black text-green-600 uppercase hover:underline">Desbanir</button>
+                  )}
+                  {(u.role === 'ADMIN' || u.role === 'MODERADOR') && (
+                    <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'MEMBER', 'Rebaixar a Membro', `"${u.full_name || 'Usuário'}" deixará de ser admin e passará a ser membro.`, 'Rebaixar a Membro', 'default')} className="text-[10px] font-black text-amber-600 uppercase hover:underline">Rebaixar a Membro</button>
+                  )}
+                  {u.role !== 'ADMIN' && u.role !== 'MODERADOR' && u.role !== 'BANNED' && (
+                    <>
+                      <button onClick={() => requestRoleChange(u.id, u.full_name || 'Usuário', 'ADMIN', 'Dar rank Admin', `"${u.full_name || 'Usuário'}" terá acesso ao painel de administração.`, 'Dar Admin', 'default')} className="text-[10px] font-black text-violet-600 uppercase hover:underline">Dar Admin</button>
+                      <button onClick={() => requestBanUser(u.id, u.full_name || 'Usuário')} className="text-[10px] font-black text-red-500 uppercase hover:underline">Banir</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -118,10 +182,10 @@ export default function MasterAdminPage() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* MODERAÇÃO FÓRUM */}
+        {/* MODERAÇÃO COMUNIDADE */}
         <div className="bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
           <div className="p-6 bg-slate-50 border-b-2 border-slate-200">
-            <h2 className="text-xs font-black uppercase tracking-widest">Publicações do Fórum</h2>
+            <h2 className="text-xs font-black uppercase tracking-widest">Publicações da Comunidade</h2>
           </div>
           <div className="p-4 space-y-4 h-[400px] overflow-y-auto">
             {content.posts.map(p => (
@@ -130,7 +194,7 @@ export default function MasterAdminPage() {
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Autor: {p.profiles?.full_name}</p>
                 </div>
-                <button onClick={() => deleteItem('posts', p.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
+                <button onClick={() => requestDeleteItem('posts', p.id, p.title)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
@@ -150,7 +214,7 @@ export default function MasterAdminPage() {
                   <p className="text-xs font-black uppercase truncate">{p.title}</p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">Dono: {p.profiles?.full_name}</p>
                 </div>
-                <button onClick={() => deleteItem('projects', p.id)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
+                <button onClick={() => requestDeleteItem('projects', p.id, p.title)} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-600 hover:text-white transition-all">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
@@ -158,6 +222,43 @@ export default function MasterAdminPage() {
           </div>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          open={confirmDelete.open}
+          onClose={() => setConfirmDelete(null)}
+          title={confirmDelete.table === 'posts' ? 'Excluir publicação da comunidade' : 'Excluir projeto'}
+          message={`"${confirmDelete.label}" será removido permanentemente. Esta ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          cancelLabel="Cancelar"
+          onConfirm={executeDeleteItem}
+          variant="danger"
+        />
+      )}
+      {confirmBan && (
+        <ConfirmModal
+          open={confirmBan.open}
+          onClose={() => setConfirmBan(null)}
+          title="Restringir acesso (banir)"
+          message={`O usuário "${confirmBan.userName}" não poderá acessar a rede. Esta ação pode ser revertida por um admin.`}
+          confirmLabel="Banir usuário"
+          cancelLabel="Cancelar"
+          onConfirm={executeBanUser}
+          variant="danger"
+        />
+      )}
+      {confirmRole && (
+        <ConfirmModal
+          open={confirmRole.open}
+          onClose={() => setConfirmRole(null)}
+          title={confirmRole.title}
+          message={confirmRole.message}
+          confirmLabel={confirmRole.confirmLabel}
+          cancelLabel="Cancelar"
+          onConfirm={executeRoleChange}
+          variant={confirmRole.variant}
+        />
+      )}
     </div>
   )
 }

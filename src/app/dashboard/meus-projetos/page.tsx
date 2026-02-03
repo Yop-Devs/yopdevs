@@ -4,11 +4,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function MyProjectsPage() {
   const [myProjects, setMyProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; projectId: string | null }>({ open: false, projectId: null })
 
   async function loadMyProjects() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -39,10 +41,16 @@ export default function MyProjectsPage() {
   }
 
   const deleteProject = async (projectId: string) => {
-    if (!confirm('Excluir este projeto? Esta ação não pode ser desfeita.')) return
+    setConfirmDelete({ open: true, projectId })
+  }
+
+  const executeDeleteProject = async () => {
+    const projectId = confirmDelete.projectId
+    if (!projectId) return
     setDeletingId(projectId)
     const { error } = await supabase.from('projects').delete().eq('id', projectId)
     setDeletingId(null)
+    setConfirmDelete({ open: false, projectId: null })
     if (!error) loadMyProjects()
   }
 
@@ -66,7 +74,21 @@ export default function MyProjectsPage() {
             Ir para o Marketplace →
           </Link>
         </div>
-      ) : (
+      ) : null}
+
+      <ConfirmModal
+        open={confirmDelete.open}
+        onClose={() => setConfirmDelete({ open: false, projectId: null })}
+        title="Excluir projeto"
+        message="Esta ação não pode ser desfeita. O projeto e os dados vinculados serão removidos da rede."
+        confirmLabel="Excluir projeto"
+        cancelLabel="Manter projeto"
+        onConfirm={executeDeleteProject}
+        variant="danger"
+        loading={deletingId !== null}
+      />
+
+      {myProjects.length > 0 && (
         <div className="space-y-6">
           {myProjects.map((project) => (
             <div key={project.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

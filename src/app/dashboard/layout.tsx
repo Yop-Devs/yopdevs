@@ -1,10 +1,11 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import Logo from '@/components/Logo'
+import FriendsOnlineWidget from '@/components/FriendsOnlineWidget'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
@@ -23,20 +24,67 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setUnreadCount(count ?? 0)
   }
 
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  const roleUpper = (profile?.role || '').toUpperCase().trim()
+  const isAdminByRole = roleUpper === 'ADMIN' || roleUpper === 'MODERADOR'
+  const fullNameUpper = (profile?.full_name || '').toUpperCase()
+  const isAdminByName = fullNameUpper.includes('ADMIN') || fullNameUpper.includes('MODERADOR')
+  const adminEmails = typeof process.env.NEXT_PUBLIC_ADMIN_EMAILS === 'string'
+    ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : []
+  const isAdminByEmail = !!userEmail && adminEmails.includes(userEmail.toLowerCase())
+  const showAdminLink = isAdminByRole || isAdminByEmail || isAdminByName
+
   useEffect(() => {
     async function checkAccess() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/'); return; }
 
       if (typeof window !== 'undefined') (window as any).__notifUserId = session.user.id
+      setUserId(session.user.id)
+      setUserEmail(session.user.email ?? null)
       const { data: profileData } = await supabase
-        .from('profiles').select('*').eq('id', session.user.id).single()
+        .from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
       setProfile(profileData)
       await fetchUnreadCount(session.user.id)
       setLoading(false)
     }
     checkAccess()
   }, [router])
+
+  // Realtime + polling: badge de notificações atualiza em tempo real ou a cada 15s
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel('notifications-badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        () => fetchUnreadCount(userId)
+      )
+      .subscribe()
+    const pollInterval = setInterval(() => fetchUnreadCount(userId), 15_000)
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(pollInterval)
+    }
+  }, [userId])
+
+  // Heartbeat: marca usuário como online (last_seen) a cada 60s
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null
+    const tick = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.id) {
+        await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', session.user.id)
+      }
+    }
+    tick()
+    interval = setInterval(tick, 60_000)
+    return () => { if (interval) clearInterval(interval) }
+  }, [])
 
   useEffect(() => {
     const handler = () => {
@@ -60,7 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { name: 'HOME', href: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { name: 'Fórum', href: '/dashboard/forum', icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
+    { name: 'Comunidade', href: '/dashboard/forum', icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z' },
     { name: 'Projetos', href: '/dashboard/projetos', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
     { name: 'Meus Projetos', href: '/dashboard/meus-projetos', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { name: 'Ver Amigos', href: '/dashboard/membros', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
@@ -87,17 +135,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-6 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Logo variant="light" size="sm" />
+        <div className="p-4 sm:p-6 flex items-center justify-center relative bg-slate-800">
+          <Link href="/dashboard" className="flex items-center justify-center w-full min-h-[4rem]">
+            <Image src="/homeimage.png?v=1" alt="YOP DEVS" width={280} height={88} className="h-14 sm:h-16 w-auto object-contain object-center" priority unoptimized />
           </Link>
-          <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
+          <button className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-          {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || profile?.role === 'ADMIN').map((item) => {
+          {navItems.filter((item) => {
+            if ('adminOnly' in item && item.adminOnly) return showAdminLink
+            return true
+          }).map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
               <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
@@ -118,10 +169,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
-            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">{profile?.role || 'Membro'}</p>
+            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">
+              {showAdminLink ? 'Administrador On-line' : 'Usuário On-line'}
+            </p>
           </div>
-          <button onClick={handleSignOut} className="text-slate-400 hover:text-red-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 hover:text-red-300 transition-all text-[10px] font-bold uppercase tracking-wider"
+            title="Sair da conta"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Sair
           </button>
         </div>
       </aside>
@@ -134,7 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-300 hover:text-white">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <Logo variant="light" size="sm" />
+          <span className="text-white font-bold text-lg tracking-tight">YOP Devs</span>
           <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-black text-[10px] text-white">
             {profile?.full_name?.[0]}
           </div>
@@ -145,6 +204,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      <FriendsOnlineWidget />
     </div>
   )
 }

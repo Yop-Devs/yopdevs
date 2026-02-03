@@ -1,10 +1,10 @@
 "use client"
 
+import Image from 'next/image'
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import Logo from '@/components/Logo'
 
 function LandingPageContent() {
   const searchParams = useSearchParams()
@@ -12,10 +12,6 @@ function LandingPageContent() {
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [latestPosts, setLatestPosts] = useState<{ id: string; title: string; category: string; created_at: string; profiles?: { full_name: string } }[]>([])
-  const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; category: string; created_at: string }[]>([])
-  const [feedLoading, setFeedLoading] = useState(true)
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -26,6 +22,23 @@ function LandingPageContent() {
     setShowModal(false)
     setMessage(null)
   }, [])
+
+  function getAuthErrorMessage(err: unknown): string {
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
+    if (msg.includes('already registered') || msg.includes('user already registered') || msg.includes('already been registered'))
+      return 'Já existe uma conta com este e-mail. Faça login ou use "Esqueci minha senha".'
+    if (msg.includes('password') && (msg.includes('6') || msg.includes('least')))
+      return 'A senha deve ter no mínimo 6 caracteres.'
+    if (msg.includes('invalid login') || msg.includes('invalid credentials'))
+      return 'E-mail ou senha incorretos. Tente novamente.'
+    if (msg.includes('email not confirmed') || msg.includes('confirm your email'))
+      return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada ou use "Esqueci minha senha".'
+    if (msg.includes('invalid email') || msg.includes('valid email'))
+      return 'Informe um e-mail válido.'
+    if (msg.includes('signup') && msg.includes('disabled'))
+      return 'Cadastros estão temporariamente desativados. Entre em contato com o suporte.'
+    return err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
+  }
 
   useEffect(() => {
     const err = searchParams.get('error')
@@ -46,40 +59,31 @@ function LandingPageContent() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [showModal, closeModal])
 
-  useEffect(() => {
-    async function fetchFeed() {
-      try {
-        const [postsRes, projectsRes] = await Promise.all([
-          supabase.from('posts').select('id, title, category, created_at, profiles(full_name)').order('created_at', { ascending: false }).limit(6),
-          supabase.from('projects').select('id, title, category, created_at').order('created_at', { ascending: false }).limit(4),
-        ])
-        if (postsRes.data) {
-          const normalized = postsRes.data.map((p: { id: string; title: string; category: string; created_at: string; profiles?: { full_name: string } | { full_name: string }[] }) => ({
-            id: p.id,
-            title: p.title,
-            category: p.category,
-            created_at: p.created_at,
-            profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles,
-          }))
-          setLatestPosts(normalized)
-        }
-        if (projectsRes.data) setLatestProjects(projectsRes.data)
-      } catch {
-        // RLS pode bloquear; mantém arrays vazios
-      } finally {
-        setFeedLoading(false)
-      }
-    }
-    fetchFeed()
-  }, [])
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setMessage(null)
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres.' })
+        return
+      }
+      if (password !== confirmPassword) {
+        setMessage({ type: 'error', text: 'As senhas não coincidem. Digite a mesma senha nos dois campos.' })
+        return
+      }
+      if (!email.trim()) {
+        setMessage({ type: 'error', text: 'Informe seu e-mail.' })
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        setMessage({ type: 'error', text: 'Informe um e-mail válido.' })
+        return
+      }
+    }
+    setLoading(true)
     try {
       if (mode === 'signup') {
-        if (password !== confirmPassword) throw new Error("As senhas não coincidem!")
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -117,10 +121,15 @@ function LandingPageContent() {
           })
           return
         }
-        throw signUpError
+        setMessage({ type: 'error', text: getAuthErrorMessage(signUpError) })
+        return
       } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        if (error) {
+          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+          setLoading(false)
+          return
+        }
         if (data.session) {
           await supabase.auth.setSession({
             access_token: data.session.access_token,
@@ -129,13 +138,21 @@ function LandingPageContent() {
           window.location.href = '/dashboard'
         }
       } else {
+        if (!email.trim()) {
+          setMessage({ type: 'error', text: 'Informe seu e-mail para receber o link de redefinição.' })
+          setLoading(false)
+          return
+        }
         const { error } = await supabase.auth.resetPasswordForEmail(email)
-        if (error) throw error
-        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado.' })
+        if (error) {
+          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+          setLoading(false)
+          return
+        }
+        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado. Verifique sua caixa de entrada.' })
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
-      setMessage({ type: 'error', text: msg })
+      setMessage({ type: 'error', text: getAuthErrorMessage(err) })
     } finally {
       setLoading(false)
     }
@@ -147,11 +164,8 @@ function LandingPageContent() {
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="h-14 md:h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-[#4c1d95] rounded-xl flex items-center justify-center shadow-md">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </div>
-              <Logo variant="dark" size="sm" />
+            <Link href="/" className="flex items-center">
+              <Image src="/logoprincipal.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 md:h-16 w-auto object-contain" priority unoptimized />
             </Link>
             <div className="flex items-center gap-4 md:gap-6">
               <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Portfolio</Link>
@@ -239,89 +253,6 @@ function LandingPageContent() {
         </div>
       </section>
 
-      {/* Últimas do fórum + projetos */}
-      <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-200">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-center text-xl md:text-2xl font-black text-slate-900 mb-1">
-            Atividade recente
-          </h2>
-          <p className="text-center text-slate-600 text-sm mb-8 max-w-xl mx-auto">
-            Últimas discussões no fórum e projetos lançados na rede.
-          </p>
-
-          {feedLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="rounded-2xl bg-white border border-slate-100 p-8 animate-pulse">
-                <div className="h-5 bg-slate-200 rounded w-1/3 mb-4" />
-                <div className="h-4 bg-slate-100 rounded w-full mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-2/3" />
-              </div>
-              <div className="rounded-2xl bg-white border border-slate-100 p-8 animate-pulse">
-                <div className="h-5 bg-slate-200 rounded w-1/3 mb-4" />
-                <div className="h-4 bg-slate-100 rounded w-full mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-2/3" />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-violet-600 mb-4">Fórum</h3>
-                {latestPosts.length === 0 ? (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center text-slate-500">
-                    <p className="text-sm">Nenhuma discussão recente. Entre na rede e seja o primeiro a postar.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {latestPosts.map((post) => (
-                      <li key={post.id}>
-                        <Link
-                          href={`/dashboard/forum/${post.id}`}
-                          className="block rounded-2xl bg-white border border-slate-100 p-5 hover:border-violet-200 hover:shadow-md transition-all group"
-                        >
-                          <h4 className="font-bold text-slate-900 group-hover:text-violet-700 transition-colors line-clamp-1">{post.title}</h4>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {post.profiles?.full_name ?? 'Membro'} · {post.category ?? 'Geral'} · {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 mb-4">Projetos</h3>
-                {latestProjects.length === 0 ? (
-                  <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center text-slate-500">
-                    <p className="text-sm">Nenhum projeto recente. Crie sua conta e lance o primeiro.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {latestProjects.map((proj) => (
-                      <li key={proj.id}>
-                        <Link
-                          href="/dashboard/projetos"
-                          className="block rounded-2xl bg-white border border-slate-100 p-5 hover:border-indigo-200 hover:shadow-md transition-all group"
-                        >
-                          <h4 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors line-clamp-1">{proj.title}</h4>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {proj.category ?? 'Projeto'} · {new Date(proj.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-          <p className="text-center mt-8">
-            <button onClick={() => { setMode('signup'); setShowModal(true); }} className="text-sm font-bold text-violet-600 hover:text-violet-700 underline">
-              Entrar na rede para ver tudo e participar
-            </button>
-          </p>
-        </div>
-      </section>
-
       {/* O que você encontra */}
       <section className="py-12 md:py-16 px-4 md:px-6 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto">
@@ -370,11 +301,8 @@ function LandingPageContent() {
       {/* Footer — Termos, Privacidade e Suporte em destaque */}
       <footer className="bg-slate-800 text-slate-200 py-10 px-4 md:px-6 border-t border-slate-700">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-6 text-center">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <Logo variant="light" size="sm" />
+          <Link href="/" className="text-xl md:text-2xl font-black italic tracking-tight text-white hover:text-slate-200 transition-colors">
+            YOP Devs
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
             <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Portfolio · Gabriel Costa Carrara</Link>
@@ -397,7 +325,7 @@ function LandingPageContent() {
               {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Resetar senha'}
             </h2>
             {message && (
-              <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <div role="alert" aria-live="polite" className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                 {message.text}
               </div>
             )}
@@ -414,9 +342,14 @@ function LandingPageContent() {
               <input type="email" placeholder="E-mail" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} required />
               {mode !== 'reset' && (
                 <>
-                  <input type="password" placeholder="Senha" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <input type="password" placeholder="Senha (mín. 6 caracteres)" minLength={6} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   {mode === 'signup' && (
-                    <input type="password" placeholder="Confirmar senha" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <>
+                      <input type="password" placeholder="Confirmar senha" minLength={6} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-violet-500 text-slate-900 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                      {confirmPassword && password !== confirmPassword && (
+                        <p className="text-xs text-red-600 font-medium">As senhas não coincidem.</p>
+                      )}
+                    </>
                   )}
                 </>
               )}

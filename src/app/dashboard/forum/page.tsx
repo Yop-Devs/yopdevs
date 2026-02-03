@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-type SortBy = 'recent' | 'comments'
+type SortBy = 'recent' | 'comments' | 'likes'
 
 export default function ForumPage() {
   const [posts, setPosts] = useState<any[]>([])
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('recent')
@@ -23,11 +24,17 @@ export default function ForumPage() {
       setPosts(data)
       if (data.length > 0) {
         const ids = data.map((p) => p.id)
-        const { data: comments } = await supabase.from('post_comments').select('post_id').in('post_id', ids)
+        const [commentsRes, likesRes] = await Promise.all([
+          supabase.from('post_comments').select('post_id').in('post_id', ids),
+          supabase.from('post_likes').select('post_id').in('post_id', ids),
+        ])
         const counts: Record<string, number> = {}
-        ids.forEach((id) => { counts[id] = 0 })
-        comments?.forEach((c) => { counts[c.post_id] = (counts[c.post_id] || 0) + 1 })
+        const likes: Record<string, number> = {}
+        ids.forEach((id) => { counts[id] = 0; likes[id] = 0 })
+        commentsRes.data?.forEach((c) => { counts[c.post_id] = (counts[c.post_id] || 0) + 1 })
+        likesRes.data?.forEach((l) => { likes[l.post_id] = (likes[l.post_id] || 0) + 1 })
         setCommentCounts(counts)
+        setLikeCounts(likes)
       }
     }
     setLoading(false)
@@ -43,14 +50,19 @@ export default function ForumPage() {
         const cb = commentCounts[b.id] || 0
         return cb - ca
       }
+      if (sortBy === 'likes') {
+        const la = likeCounts[a.id] || 0
+        const lb = likeCounts[b.id] || 0
+        return lb - la
+      }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase tracking-widest text-center">Sincronizando_Dados...</div>
 
   return (
-    <div className="max-w-[1200px] mx-auto py-10 px-6 space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-2 border-slate-200 pb-8">
+    <div className="max-w-[1200px] mx-auto py-6 sm:py-10 px-4 sm:px-6 space-y-6 sm:space-y-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 border-slate-200 pb-6 sm:pb-8">
         <div>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Inteligência Coletiva</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Valide teses e tire dúvidas técnicas</p>
@@ -78,6 +90,13 @@ export default function ForumPage() {
             >
               Mais comentados
             </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('likes')}
+              className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'likes' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}
+            >
+              Mais curtidos
+            </button>
           </div>
           <Link href="/dashboard/forum/novo" className="px-6 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-violet-800 transition-all shadow-md">
             Novo Tópico
@@ -101,14 +120,14 @@ export default function ForumPage() {
         <div className="space-y-4">
           {filteredPosts.map((post) => (
             <Link href={`/dashboard/forum/${post.id}`} key={post.id} className="block group">
-              <div className="bg-white border-2 border-slate-200 p-6 rounded-xl group-hover:shadow-lg group-hover:border-violet-200 group-hover:-translate-y-0.5 transition-all flex items-center justify-between">
-                <div className="flex gap-6 items-center">
+              <div className="bg-white border-2 border-slate-200 p-4 sm:p-6 rounded-xl group-hover:shadow-lg group-hover:border-violet-200 group-hover:-translate-y-0.5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+                <div className="flex gap-3 sm:gap-6 items-center min-w-0">
                   <div className="w-12 h-12 bg-slate-50 rounded-lg border-2 border-slate-200 overflow-hidden flex items-center justify-center text-xs font-black text-slate-400 shrink-0">
                     {post.profiles?.avatar_url ? <img src={post.profiles.avatar_url} className="w-full h-full object-cover" alt="" /> : post.profiles?.full_name?.[0]}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 uppercase italic tracking-tight group-hover:text-violet-700">{post.title}</h3>
-                    <p className="text-[9px] font-black text-slate-400 uppercase mt-1">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-800 uppercase italic tracking-tight group-hover:text-violet-700 line-clamp-2 break-words">{post.title}</h3>
+                    <p className="text-[9px] font-black text-slate-400 uppercase mt-1 truncate">
                       Por {post.profiles?.full_name} • {new Date(post.created_at).toLocaleDateString('pt-BR')}
                       {(commentCounts[post.id] ?? 0) > 0 && (
                         <span className="ml-2 text-indigo-500">• {commentCounts[post.id]} {commentCounts[post.id] === 1 ? 'resposta' : 'respostas'}</span>

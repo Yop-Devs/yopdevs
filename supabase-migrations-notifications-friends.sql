@@ -1,3 +1,9 @@
+-- Presença online (para status Amigos: online/offline)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_seen timestamptz;
+
+-- Chat: suporte a imagem na mensagem (opcional; para economizar Storage, limite tamanho no app)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url text;
+
 -- Notificações: colunas para link e contexto (rode no SQL Editor do Supabase)
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link text;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_user_id uuid REFERENCES auth.users(id);
@@ -80,94 +86,109 @@ CREATE POLICY "Users can delete own post" ON posts FOR DELETE USING (auth.uid() 
 DROP POLICY IF EXISTS "Users can delete own project" ON projects;
 CREATE POLICY "Users can delete own project" ON projects FOR DELETE USING (auth.uid() = owner_id);
 
--- ========== TRIGGERS DE NOTIFICAÇÃO (descomente e rode um por vez no SQL Editor) ==========
+-- ========== TRIGGERS DE NOTIFICAÇÃO (rode no SQL Editor do Supabase) ==========
+-- Mensagens personalizadas: "Usuário X aceitou...", "Usuário X curtiu...", etc.
 
--- 1) Mensagem no chat (link e from_user_id para exibir "Você recebeu uma nova mensagem de [nome]")
--- CREATE OR REPLACE FUNCTION notify_on_new_message()
--- RETURNS TRIGGER AS $$
--- DECLARE sender_name text;
--- BEGIN
---   SELECT full_name INTO sender_name FROM profiles WHERE id = NEW.sender_id;
---   INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
---   VALUES (NEW.receiver_id, 'CHAT', 'Você recebeu uma nova mensagem de ' || COALESCE(sender_name, 'alguém') || '.', false, '/dashboard/chat/' || NEW.sender_id, NEW.sender_id);
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_message_insert ON messages;
--- CREATE TRIGGER on_message_insert AFTER INSERT ON messages FOR EACH ROW EXECUTE FUNCTION notify_on_new_message();
+-- 1) Mensagem no chat
+CREATE OR REPLACE FUNCTION notify_on_new_message()
+RETURNS TRIGGER AS $$
+DECLARE sender_name text;
+BEGIN
+  SELECT full_name INTO sender_name FROM profiles WHERE id = NEW.sender_id;
+  INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
+  VALUES (NEW.receiver_id, 'CHAT', 'Você recebeu uma nova mensagem de ' || COALESCE(sender_name, 'alguém') || '.', false, '/dashboard/chat/' || NEW.sender_id, NEW.sender_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_message_insert ON messages;
+CREATE TRIGGER on_message_insert AFTER INSERT ON messages FOR EACH ROW EXECUTE FUNCTION notify_on_new_message();
 
 -- 2) Solicitação de amizade enviada para você
--- CREATE OR REPLACE FUNCTION notify_on_friend_request()
--- RETURNS TRIGGER AS $$
--- BEGIN
---   INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
---   VALUES (NEW.to_id, 'FRIEND_REQUEST', 'Nova solicitação de amizade.', false, '/dashboard/membros', NEW.from_id);
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_friend_request_insert ON friend_requests;
--- CREATE TRIGGER on_friend_request_insert AFTER INSERT ON friend_requests FOR EACH ROW EXECUTE FUNCTION notify_on_friend_request();
+CREATE OR REPLACE FUNCTION notify_on_friend_request()
+RETURNS TRIGGER AS $$
+DECLARE from_name text;
+BEGIN
+  SELECT full_name INTO from_name FROM profiles WHERE id = NEW.from_id;
+  INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
+  VALUES (NEW.to_id, 'FRIEND_REQUEST', COALESCE(from_name, 'Alguém') || ' enviou uma solicitação de amizade.', false, '/dashboard/membros', NEW.from_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_friend_request_insert ON friend_requests;
+CREATE TRIGGER on_friend_request_insert AFTER INSERT ON friend_requests FOR EACH ROW EXECUTE FUNCTION notify_on_friend_request();
 
 -- 3) Sua solicitação de amizade foi aceita
--- CREATE OR REPLACE FUNCTION notify_on_friend_accepted()
--- RETURNS TRIGGER AS $$
--- BEGIN
---   IF NEW.status = 'accepted' AND (OLD.status IS NULL OR OLD.status <> 'accepted') THEN
---     INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
---     VALUES (NEW.from_id, 'FRIEND_ACCEPTED', 'Sua solicitação de amizade foi aceita.', false, '/dashboard/membros', NEW.to_id);
---   END IF;
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_friend_request_update ON friend_requests;
--- CREATE TRIGGER on_friend_request_update AFTER UPDATE ON friend_requests FOR EACH ROW EXECUTE FUNCTION notify_on_friend_accepted();
+CREATE OR REPLACE FUNCTION notify_on_friend_accepted()
+RETURNS TRIGGER AS $$
+DECLARE to_name text;
+BEGIN
+  IF NEW.status = 'accepted' AND (OLD.status IS NULL OR OLD.status <> 'accepted') THEN
+    SELECT full_name INTO to_name FROM profiles WHERE id = NEW.to_id;
+    INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id)
+    VALUES (NEW.from_id, 'FRIEND_ACCEPTED', COALESCE(to_name, 'Alguém') || ' aceitou sua solicitação de amizade.', false, '/dashboard/membros', NEW.to_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_friend_request_update ON friend_requests;
+CREATE TRIGGER on_friend_request_update AFTER UPDATE ON friend_requests FOR EACH ROW EXECUTE FUNCTION notify_on_friend_accepted();
 
 -- 4) Alguém curtiu sua resposta no fórum
--- CREATE OR REPLACE FUNCTION notify_on_comment_like()
--- RETURNS TRIGGER AS $$
--- DECLARE
---   comment_author uuid;
--- BEGIN
---   SELECT user_id INTO comment_author FROM post_comments WHERE id = NEW.comment_id;
---   IF comment_author IS NOT NULL AND comment_author <> NEW.user_id THEN
---     INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
---     VALUES (comment_author, 'COMMENT_LIKE', 'Alguém curtiu sua resposta no fórum.', false, '/dashboard/forum/' || (SELECT post_id FROM post_comments WHERE id = NEW.comment_id), NEW.user_id, jsonb_build_object('comment_id', NEW.comment_id));
---   END IF;
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_comment_like_insert ON post_comment_likes;
--- CREATE TRIGGER on_comment_like_insert AFTER INSERT ON post_comment_likes FOR EACH ROW EXECUTE FUNCTION notify_on_comment_like();
+CREATE OR REPLACE FUNCTION notify_on_comment_like()
+RETURNS TRIGGER AS $$
+DECLARE
+  comment_author uuid;
+  liker_name text;
+BEGIN
+  SELECT user_id INTO comment_author FROM post_comments WHERE id = NEW.comment_id;
+  IF comment_author IS NOT NULL AND comment_author <> NEW.user_id THEN
+    SELECT full_name INTO liker_name FROM profiles WHERE id = NEW.user_id;
+    INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
+    VALUES (comment_author, 'COMMENT_LIKE', COALESCE(liker_name, 'Alguém') || ' curtiu sua resposta no fórum.', false, '/dashboard/forum/' || (SELECT post_id FROM post_comments WHERE id = NEW.comment_id), NEW.user_id, jsonb_build_object('comment_id', NEW.comment_id));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_comment_like_insert ON post_comment_likes;
+CREATE TRIGGER on_comment_like_insert AFTER INSERT ON post_comment_likes FOR EACH ROW EXECUTE FUNCTION notify_on_comment_like();
 
 -- 4b) Alguém curtiu sua postagem (tópico) do fórum
--- CREATE OR REPLACE FUNCTION notify_on_post_like()
--- RETURNS TRIGGER AS $$
--- DECLARE post_author uuid;
--- BEGIN
---   SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
---   IF post_author IS NOT NULL AND post_author <> NEW.user_id THEN
---     INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
---     VALUES (post_author, 'LIKE', 'Alguém curtiu sua postagem.', false, '/dashboard/forum/' || NEW.post_id, NEW.user_id, jsonb_build_object('post_id', NEW.post_id));
---   END IF;
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_post_like_insert ON post_likes;
--- CREATE TRIGGER on_post_like_insert AFTER INSERT ON post_likes FOR EACH ROW EXECUTE FUNCTION notify_on_post_like();
+CREATE OR REPLACE FUNCTION notify_on_post_like()
+RETURNS TRIGGER AS $$
+DECLARE post_author uuid; liker_name text;
+BEGIN
+  SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+  IF post_author IS NOT NULL AND post_author <> NEW.user_id THEN
+    SELECT full_name INTO liker_name FROM profiles WHERE id = NEW.user_id;
+    INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
+    VALUES (post_author, 'LIKE', COALESCE(liker_name, 'Alguém') || ' curtiu sua postagem.', false, '/dashboard/forum/' || NEW.post_id, NEW.user_id, jsonb_build_object('post_id', NEW.post_id));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_post_like_insert ON post_likes;
+CREATE TRIGGER on_post_like_insert AFTER INSERT ON post_likes FOR EACH ROW EXECUTE FUNCTION notify_on_post_like();
 
 -- 5) Nova resposta no seu tópico do fórum
--- CREATE OR REPLACE FUNCTION notify_on_forum_reply()
--- RETURNS TRIGGER AS $$
--- DECLARE
---   post_author uuid;
--- BEGIN
---   SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
---   IF post_author IS NOT NULL AND post_author <> NEW.user_id THEN
---     INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
---     VALUES (post_author, 'FORUM_REPLY', 'Nova resposta no seu tópico do fórum.', false, '/dashboard/forum/' || NEW.post_id, NEW.user_id, jsonb_build_object('post_id', NEW.post_id));
---   END IF;
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
--- DROP TRIGGER IF EXISTS on_forum_reply_insert ON post_comments;
--- CREATE TRIGGER on_forum_reply_insert AFTER INSERT ON post_comments FOR EACH ROW EXECUTE FUNCTION notify_on_forum_reply();
+CREATE OR REPLACE FUNCTION notify_on_forum_reply()
+RETURNS TRIGGER AS $$
+DECLARE post_author uuid; replier_name text;
+BEGIN
+  SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+  IF post_author IS NOT NULL AND post_author <> NEW.user_id THEN
+    SELECT full_name INTO replier_name FROM profiles WHERE id = NEW.user_id;
+    INSERT INTO notifications (user_id, type, content, is_read, link, from_user_id, metadata)
+    VALUES (post_author, 'FORUM_REPLY', COALESCE(replier_name, 'Alguém') || ' comentou na sua postagem do fórum.', false, '/dashboard/forum/' || NEW.post_id, NEW.user_id, jsonb_build_object('post_id', NEW.post_id));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS on_forum_reply_insert ON post_comments;
+CREATE TRIGGER on_forum_reply_insert AFTER INSERT ON post_comments FOR EACH ROW EXECUTE FUNCTION notify_on_forum_reply();
+
+-- Para notificações em tempo real no app: no Supabase Dashboard > Database > Replication,
+-- inclua a tabela "notifications" na publicação "supabase_realtime" (se ainda não estiver).
+
+-- Chat com imagens: bucket "chat-images". Políticas não podem ser criadas pelo SQL Editor (must be owner).
+-- Crie pelo Dashboard: Storage > chat-images > Policies (INSERT para authenticated, SELECT para public).
+-- Ver supabase-storage-chat-images-policies.sql para o passo a passo.

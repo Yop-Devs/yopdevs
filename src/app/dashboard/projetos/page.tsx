@@ -4,16 +4,26 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+const TYPE_OPTIONS = [
+  { value: '', label: 'Todos os tipos' },
+  { value: 'VAGA_EMPREGO', label: 'Vaga de emprego' },
+  { value: 'NOVO_PROJETO', label: 'Novo projeto / Startup' },
+]
+
+function getTypeLabel(category: string | null | undefined): string {
+  if (category === 'VAGA_EMPREGO') return 'Vaga de emprego'
+  if (category === 'NOVO_PROJETO') return 'Novo projeto'
+  return category || 'Projeto'
+}
+
 export default function MarketplacePage() {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [filterType, setFilterType] = useState('')
+  const [filterEquityMin, setFilterEquityMin] = useState<number | ''>('')
   const [interestSent, setInterestSent] = useState<Record<string, boolean>>({})
   const [myId, setMyId] = useState<string | null>(null)
-
-  // Tags pré-definidas para filtro rápido
-  const techStacks = ['React', 'Node.js', 'Python', 'Go', 'AWS', 'Mobile', 'AI']
 
   async function fetchProjects() {
     setLoading(true)
@@ -30,10 +40,12 @@ export default function MarketplacePage() {
   const sendInterest = async (project: { id: string; title: string; owner_id: string }) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || user.id === project.owner_id) return
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    const displayName = profile?.full_name || user.email || 'Um membro'
     const { error } = await supabase.from('notifications').insert({
       user_id: project.owner_id,
       type: 'INTEREST',
-      content: `${user.email || 'Um membro'} demonstrou interesse no seu projeto "${project.title}".`,
+      content: `${displayName} tem interesse no seu projeto "${project.title}".`,
       is_read: false,
       link: `/dashboard/chat/${user.id}`,
       from_user_id: user.id,
@@ -45,17 +57,21 @@ export default function MarketplacePage() {
   useEffect(() => { fetchProjects() }, [])
 
   const filtered = projects.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesTag = selectedTag ? p.tech_stack?.includes(selectedTag) : true
-    return matchesSearch && matchesTag
+    const matchesSearch = !searchTerm || p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         p.tech_stack?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesType = !filterType || (p.category && p.category === filterType)
+    const equity = typeof p.equity_offered === 'number' ? p.equity_offered : parseFloat(p.equity_offered) || 0
+    const matchesEquity = filterEquityMin === '' || equity >= Number(filterEquityMin)
+    return matchesSearch && matchesType && matchesEquity
   })
 
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-200 pb-10">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-6 sm:py-12 space-y-6 sm:space-y-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-8 border-b border-slate-200 pb-6 sm:pb-10">
         <div>
           <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Marketplace</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.3em] mt-3">Explorar Ativos e Oportunidades de Equity</p>
@@ -64,9 +80,27 @@ export default function MarketplacePage() {
         <div className="flex flex-col md:flex-row items-center gap-4">
           <input 
             type="text" 
-            placeholder="Pesquisar ventures..." 
+            placeholder="Pesquisar projetos..." 
             className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] transition-all w-72 shadow-sm"
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-48"
+          >
+            {TYPE_OPTIONS.map(opt => <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>)}
+          </select>
+          <input 
+            type="number" 
+            min={0} 
+            max={100} 
+            step={1}
+            placeholder="Equity mín. %" 
+            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-28"
+            value={filterEquityMin === '' ? '' : filterEquityMin}
+            onChange={(e) => setFilterEquityMin(e.target.value === '' ? '' : Number(e.target.value))}
           />
           <Link href="/dashboard/projetos/novo" className="px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md">
             Lançar Projeto
@@ -74,32 +108,13 @@ export default function MarketplacePage() {
         </div>
       </header>
 
-      {/* Barra de Filtros Tech */}
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={() => setSelectedTag(null)}
-          className={`px-4 py-2 rounded-full border-2 text-[9px] font-black uppercase tracking-widest transition-all ${!selectedTag ? 'bg-[#4c1d95] border-[#4c1d95] text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-violet-400'}`}
-        >
-          Todos
-        </button>
-        {techStacks.map(tag => (
-          <button 
-            key={tag}
-            onClick={() => setSelectedTag(tag)}
-            className={`px-4 py-2 rounded-full border-2 text-[9px] font-black uppercase tracking-widest transition-all ${selectedTag === tag ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-violet-400'}`}
-          >
-            {tag}
-          </button>
-        ))}
-      </div>
-
       {filtered.length === 0 ? (
         <div className="text-center py-20 px-6 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
           <p className="text-slate-600 font-bold text-lg mb-2">Nenhum projeto encontrado</p>
           <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
-            {searchTerm || selectedTag ? 'Tente outro termo ou filtro.' : 'Seja o primeiro a lançar um projeto e atrair talentos.'}
+            {searchTerm ? 'Tente outro termo de pesquisa.' : 'Seja o primeiro a lançar um projeto e atrair talentos.'}
           </p>
-          {!searchTerm && !selectedTag && (
+          {!searchTerm && (
             <Link href="/dashboard/projetos/novo" className="inline-block px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all">
               Lançar projeto
             </Link>
@@ -108,22 +123,24 @@ export default function MarketplacePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {filtered.map((project) => (
-            <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
+            <div key={project.id} className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{project.category || 'Venture'}</span>
+                  <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{getTypeLabel(project.category)}</span>
                   <span className="text-[9px] font-mono text-slate-400 italic">ID_{project.id.substring(0,6)}</span>
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 mb-4 uppercase italic tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">{project.title}</h3>
                 <p className="text-sm text-slate-600 leading-relaxed line-clamp-4 font-medium mb-8">"{project.description}"</p>
                 
-                <div className="flex flex-wrap gap-2 mb-8">
-                  {project.tech_stack?.split(',').map((stack: string) => (
-                    <span key={stack} className="text-[8px] font-mono font-black border border-slate-200 px-2 py-0.5 rounded text-slate-400 uppercase">
-                      {stack.trim()}
-                    </span>
-                  ))}
-                </div>
+                {project.tech_stack?.trim() && (
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {project.tech_stack.split(',').map((stack: string) => (
+                      <span key={stack} className="text-[8px] font-mono font-black border border-slate-200 px-2 py-0.5 rounded text-slate-400 uppercase">
+                        {stack.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col gap-3 border-t-2 border-slate-50 pt-8">

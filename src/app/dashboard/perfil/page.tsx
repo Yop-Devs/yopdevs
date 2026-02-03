@@ -8,6 +8,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
   
+  const [profileRole, setProfileRole] = useState<string>('')
   const [formData, setFormData] = useState({ 
     full_name: '', 
     bio: '', 
@@ -16,8 +17,7 @@ export default function ProfilePage() {
     website_url: '', 
     avatar_url: '',
     location: '',
-    specialties: '',
-    availability_status: 'DISPONÍVEL'
+    specialties: ''
   })
 
   useEffect(() => {
@@ -25,17 +25,19 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        if (data) setFormData({
-          full_name: data.full_name || '',
-          bio: data.bio || '',
-          github_url: data.github_url || '',
-          linkedin_url: data.linkedin_url || '',
-          website_url: data.website_url || '',
-          avatar_url: data.avatar_url || '',
-          location: data.location || '',
-          specialties: data.specialties || '',
-          availability_status: data.availability_status || 'DISPONÍVEL'
-        })
+        if (data) {
+          setProfileRole(data.role || '')
+          setFormData({
+            full_name: data.full_name || '',
+            bio: data.bio || '',
+            github_url: data.github_url || '',
+            linkedin_url: data.linkedin_url || '',
+            website_url: data.website_url || '',
+            avatar_url: data.avatar_url || '',
+            location: data.location || '',
+            specialties: data.specialties || ''
+          })
+        }
       }
       setLoading(false)
     }
@@ -54,6 +56,7 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!file || !user) return
 
+      // Perfil: mantém qualidade original (sem redimensionar/comprimir)
       const fileName = `${user.id}-${Date.now()}.${file.name.split('.').pop()}`
       await supabase.storage.from('avatars').upload(fileName, file)
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
@@ -67,7 +70,16 @@ export default function ProfilePage() {
   const handleSave = async (e: any) => {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('profiles').update(formData).eq('id', user?.id)
+    const { error } = await supabase.from('profiles').update({
+          full_name: formData.full_name,
+          bio: formData.bio,
+          github_url: formData.github_url,
+          linkedin_url: formData.linkedin_url,
+          website_url: formData.website_url,
+          avatar_url: formData.avatar_url,
+          location: formData.location,
+          specialties: formData.specialties
+        }).eq('id', user?.id)
     if (error) showStatus('error', error.message)
     else showStatus('success', 'PERFIL ATUALIZADO NO KERNEL.')
   }
@@ -75,10 +87,20 @@ export default function ProfilePage() {
   if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-[0.5em]">Sync_Profile_Data...</div>
 
   return (
-    <div className="max-w-[1200px] mx-auto py-16 px-8 space-y-12">
+    <div className="max-w-[1200px] mx-auto py-8 sm:py-16 px-4 sm:px-8 space-y-8 sm:space-y-12">
       <header className="flex justify-between items-end border-b border-slate-200 pb-8">
         <div>
-          <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">Configurações de Identidade</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">Configurações de Identidade</h1>
+            {profileRole && (
+              <span className={`text-[9px] font-black px-3 py-1.5 rounded-xl border-2 uppercase tracking-widest ${
+                profileRole === 'ADMIN' ? 'bg-violet-100 border-violet-400 text-violet-700' :
+                profileRole === 'BANNED' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-slate-100 border-slate-300 text-slate-600'
+              }`}>
+                {profileRole === 'ADMIN' ? 'Admin' : profileRole === 'BANNED' ? 'Restrito' : 'Membro'}
+              </span>
+            )}
+          </div>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-2 italic">Gerenciamento de credenciais e ativos digitais</p>
         </div>
         
@@ -108,19 +130,6 @@ export default function ProfilePage() {
               <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Aguarde...' : 'Alterar Imagem'}</span>
             </label>
           </div>
-
-          <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50 space-y-4">
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status de Disponibilidade</p>
-            <select 
-              className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer"
-              value={formData.availability_status}
-              onChange={e => setFormData({...formData, availability_status: e.target.value})}
-            >
-              <option value="DISPONÍVEL">🟢 Disponível para Ventures</option>
-              <option value="OCUPADO">🔴 Em Operação Focada</option>
-              <option value="MENTOR">💎 Apenas Mentoria</option>
-            </select>
-          </div>
         </aside>
 
         {/* COLUNA DIREITA: DADOS */}
@@ -137,8 +146,12 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Especialidades Técnicas (Tags separadas por vírgula)</label>
-            <input placeholder="React, Python, Arquitetura Cloud, Venture Capital..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none italic" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Especialidades (tags por vírgula)</label>
+            <input placeholder="Ex: React, Python, Venture Capital..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.specialties} onChange={e => setFormData({...formData, specialties: e.target.value})} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Bio (dev ou empresário)</label>
+            <textarea rows={4} placeholder="Breve bio ou tese: CTO, fundador, desenvolvedor full-stack..." className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -154,11 +167,6 @@ export default function ProfilePage() {
               <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Site / Portfólio</label>
               <input type="url" placeholder="https://..." className="p-4 border border-slate-200 rounded-xl text-xs font-semibold w-full outline-none" value={formData.website_url} onChange={e => setFormData({...formData, website_url: e.target.value})} />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Tese de Carreira / Bio Profissional</label>
-            <textarea rows={6} className="w-full p-4 border border-slate-200 rounded-xl text-sm font-medium resize-none outline-none focus:bg-slate-50 transition-all" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} placeholder="Descreva sua tese de valor e o que você constrói..." />
           </div>
 
           <button type="submit" className="w-full lg:w-auto px-20 py-5 bg-[#4c1d95] text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-violet-800 transition-all active:scale-95 shadow-md hover:shadow-lg">
