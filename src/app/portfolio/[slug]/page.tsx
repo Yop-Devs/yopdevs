@@ -145,7 +145,7 @@ export default function PortfolioPage({
   const displayRole = isGabriel && (profile.role === 'MEMBER' || !profile.role) ? 'CEO' : (profile.role || 'Membro da rede YOP Devs')
   const instagramUrl = isGabriel ? 'https://instagram.com/gabriel.carrara_' : null
   const contactPhone = isGabriel ? '65 9 9226-3485' : null
-  const contactTel = isGabriel ? 'tel:+5565992263485' : null
+  const contactTel = isGabriel ? 'tel:+5565992263485' : undefined
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -210,7 +210,7 @@ export default function PortfolioPage({
               <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm font-semibold text-slate-500 uppercase tracking-wider mb-5">
                 {profile.location && <span>📍 {profile.location}</span>}
                 {contactPhone && (
-                  <a href={contactTel} className="hover:text-violet-600 transition-colors">📞 {contactPhone}</a>
+                  <a href={contactTel ?? '#'} className="hover:text-violet-600 transition-colors">📞 {contactPhone}</a>
                 )}
                 {profile.availability_status && (
                   <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-black">
@@ -424,7 +424,7 @@ export default function PortfolioPage({
           </p>
           {contactPhone && (
             <p className="mb-5">
-              <a href={contactTel} className="text-lg font-bold text-slate-800 hover:text-violet-600 transition-colors">
+              <a href={contactTel ?? '#'} className="text-lg font-bold text-slate-800 hover:text-violet-600 transition-colors">
                 📞 {contactPhone}
               </a>
             </p>
