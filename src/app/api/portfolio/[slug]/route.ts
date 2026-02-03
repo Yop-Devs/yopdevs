@@ -25,13 +25,24 @@ export async function GET(
   const supabase = createClient(supabaseUrl, supabaseAnonKey)
   const fullName = slugToFullName(slug)
 
-  const { data: profile, error: profileError } = await supabase
+  // Tenta exato; se não achar, tenta case-insensitive (ilike)
+  let { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('full_name', fullName)
-    .single()
+    .maybeSingle()
 
-  if (profileError || !profile) {
+  if ((profileError || !profile) && fullName) {
+    const { data: profileIlike } = await supabase
+      .from('profiles')
+      .select('*')
+      .ilike('full_name', fullName)
+      .limit(1)
+      .maybeSingle()
+    if (profileIlike) profile = profileIlike
+  }
+
+  if (!profile) {
     return NextResponse.json(
       { error: 'Perfil não encontrado', profile: null, projects: [] },
       { status: 404 }

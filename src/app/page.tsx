@@ -168,7 +168,6 @@ function LandingPageContent() {
               <Image src="/logoprincipal.png?v=3" alt="YOP DEVS" width={280} height={90} className="h-14 md:h-16 w-auto object-contain" priority unoptimized />
             </Link>
             <div className="flex items-center gap-4 md:gap-6">
-              <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Portfolio</Link>
               <Link href="/termos" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Termos de Uso</Link>
               <Link href="/privacidade" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Privacidade</Link>
               <Link href="/suporte" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Suporte</Link>
@@ -305,7 +304,6 @@ function LandingPageContent() {
             YOP Devs
           </Link>
           <nav className="flex flex-wrap justify-center gap-6 md:gap-8">
-            <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Portfolio · Gabriel Costa Carrara</Link>
             <Link href="/termos" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Termos de Uso</Link>
             <Link href="/privacidade" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Privacidade</Link>
             <Link href="/suporte" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">Suporte</Link>
