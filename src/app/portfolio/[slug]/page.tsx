@@ -141,6 +141,12 @@ export default function PortfolioPage({
     ? profile.specialties.split(',').map((s) => s.trim()).filter(Boolean)
     : []
 
+  const isGabriel = slug === 'gabriel-costa-carrara'
+  const displayRole = isGabriel && (profile.role === 'MEMBER' || !profile.role) ? 'CEO' : (profile.role || 'Membro da rede YOP Devs')
+  const instagramUrl = isGabriel ? 'https://instagram.com/gabriel.carrara_' : null
+  const contactPhone = isGabriel ? '65 9 9226-3485' : null
+  const contactTel = isGabriel ? 'tel:+5565992263485' : null
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       {/* Header fixo */}
@@ -175,10 +181,10 @@ export default function PortfolioPage({
       </header>
 
       {/* Hero */}
-      <section className="pt-24 md:pt-32 pb-16 md:pb-24 px-4 md:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center gap-12 md:gap-16">
+      <section className="pt-20 md:pt-24 pb-10 md:pb-14 px-4 md:px-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center gap-8 md:gap-10">
           <div className="flex-shrink-0 mx-auto md:mx-0">
-            <div className="w-48 h-48 md:w-64 md:h-64 rounded-3xl overflow-hidden border-4 border-white shadow-2xl bg-slate-200 flex items-center justify-center">
+            <div className="w-40 h-40 md:w-52 md:h-52 rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-slate-200 flex items-center justify-center">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
               ) : (
@@ -189,44 +195,53 @@ export default function PortfolioPage({
             </div>
           </div>
           <div className="text-center md:text-left">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-violet-600 mb-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-violet-600 mb-2">
               Portfolio · YOP Devs
             </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-3">
               {profile.full_name}
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 font-medium max-w-xl mb-6">
-              {profile.role ? (
-                <span className="inline-block px-4 py-1.5 bg-slate-800 text-white text-sm font-bold uppercase rounded-lg tracking-wider">
-                  {profile.role}
-                </span>
-              ) : (
-                <span className="text-slate-500">Membro da rede YOP Devs</span>
-              )}
+            <p className="text-base md:text-lg text-slate-600 font-medium max-w-xl mb-4">
+              <span className="inline-block px-3 py-1 bg-slate-800 text-white text-sm font-bold uppercase rounded-lg tracking-wider">
+                {displayRole}
+              </span>
             </p>
-            {(profile.location || profile.availability_status) && (
-              <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm font-semibold text-slate-500 uppercase tracking-wider mb-8">
+            {(profile.location || profile.availability_status || contactPhone) && (
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm font-semibold text-slate-500 uppercase tracking-wider mb-5">
                 {profile.location && <span>📍 {profile.location}</span>}
+                {contactPhone && (
+                  <a href={contactTel} className="hover:text-violet-600 transition-colors">📞 {contactPhone}</a>
+                )}
                 {profile.availability_status && (
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-black">
+                  <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-black">
                     {profile.availability_status}
                   </span>
                 )}
               </div>
             )}
-            <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
               <Link
                 href="/"
-                className="px-8 py-4 bg-[#4c1d95] text-white rounded-2xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-lg hover:shadow-xl"
+                className="px-6 py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-md"
               >
                 Conectar na rede YOP
               </Link>
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all"
+                >
+                  Instagram
+                </a>
+              )}
               {profile.linkedin_url && (
                 <a
                   href={profile.linkedin_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all"
+                  className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all"
                 >
                   LinkedIn
                 </a>
@@ -236,7 +251,7 @@ export default function PortfolioPage({
                   href={profile.github_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all"
+                  className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all"
                 >
                   GitHub
                 </a>
@@ -247,15 +262,15 @@ export default function PortfolioPage({
       </section>
 
       {/* Sobre */}
-      <section id="sobre" className="py-16 md:py-24 px-4 md:px-6 bg-white border-y border-slate-200">
+      <section id="sobre" className="py-10 md:py-14 px-4 md:px-6 bg-white border-y border-slate-200">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">
             Sobre
           </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-6">
+          <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4">
             Tese profissional
           </h3>
-          <p className="text-slate-600 text-lg leading-relaxed font-medium">
+          <p className="text-slate-600 text-base leading-relaxed font-medium">
             {profile.bio || (
               <span className="italic text-slate-500">
                 {profile.full_name} faz parte da rede YOP Devs — ecossistema que conecta empreendedores, desenvolvedores e investidores. Perfil em construção.
@@ -267,12 +282,12 @@ export default function PortfolioPage({
 
       {/* Especialidades */}
       {specialties.length > 0 && (
-        <section className="py-16 md:py-24 px-4 md:px-6">
+        <section className="py-10 md:py-14 px-4 md:px-6">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">
               Especialidades
             </h2>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-8">
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-5">
               Competências e foco
             </h3>
             <div className="flex flex-wrap gap-3">
@@ -291,15 +306,15 @@ export default function PortfolioPage({
 
       {/* Apps e sistemas desenvolvidos (Gabriel Costa Carrara) */}
       {slug === 'gabriel-costa-carrara' && (
-        <section id="projetos" className="py-16 md:py-24 px-4 md:px-6 bg-white border-y border-slate-200">
+        <section id="projetos" className="py-10 md:py-14 px-4 md:px-6 bg-white border-y border-slate-200">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">
               Portfolio
             </h2>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-10">
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6">
               Apps e sistemas desenvolvidos
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {SHOWCASE_PROJECTS_GABRIEL.map((item) => (
                 item.url !== '#' ? (
                   <a
@@ -325,7 +340,7 @@ export default function PortfolioPage({
                 ) : (
                   <div
                     key={item.title}
-                    className="bg-slate-100 border-2 border-slate-200 rounded-2xl p-8"
+                    className="bg-slate-100 border-2 border-slate-200 rounded-xl p-6"
                   >
                     <span className="text-[9px] font-black uppercase tracking-widest text-violet-600 mb-3 block">
                       {item.tag}
@@ -345,16 +360,16 @@ export default function PortfolioPage({
       )}
 
       {/* Projetos na rede YOP */}
-      <section id={slug === 'gabriel-costa-carrara' ? 'projetos-rede' : 'projetos'} className="py-16 md:py-24 px-4 md:px-6">
+      <section id={slug === 'gabriel-costa-carrara' ? 'projetos-rede' : 'projetos'} className="py-10 md:py-14 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">
             Ativos na rede
           </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-10">
+          <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6">
             Projetos na rede YOP
           </h3>
           {projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {projects.map((p) => (
                 <div
                   key={p.id}
@@ -383,7 +398,7 @@ export default function PortfolioPage({
               ))}
             </div>
           ) : (
-            <div className="py-16 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+            <div className="py-10 border-2 border-dashed border-slate-200 rounded-xl text-center">
               <p className="text-slate-500 font-medium">
                 Nenhum projeto publicado na rede ainda.
               </p>
@@ -396,24 +411,41 @@ export default function PortfolioPage({
       </section>
 
       {/* Contato */}
-      <section id="contato" className="py-16 md:py-24 px-4 md:px-6">
+      <section id="contato" className="py-10 md:py-14 px-4 md:px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">
             Contato
           </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-6">
+          <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4">
             Vamos conectar?
           </h3>
-          <p className="text-slate-600 mb-10 max-w-xl mx-auto">
+          <p className="text-slate-600 mb-6 max-w-xl mx-auto text-sm">
             Entre na rede YOP Devs para ver projetos, participar do fórum e falar diretamente com {profile.full_name.split(' ')[0]}.
           </p>
-          <div className="flex flex-wrap gap-4 justify-center mb-10">
+          {contactPhone && (
+            <p className="mb-5">
+              <a href={contactTel} className="text-lg font-bold text-slate-800 hover:text-violet-600 transition-colors">
+                📞 {contactPhone}
+              </a>
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 justify-center mb-6">
+            {instagramUrl && (
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
+              >
+                Instagram
+              </a>
+            )}
             {profile.github_url && (
               <a
                 href={profile.github_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
+                className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
               >
                 GitHub
               </a>
@@ -423,7 +455,7 @@ export default function PortfolioPage({
                 href={profile.linkedin_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
+                className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
               >
                 LinkedIn
               </a>
@@ -433,7 +465,7 @@ export default function PortfolioPage({
                 href={profile.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
+                className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all"
               >
                 Site
               </a>
@@ -441,7 +473,7 @@ export default function PortfolioPage({
           </div>
           <Link
             href="/"
-            className="inline-block px-10 py-4 bg-[#4c1d95] text-white rounded-2xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-lg"
+            className="inline-block px-8 py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-md"
           >
             Entrar na rede YOP Devs
           </Link>
@@ -449,7 +481,7 @@ export default function PortfolioPage({
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-slate-800 text-slate-200 py-10 px-4 md:px-6">
+      <footer className="border-t border-slate-200 bg-slate-800 text-slate-200 py-6 px-4 md:px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
