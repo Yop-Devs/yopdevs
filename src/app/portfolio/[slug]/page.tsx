@@ -58,6 +58,18 @@ const SHOWCASE_PROJECTS_GABRIEL = [
     description: 'Automações e sistemas internos para empresas — processos, integrações e ferramentas sob medida.',
     tag: 'Automação',
   },
+  {
+    title: 'Sport Club Westham',
+    url: 'https://westham.vercel.app',
+    description: 'Site oficial do Westham: FUT 7, Campo e Futsal, área do sócio, loja oficial, notícias e cronograma de jogos.',
+    tag: 'Site institucional',
+  },
+  {
+    title: 'Cap. Cavaleiros do Guaporé nº 862',
+    url: 'https://capitulo862.vercel.app',
+    description: 'Site do Capítulo DeMolay — Ordem DeMolay, fraternidade, reverência e companheirismo. Informações, membros e secretaria.',
+    tag: 'Site institucional',
+  },
 ]
 
 export default function PortfolioPage({
