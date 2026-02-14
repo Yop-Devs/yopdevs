@@ -43,6 +43,8 @@ const SHOWCASE_PROJECTS_GABRIEL_EN = [
   { title: 'Fenix Gestora', url: 'https://fenixgestora.com.br', description: 'Delivered custom system and company website for financial/consortium operations — requirements, development and deployment.', tech: ['Web', 'Systems'], achievement: 'Custom system in production.' },
   { title: 'WhatsApp Automations (Meta)', url: '#', description: 'Implemented payment reminders and notifications via official WhatsApp Business API; automated billing and customer communication flows.', tech: ['API', 'Automation'], achievement: 'Automation flows in use.' },
   { title: 'Internal systems & integrations', url: '#', description: 'Designed and delivered custom automations and internal tools for companies — process design, integrations and bespoke software.', tech: ['Automation', 'Integrations'], achievement: 'Internal tools delivered on scope.' },
+  { title: 'Sport Club Westham', url: 'https://westham.vercel.app', description: 'Official club website: 7-a-side, field and futsal info, member area, official store, news and match schedule.', tech: ['Web', 'Institutional'], achievement: 'Club site in production.' },
+  { title: 'Chapter Cavaleiros do Guaporé nº 862', url: 'https://capitulo862.vercel.app', description: 'DeMolay Chapter website — fraternity, reverence and fellowship. Info, members and secretariat.', tech: ['Web', 'Institutional'], achievement: 'Chapter site in production.' },
 ]
 
 // Key achievements — measurable / outcome-focused (for summary)
@@ -181,7 +183,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm print:hidden">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
@@ -189,28 +191,28 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             <Logo variant="dark" size="sm" />
           </Link>
           <nav className="flex items-center gap-4">
-            <a href="#about" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Summary</a>
-            <a href="#experience" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Experience</a>
+            <a href="#about" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Summary</a>
+            <a href="#experience" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Experience</a>
             {isGabriel && (
               <>
-                <a href="#education" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Education</a>
-                <a href="#languages" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Languages</a>
+                <a href="#education" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Education</a>
+                <a href="#languages" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Languages</a>
               </>
             )}
-            <a href="#contact" className="text-sm font-semibold text-slate-600 hover:text-[#4c1d95] transition-colors hidden sm:inline">Contact</a>
+            <a href="#contact" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Contact</a>
             {isGabriel && (
-              <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-500 hover:text-violet-600 transition-colors">
+              <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors">
                 PT
               </Link>
             )}
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2.5 border-2 border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:border-violet-300 hover:text-violet-700 transition-all hidden sm:block"
+              className="px-4 py-2.5 border-2 border-slate-300 text-slate-700 rounded-lg text-sm font-bold hover:border-slate-500 hover:bg-slate-50 transition-all hidden sm:block"
             >
               Print resume
             </button>
-            <Link href="/" className="px-4 py-2.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all">
+            <Link href="/" className="px-4 py-2.5 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition-all">
               Join YOP
             </Link>
           </nav>
@@ -230,7 +232,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             </div>
           </div>
           <div className="text-center md:text-left flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-violet-600 mb-2">Resume · YOP Devs</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Resume · YOP Devs</p>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-2 print:text-3xl">
               {profile.full_name}
             </h1>
@@ -245,12 +247,12 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                 {displayRole}
               </span>
               {fenixRole && (
-                <span className="inline-block ml-2 px-3 py-1 bg-violet-100 text-violet-800 text-xs font-bold rounded-lg tracking-wider border border-violet-200">
+                <span className="inline-block ml-2 px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded tracking-wider border border-slate-200">
                   {fenixRole}
                 </span>
               )}
               {isGabriel && (
-                <span className="inline-block ml-2 px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full border border-emerald-600 print:bg-emerald-600">
+                <span className="inline-block ml-2 px-3 py-1 bg-slate-700 text-white text-xs font-bold rounded tracking-wider print:bg-slate-800">
                   Open to work
                 </span>
               )}
@@ -259,10 +261,10 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
               <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm font-semibold text-slate-500 uppercase tracking-wider mb-5">
                 {profile.location && <span>📍 {profile.location}</span>}
                 {contactPhone && (
-                  <a href={contactTelHref} className="hover:text-violet-600 transition-colors">📞 {contactPhone}</a>
+                  <a href={contactTelHref} className="hover:text-slate-800 transition-colors">📞 {contactPhone}</a>
                 )}
                 {profile.availability_status && (
-                  <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-black">
+                  <span className="px-2.5 py-0.5 bg-slate-200 text-slate-700 rounded text-xs font-bold">
                     {profile.availability_status}
                   </span>
                 )}
@@ -270,26 +272,26 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             )}
             <div className="flex flex-wrap gap-2 justify-center md:justify-start print:flex print:gap-2">
               {profile.linkedin_url && (
-                <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-[#0a66c2] text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-[#004182] transition-all shadow-md">
+                <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-[#0a66c2] text-white rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-[#004182] transition-all">
                   LinkedIn — Let&apos;s connect
                 </a>
               )}
               {contactTelHref !== '#' && (
-                <a href={contactTelHref} className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-emerald-700 transition-all shadow-md">
+                <a href={contactTelHref} className="px-6 py-3 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-slate-700 transition-all">
                   📞 Call / WhatsApp
                 </a>
               )}
               {profile.github_url && (
-                <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all">
+                <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold text-sm uppercase tracking-wide hover:border-slate-400 hover:bg-slate-50 transition-all">
                   GitHub
                 </a>
               )}
               {instagramUrl && (
-                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:border-violet-300 hover:text-violet-700 transition-all">
+                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold text-sm uppercase tracking-wide hover:border-slate-400 hover:bg-slate-50 transition-all">
                   Instagram
                 </a>
               )}
-              <Link href="/" className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-slate-300 transition-all print:hidden">
+              <Link href="/" className="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-slate-300 transition-all print:hidden">
                 YOP Network
               </Link>
             </div>
@@ -316,7 +318,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             <ul className="mt-6 space-y-2 text-slate-600 text-sm leading-relaxed font-medium">
               {KEY_ACHIEVEMENTS_GABRIEL.map((bullet, i) => (
                 <li key={i} className="flex gap-2">
-                  <span className="text-violet-500 font-bold shrink-0">•</span>
+                  <span className="text-slate-500 font-bold shrink-0">•</span>
                   <span>{bullet}</span>
                 </li>
               ))}
@@ -367,7 +369,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                     {tech.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {tech.map((t) => (
-                          <span key={t} className="text-[9px] font-black uppercase tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                          <span key={t} className="text-[9px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             {t}
                           </span>
                         ))}
@@ -379,7 +381,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                       <p className="text-slate-700 text-xs font-semibold mb-3">✓ {achievement}</p>
                     )}
                     {'url' in item && item.url !== '#' && (
-                      <span className="text-sm font-bold text-[#4c1d95] uppercase tracking-wider">View →</span>
+                      <span className="text-sm font-bold text-slate-700 uppercase tracking-wider">View →</span>
                     )}
                   </>
                 )
@@ -389,12 +391,12 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-slate-100 border-2 border-slate-200 rounded-xl p-6 hover:border-violet-300 hover:shadow-lg transition-all group"
+                    className="block bg-white border border-slate-200 rounded-lg p-6 hover:border-slate-300 hover:shadow-md transition-all group"
                   >
                     {cardContent}
                   </a>
                 ) : (
-                  <div key={item.title} className="bg-slate-100 border-2 border-slate-200 rounded-xl p-6">
+                  <div key={item.title} className="bg-white border border-slate-200 rounded-lg p-6">
                     {cardContent}
                   </div>
                 )
@@ -444,18 +446,18 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
           {projects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {projects.map((p) => (
-                <div key={p.id} className="bg-slate-100 border-2 border-slate-200 rounded-xl p-6 hover:border-violet-200 hover:shadow-lg transition-all">
-                  {p.category && <span className="text-[9px] font-black uppercase tracking-widest text-violet-600 mb-3 block">{p.category}</span>}
-                  <h4 className="text-xl font-black text-slate-900 mb-3 leading-tight">{p.title}</h4>
+                <div key={p.id} className="bg-white border border-slate-200 rounded-lg p-6 hover:border-slate-300 hover:shadow-md transition-all">
+                  {p.category && <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-3 block">{p.category}</span>}
+                  <h4 className="text-xl font-bold text-slate-900 mb-3 leading-tight">{p.title}</h4>
                   {p.description && <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-6">{p.description}</p>}
-                  <Link href="/" className="text-sm font-bold text-[#4c1d95] hover:underline uppercase tracking-wider">View on YOP →</Link>
+                  <Link href="/" className="text-sm font-bold text-slate-700 hover:underline uppercase tracking-wider">View on YOP →</Link>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-10 border-2 border-dashed border-slate-200 rounded-xl text-center">
+            <div className="py-10 border border-dashed border-slate-200 rounded-lg text-center">
               <p className="text-slate-500 font-medium">No projects on the network yet.</p>
-              <Link href="/" className="inline-block mt-4 text-sm font-bold text-violet-600 hover:underline">Visit YOP Devs</Link>
+              <Link href="/" className="inline-block mt-4 text-sm font-bold text-slate-700 hover:underline">Visit YOP Devs</Link>
             </div>
           )}
         </div>
@@ -472,7 +474,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
           </p>
           {contactPhone && (
             <p className="mb-5">
-              <a href={contactTelHref} className="text-lg font-bold text-slate-800 hover:text-violet-600 transition-colors">
+              <a href={contactTelHref} className="text-lg font-bold text-slate-800 hover:text-slate-600 transition-colors">
                 📞 {contactPhone}
               </a>
             </p>
@@ -482,21 +484,21 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
               <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-[#0a66c2] text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-[#004182] transition-all">LinkedIn</a>
             )}
             {contactTelHref !== '#' && (
-              <a href={contactTelHref} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-emerald-700 transition-all">Call / WhatsApp</a>
+              <a href={contactTelHref} className="px-5 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Call / WhatsApp</a>
             )}
             {profile.github_url && (
-              <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">GitHub</a>
+              <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">GitHub</a>
             )}
             {instagramUrl && (
-              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Instagram</a>
+              <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Instagram</a>
             )}
             {profile.website_url && (
-              <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Website</a>
+              <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-slate-700 transition-all">Website</a>
             )}
           </div>
           <p className="text-xs text-slate-500 mb-2">Use &quot;Print resume&quot; above to save as PDF for applications (ATS-friendly, no photo).</p>
           <p className="text-xs text-slate-500 mb-4">For international roles, I provide a tailored cover letter when applying.</p>
-          <Link href="/" className="inline-block px-8 py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-violet-800 transition-all shadow-md print:hidden">
+          <Link href="/" className="inline-block px-8 py-3 bg-slate-800 text-white rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-slate-700 transition-all print:hidden">
             Join YOP Devs
           </Link>
         </div>
@@ -505,7 +507,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
       <footer className="border-t border-slate-200 bg-slate-800 text-slate-200 py-6 px-4 md:px-6 print:py-4 print:bg-white print:border-slate-200 print:text-slate-600">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <Link href="/" className="flex items-center gap-2 print:no-underline print:text-slate-700">
-            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center print:bg-slate-200">
+            <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center print:bg-slate-200">
               <svg className="w-4 h-4 text-white print:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
