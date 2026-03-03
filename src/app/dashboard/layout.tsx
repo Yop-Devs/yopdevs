@@ -129,29 +129,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* SIDEBAR - Corporativo escuro */}
+      {/* SIDEBAR - Roxo com cantos esquerdos arredondados */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 flex flex-col border-r border-slate-700 transition-transform duration-300
+        fixed inset-y-0 left-0 z-50 w-64 bg-violet-900 flex flex-col border-r border-violet-800 transition-transform duration-300
+        rounded-l-3xl overflow-hidden
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-4 sm:p-6 flex items-center justify-center relative bg-slate-800">
+        <div className="p-4 sm:p-6 flex items-center justify-center relative bg-violet-900 border-b border-white/20 shrink-0">
           <Link href="/dashboard" className="flex items-center justify-center w-full min-h-[4rem]">
-            <Image src="/homeimage.png?v=1" alt="YOP DEVS" width={280} height={88} className="h-14 sm:h-16 w-auto object-contain object-center" priority unoptimized />
+            <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={280} height={88} className="h-12 sm:h-14 w-auto object-contain object-center" priority unoptimized />
           </Link>
           <button className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
           {navItems.filter((item) => {
             if ('adminOnly' in item && item.adminOnly) return showAdminLink
             return true
           }).map((item) => {
             const isNotifications = item.href === '/dashboard/notificacoes'
             return (
-              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
+              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-none text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-white hover:bg-violet-800'}`}>
                 <span className="flex items-center gap-3 min-w-0">
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                   <span className="truncate">{item.name}</span>
@@ -166,17 +167,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center gap-3">
+        <div className="p-4 bg-violet-900 border-t border-violet-800 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
-            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">
+            <p className="text-[8px] text-violet-200 font-semibold uppercase tracking-wider">
               {showAdminLink ? 'Administrador On-line' : 'Usuário On-line'}
             </p>
           </div>
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 hover:text-red-300 transition-all text-[10px] font-bold uppercase tracking-wider"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-violet-700 text-white hover:bg-violet-800 hover:border-violet-600 hover:text-red-200 transition-all text-[10px] font-bold uppercase tracking-wider"
             title="Sair da conta"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -189,12 +190,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* HEADER MOBILE */}
-        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 lg:hidden shrink-0">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-300 hover:text-white">
+        <header className="h-16 bg-violet-900 border-b border-violet-800 flex items-center justify-between px-4 lg:hidden shrink-0">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-white hover:text-violet-200">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <span className="text-white font-bold text-lg tracking-tight">YOP Devs</span>
-          <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-black text-[10px] text-white">
+          <Link href="/dashboard" className="flex items-center">
+            <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={160} height={50} className="h-8 w-auto object-contain" unoptimized />
+          </Link>
+          <div className="w-10 h-10 bg-violet-800 rounded-full flex items-center justify-center font-black text-[10px] text-white">
             {profile?.full_name?.[0]}
           </div>
         </header>

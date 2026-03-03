@@ -130,6 +130,15 @@ export default function MarketplacePage() {
                   <span className="text-[9px] font-mono text-slate-400 italic">ID_{project.id.substring(0,6)}</span>
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 mb-4 uppercase italic tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">{project.title}</h3>
+                {(project.image_urls?.length ?? 0) > 0 && (
+                  <div className="flex gap-2 mb-4">
+                    {(project.image_urls || []).slice(0, 3).map((url: string, i: number) => (
+                      <div key={i} className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-sm text-slate-600 leading-relaxed line-clamp-4 font-medium mb-8">"{project.description}"</p>
                 
                 {project.tech_stack?.trim() && (
