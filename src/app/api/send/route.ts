@@ -1,7 +1,9 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY ?? '')
+}
 
 export async function POST(request: Request) {
   if (!process.env.RESEND_API_KEY) {
@@ -11,6 +13,7 @@ export async function POST(request: Request) {
     )
   }
 
+  const resend = getResend()
   try {
     const body = await request.json()
     const name = typeof body?.name === 'string' ? body.name.trim() : ''

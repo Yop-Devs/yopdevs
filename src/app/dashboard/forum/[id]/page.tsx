@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import ConfirmModal from '@/components/ConfirmModal'
+import { formatTimeAgo, formatAuthorName } from '@/lib/format'
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -14,8 +15,13 @@ export default function PostDetailPage() {
   const [myId, setMyId] = useState<string | null>(null)
   const [likesByComment, setLikesByComment] = useState<Record<string, { count: number; iLiked: boolean }>>({})
   const [postLike, setPostLike] = useState<{ count: number; iLiked: boolean }>({ count: 0, iLiked: false })
+  const [postUseful, setPostUseful] = useState<{ count: number; iUsed: boolean }>({ count: 0, iUsed: false })
+  const [postInteresting, setPostInteresting] = useState<{ count: number; iUsed: boolean }>({ count: 0, iUsed: false })
   const [deleting, setDeleting] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null)
+  const viewedPostsRef = useRef<Set<string>>(new Set())
   const router = useRouter()
 
   async function loadData() {
@@ -32,6 +38,14 @@ export default function PostDetailPage() {
     const postLikeCount = postLikes?.length ?? 0
     const postILiked = user ? (postLikes?.some((l) => l.user_id === user.id) ?? false) : false
     setPostLike({ count: postLikeCount, iLiked: postILiked })
+
+    const { data: reactions } = await supabase.from('post_reactions').select('user_id, reaction_type').eq('post_id', id)
+    const usefulCount = (reactions || []).filter((r: any) => r.reaction_type === 'useful').length
+    const interestingCount = (reactions || []).filter((r: any) => r.reaction_type === 'interesting').length
+    const iUseful = user ? (reactions || []).some((r: any) => r.reaction_type === 'useful' && r.user_id === user.id) : false
+    const iInteresting = user ? (reactions || []).some((r: any) => r.reaction_type === 'interesting' && r.user_id === user.id) : false
+    setPostUseful({ count: usefulCount, iUsed: iUseful })
+    setPostInteresting({ count: interestingCount, iUsed: iInteresting })
 
     if (commentList.length > 0) {
       const commentIds = commentList.map((x) => x.id)
@@ -55,6 +69,17 @@ export default function PostDetailPage() {
   }
 
   useEffect(() => { loadData() }, [id])
+
+  useEffect(() => {
+    const postId = Array.isArray(id) ? id[0] : id
+    if (!postId || viewedPostsRef.current.has(postId)) return
+    viewedPostsRef.current.add(postId)
+    void (async () => {
+      try {
+        await supabase.rpc('increment_post_views', { p_post_id: postId })
+      } catch { /* ignora se a função não existir */ }
+    })()
+  }, [id])
 
   const sendComment = async (e: any) => {
     e.preventDefault()
@@ -84,6 +109,30 @@ export default function PostDetailPage() {
     }
   }
 
+  const toggleUseful = async () => {
+    if (!myId || !id) return
+    const iUsed = postUseful.iUsed
+    if (iUsed) {
+      await supabase.from('post_reactions').delete().eq('post_id', id).eq('user_id', myId).eq('reaction_type', 'useful')
+      setPostUseful((prev) => ({ count: Math.max(0, prev.count - 1), iUsed: false }))
+    } else {
+      await supabase.from('post_reactions').insert([{ post_id: id, user_id: myId, reaction_type: 'useful' }])
+      setPostUseful((prev) => ({ count: prev.count + 1, iUsed: true }))
+    }
+  }
+
+  const toggleInteresting = async () => {
+    if (!myId || !id) return
+    const iUsed = postInteresting.iUsed
+    if (iUsed) {
+      await supabase.from('post_reactions').delete().eq('post_id', id).eq('user_id', myId).eq('reaction_type', 'interesting')
+      setPostInteresting((prev) => ({ count: Math.max(0, prev.count - 1), iUsed: false }))
+    } else {
+      await supabase.from('post_reactions').insert([{ post_id: id, user_id: myId, reaction_type: 'interesting' }])
+      setPostInteresting((prev) => ({ count: prev.count + 1, iUsed: true }))
+    }
+  }
+
   const requestDeletePost = () => {
     if (!myId || !id || post?.author_id !== myId) return
     setConfirmDeleteOpen(true)
@@ -97,6 +146,19 @@ export default function PostDetailPage() {
     setConfirmDeleteOpen(false)
     if (!error) router.push('/dashboard/forum')
     else setStatus({ type: 'error', text: 'Não foi possível excluir. Tente novamente.' })
+  }
+
+  const requestDeleteComment = (commentId: string) => {
+    setCommentToDelete(commentId)
+  }
+
+  const executeDeleteComment = async () => {
+    if (!commentToDelete || !myId) return
+    setDeletingCommentId(commentToDelete)
+    const { error } = await supabase.from('post_comments').delete().eq('id', commentToDelete).eq('user_id', myId)
+    setDeletingCommentId(null)
+    setCommentToDelete(null)
+    if (!error) loadData()
   }
 
   const toggleLike = async (commentId: string) => {
@@ -123,13 +185,25 @@ export default function PostDetailPage() {
             {post.profiles?.avatar_url ? <img src={post.profiles.avatar_url} className="w-full h-full object-cover" /> : post.profiles?.full_name?.[0]}
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{post.profiles?.full_name}</p>
-            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 italic">Autor do Tópico • {new Date(post.created_at).toLocaleDateString('pt-BR')}</p>
+            <p className="text-sm font-semibold text-slate-900">{formatAuthorName(post.profiles?.full_name)}</p>
+            <p className="text-slate-500 text-sm mt-0.5">{formatTimeAgo(new Date(post.created_at))}.</p>
+            {post.category && (
+              <span className="inline-block mt-2 px-2.5 py-1 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-wide">[ {post.category} ]</span>
+            )}
           </div>
         </div>
 
         <h1 className="text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-6 leading-tight">{post.title}</h1>
         <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">{post.content}</p>
+        {(post.image_urls?.length ?? 0) > 0 && (
+          <div className="mt-6 flex flex-wrap gap-3">
+            {(post.image_urls || []).map((url: string, i: number) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-full max-w-xs rounded-xl overflow-hidden border border-slate-200 hover:opacity-90 transition-opacity">
+                <img src={url} alt="" className="w-full h-48 object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
         <div className="mt-6 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -139,7 +213,23 @@ export default function PostDetailPage() {
           >
             <span>{postLike.iLiked ? '❤' : '🤍'}</span>
             <span>{postLike.count}</span>
-            <span>{postLike.iLiked ? 'Descurtir postagem' : 'Curtir postagem'}</span>
+            <span>{postLike.iLiked ? 'Descurtir' : 'Curtir'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={toggleUseful}
+            disabled={!myId}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 transition-all ${postUseful.iUsed ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200'}`}
+          >
+            💡 Útil {postUseful.count > 0 && `(${postUseful.count})`}
+          </button>
+          <button
+            type="button"
+            onClick={toggleInteresting}
+            disabled={!myId}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 transition-all ${postInteresting.iUsed ? 'bg-violet-50 border-violet-300 text-violet-600' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-200'}`}
+          >
+            🚀 Interessante {postInteresting.count > 0 && `(${postInteresting.count})`}
           </button>
           {post.author_id === myId && (
             <button
@@ -155,7 +245,7 @@ export default function PostDetailPage() {
       </article>
 
       {/* Seção de Respostas (Thread) */}
-      <section className="space-y-6">
+      <section id="comentarios" className="space-y-6">
         <div className="flex justify-between items-center px-2">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Contribuições ({comments.length})</h3>
           {status && (
@@ -174,7 +264,19 @@ export default function PostDetailPage() {
                   {comment.profiles?.avatar_url ? <img src={comment.profiles.avatar_url} className="w-full h-full object-cover" alt="" /> : comment.profiles?.full_name?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter mb-2">{comment.profiles?.full_name}</p>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{comment.profiles?.full_name}</p>
+                    {comment.user_id === myId && (
+                      <button
+                        type="button"
+                        onClick={() => requestDeleteComment(comment.id)}
+                        disabled={deletingCommentId === comment.id}
+                        className="text-[9px] font-bold uppercase text-red-500 hover:text-red-700 hover:underline disabled:opacity-50"
+                      >
+                        {deletingCommentId === comment.id ? 'Excluindo...' : 'Excluir'}
+                      </button>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-600 font-medium leading-relaxed">{comment.content}</p>
                   <button
                     type="button"
@@ -218,6 +320,18 @@ export default function PostDetailPage() {
         onConfirm={executeDeletePost}
         variant="danger"
         loading={deleting}
+      />
+
+      <ConfirmModal
+        open={!!commentToDelete}
+        onClose={() => setCommentToDelete(null)}
+        title="Excluir comentário"
+        message="Tem certeza que deseja excluir seu comentário? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        onConfirm={executeDeleteComment}
+        variant="danger"
+        loading={!!deletingCommentId}
       />
     </div>
   )
