@@ -52,7 +52,9 @@ export default function SecurityPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.created_at) setSessionCreatedAt(new Date(Number(session.created_at) * 1000))
+      const created = session && 'created_at' in session ? (session as { created_at: number }).created_at : null
+      if (created) setSessionCreatedAt(new Date(Number(created) * 1000))
+      else if (session) setSessionCreatedAt(new Date())
     })
   }, [])
 

@@ -142,7 +142,7 @@ export default function ConexoesPage() {
     if (techFilter) {
       const tech = techFilter.toLowerCase()
       const specs = (m.specialties || '').toLowerCase().split(',').map((s: string) => s.trim())
-      if (!specs.some((s) => s.includes(tech))) return false
+      if (!specs.some((s: string) => s.includes(tech))) return false
     }
     if (availableOnly) {
       const badge = m.availability_badge
@@ -401,7 +401,7 @@ function UserCard({
 
       {specs.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {specs.map((s) => (
+          {specs.map((s: string) => (
             <span key={s} className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
               {s}
             </span>

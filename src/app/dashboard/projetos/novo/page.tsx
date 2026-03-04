@@ -31,7 +31,7 @@ export default function NovaOportunidadePage() {
   const LIMITE_PROJETOS_POR_DIA = 5
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [})
+    const files = Array.from(e.target.files || [])
     const valid = files.filter((f) => f.type.startsWith('image/'))
     const total = [...imageFiles, ...valid].slice(0, MAX_IMAGES)
     setImageFiles(total)
