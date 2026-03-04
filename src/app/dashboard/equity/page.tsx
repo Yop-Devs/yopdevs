@@ -27,7 +27,7 @@ export default function EquityPortfolioPage() {
   return (
     <div className="max-w-[1200px] mx-auto py-6 sm:py-12 px-4 sm:px-6 space-y-6 sm:space-y-12">
       <header className="border-b-2 border-slate-200 pb-6 sm:pb-8">
-        <h1 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter text-slate-800">Carteira de Equity</h1>
+        <h1 className="text-xl sm:text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-slate-800">Carteira de Equity</h1>
         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-1 sm:mt-2">Ativos e participações societárias rastreadas na rede YOP</p>
       </header>
 

@@ -228,8 +228,8 @@ function LandingPageContent() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-white text-slate-900 flex flex-col">
-      <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+    <div className="h-screen overflow-hidden max-w-full bg-white text-slate-900 flex flex-col">
+      <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden min-w-0">
         {/* Coluna esquerda: logo + texto ao lado, imagens embaixo — metade da tela */}
         <section className="w-full lg:w-1/2 lg:flex-shrink-0 bg-[#f0f2f5] flex flex-col min-h-0 overflow-hidden px-4 sm:px-6 pt-4 sm:pt-5 lg:pt-6 pb-4 sm:pb-5 lg:pl-[5%] lg:pr-6">
           <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-6 mb-5 lg:mb-6 shrink-0">
@@ -249,7 +249,7 @@ function LandingPageContent() {
             </p>
           </div>
           <div className="flex-1 flex justify-center items-center min-h-0 w-full min-w-0 overflow-hidden px-4 lg:px-8">
-            <div className="relative w-full max-w-xl rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '45vh' }}>
+            <div className="relative w-full max-w-xl aspect-[4/3] rounded-lg overflow-hidden bg-slate-200/50">
               <Image
                 src="/imagem01.png"
                 alt=""

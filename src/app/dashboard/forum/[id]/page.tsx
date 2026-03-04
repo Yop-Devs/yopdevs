@@ -190,7 +190,7 @@ export default function PostDetailPage() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-6 leading-tight">{post.title}</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-4 sm:mb-6 leading-tight break-words">{post.title}</h1>
         <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">{post.content}</p>
         {(post.image_urls?.length ?? 0) > 0 && (
           <div className="mt-6 flex flex-wrap gap-3">

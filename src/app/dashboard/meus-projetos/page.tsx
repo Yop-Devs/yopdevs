@@ -62,9 +62,9 @@ export default function MyProjectsPage() {
 
   return (
     <div className="max-w-5xl mx-auto w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Gestão de Projetos</h1>
-        <p className="text-gray-500">Veja quem demonstrou interesse nas suas ideias.</p>
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Gestão de Projetos</h1>
+        <p className="text-gray-500 text-sm sm:text-base mt-1">Veja quem demonstrou interesse nas suas ideias.</p>
       </header>
 
       {myProjects.length === 0 ? (

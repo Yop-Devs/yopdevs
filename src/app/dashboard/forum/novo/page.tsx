@@ -103,7 +103,7 @@ export default function NovoPostPage() {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
-      <h1 className="text-3xl font-black italic uppercase tracking-tighter mb-8 text-slate-900">Nova Discussão</h1>
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-black italic uppercase tracking-tighter mb-6 sm:mb-8 text-slate-900">Nova Discussão</h1>
       <form onSubmit={handleSubmit} className="bg-white p-10 border border-slate-200 rounded-2xl space-y-8 shadow-lg">
         {status && (
           <div className={`p-4 border-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${

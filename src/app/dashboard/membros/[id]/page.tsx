@@ -42,7 +42,7 @@ export default function PublicProfilePage() {
 
         <div className="flex-1 text-center md:text-left space-y-4">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-slate-900 leading-tight break-words">
               {profile.full_name}
             </h1>
             <span className="px-4 py-1.5 bg-[#4c1d95] text-white text-[10px] font-black uppercase rounded-lg tracking-widest shadow-md">

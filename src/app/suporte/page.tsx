@@ -33,8 +33,8 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center justify-center px-4 py-6 sm:p-6 min-w-0 max-w-full">
+      <div className="max-w-md w-full min-w-0">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <Link href="/" className="flex items-center">
             <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />

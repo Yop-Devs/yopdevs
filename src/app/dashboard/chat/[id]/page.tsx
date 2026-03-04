@@ -265,7 +265,7 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-[85vh] max-w-[1000px] mx-auto w-full min-w-0 py-4 sm:py-6 px-2 sm:px-4 pb-20 sm:pb-6">
+    <div className="flex flex-col h-[85vh] max-w-[1000px] mx-auto w-full min-w-0 py-4 sm:py-6 px-4 pb-20 sm:pb-6">
       <header className="bg-white border border-slate-200 p-4 sm:p-6 rounded-t-2xl sm:rounded-t-3xl flex items-center gap-3 sm:gap-4">
         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center font-black shrink-0">
           {receiver?.avatar_url ? <img src={receiver.avatar_url} className="w-full h-full object-cover" alt="" /> : receiver?.full_name?.[0]}

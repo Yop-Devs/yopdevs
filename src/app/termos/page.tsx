@@ -3,8 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 p-6 md:p-12">
-      <div className="max-w-3xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-100 text-slate-900 px-4 py-6 sm:px-6 sm:py-8 md:p-12 min-w-0 max-w-full">
+      <div className="max-w-3xl mx-auto w-full min-w-0 space-y-6 sm:space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <Link href="/" className="flex items-center">
             <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
@@ -16,7 +16,7 @@ export default function TermsPage() {
           </nav>
         </header>
 
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900">Termos de Uso</h1>
+        <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-slate-900">Termos de Uso</h1>
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Última atualização: Janeiro de 2026</p>
 
         <section className="space-y-6 text-sm leading-relaxed border-t border-slate-200 pt-8">

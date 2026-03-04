@@ -113,10 +113,10 @@ export default function MasterAdminPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-12 space-y-12 font-sans">
-      <header className="border-b-2 border-slate-200 pb-8 flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter">Master Control</h1>
+    <div className="max-w-[1400px] mx-auto w-full min-w-0 px-4 sm:px-6 md:px-8 py-6 sm:py-12 space-y-8 sm:space-y-12 font-sans">
+      <header className="border-b-2 border-slate-200 pb-4 sm:pb-8 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Master Control</h1>
           <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Governança de Dados e Integridade da Rede</p>
         </div>
         {statusMsg && (

@@ -162,9 +162,9 @@ export default function PortfolioPage({
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      {/* Header fixo */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
+      {/* Header fixo — mobile h-14, centralização e padding padronizados */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-sm flex items-center overflow-hidden">
+        <div className="max-w-6xl mx-auto w-full h-full px-4 md:px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
