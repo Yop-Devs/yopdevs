@@ -3,25 +3,36 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { formatTimeAgo, formatAuthorName } from '@/lib/format'
 
-const TYPE_OPTIONS = [
-  { value: '', label: 'Todos os tipos' },
-  { value: 'VAGA_EMPREGO', label: 'Vaga de emprego' },
-  { value: 'NOVO_PROJETO', label: 'Novo projeto / Startup' },
-]
+const OPPORTUNITY_TYPES = [
+  { value: '', label: 'Todos' },
+  { value: 'DEV', label: '👨‍💻 Desenvolvedor' },
+  { value: 'SOCIO', label: '🤝 Sócio' },
+  { value: 'INVESTIDOR', label: '💰 Investidor' },
+  { value: 'MENTOR', label: '🧠 Mentor' },
+  { value: 'ENTRAR', label: '🚀 Entrar em projeto' },
+] as const
 
-function getTypeLabel(category: string | null | undefined): string {
-  if (category === 'VAGA_EMPREGO') return 'Vaga de emprego'
-  if (category === 'NOVO_PROJETO') return 'Novo projeto'
-  return category || 'Projeto'
+const TYPE_LABELS: Record<string, string> = {
+  DEV: '👨‍💻 Preciso de desenvolvedor',
+  SOCIO: '🤝 Procuro sócio',
+  INVESTIDOR: '💰 Busco investidor',
+  MENTOR: '🧠 Preciso de mentor',
+  ENTRAR: '🚀 Quero entrar em um projeto',
+  VAGA_EMPREGO: 'Vaga de emprego',
+  NOVO_PROJETO: 'Novo projeto',
 }
 
-export default function MarketplacePage() {
+function getTypeLabel(category: string | null | undefined): string {
+  return (category && TYPE_LABELS[category]) || 'Oportunidade'
+}
+
+export default function OportunidadesPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
-  const [filterEquityMin, setFilterEquityMin] = useState<number | ''>('')
   const [interestSent, setInterestSent] = useState<Record<string, boolean>>({})
   const [myId, setMyId] = useState<string | null>(null)
 
@@ -45,7 +56,7 @@ export default function MarketplacePage() {
     const { error } = await supabase.from('notifications').insert({
       user_id: project.owner_id,
       type: 'INTEREST',
-      content: `${displayName} tem interesse no seu projeto "${project.title}".`,
+      content: `${displayName} tem interesse na sua oportunidade "${project.title}".`,
       is_read: false,
       link: `/dashboard/chat/${user.id}`,
       from_user_id: user.id,
@@ -56,131 +67,160 @@ export default function MarketplacePage() {
 
   useEffect(() => { fetchProjects() }, [])
 
-  const filtered = projects.filter(p => {
-    const matchesSearch = !searchTerm || p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.tech_stack?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filtered = projects.filter((p) => {
+    const matchesSearch = !searchTerm ||
+      p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.tech_stack && p.tech_stack.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesType = !filterType || (p.category && p.category === filterType)
-    const equity = typeof p.equity_offered === 'number' ? p.equity_offered : parseFloat(p.equity_offered) || 0
-    const matchesEquity = filterEquityMin === '' || equity >= Number(filterEquityMin)
-    return matchesSearch && matchesType && matchesEquity
+    return matchesSearch && matchesType
   })
 
-  if (loading) return <div className="p-20 text-center font-mono text-[10px] text-slate-400">SYNC_MARKETPLACE_ASSETS...</div>
+  if (loading) {
+    return (
+      <div className="p-20 text-center font-mono text-[10px] text-slate-400 uppercase tracking-widest">
+        Carregando oportunidades...
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-6 sm:py-12 space-y-6 sm:space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-8 border-b border-slate-200 pb-6 sm:pb-10">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 border-slate-200 pb-6">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Marketplace</h1>
-          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.3em] mt-3">Explorar Ativos e Oportunidades de Equity</p>
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Oportunidades</h1>
+          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">
+            Encontre pessoas para tirar sua ideia do papel.
+          </p>
         </div>
-        
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <input 
-            type="text" 
-            placeholder="Pesquisar projetos..." 
-            className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] transition-all w-72 shadow-sm"
+        <div className="flex flex-wrap items-center gap-4">
+          <input
+            type="text"
+            placeholder="Pesquisar..."
+            className="px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-[#4c1d95] transition-all w-64"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <select 
-            value={filterType} 
+          <select
+            value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-48"
+            className="px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-[#4c1d95] w-48"
           >
-            {TYPE_OPTIONS.map(opt => <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>)}
+            {OPPORTUNITY_TYPES.map((opt) => (
+              <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
-          <input 
-            type="number" 
-            min={0} 
-            max={100} 
-            step={1}
-            placeholder="Equity mín. %" 
-            className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#4c1d95] w-28"
-            value={filterEquityMin === '' ? '' : filterEquityMin}
-            onChange={(e) => setFilterEquityMin(e.target.value === '' ? '' : Number(e.target.value))}
-          />
-          <Link href="/dashboard/projetos/novo" className="px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md">
-            Lançar Projeto
+          <Link
+            href="/dashboard/projetos/novo"
+            className="px-6 py-2.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all shadow-md"
+          >
+            Publicar oportunidade
           </Link>
         </div>
       </header>
 
       {filtered.length === 0 ? (
         <div className="text-center py-20 px-6 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
-          <p className="text-slate-600 font-bold text-lg mb-2">Nenhum projeto encontrado</p>
+          <p className="text-slate-600 font-bold text-lg mb-2">Ainda não há oportunidades publicadas.</p>
           <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
-            {searchTerm ? 'Tente outro termo de pesquisa.' : 'Seja o primeiro a lançar um projeto e atrair talentos.'}
+            Seja o primeiro a procurar alguém para construir sua ideia 🚀
           </p>
           {!searchTerm && (
-            <Link href="/dashboard/projetos/novo" className="inline-block px-8 py-3.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-all">
-              Lançar projeto
+            <Link
+              href="/dashboard/projetos/novo"
+              className="inline-block px-6 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-violet-800 transition-all shadow-md"
+            >
+              Publicar oportunidade
             </Link>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="space-y-5">
           {filtered.map((project) => (
-            <div key={project.id} className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8 hover:shadow-lg hover:border-violet-200 transition-all flex flex-col justify-between h-full group">
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-[9px] font-black px-3 py-1 bg-[#4c1d95] text-white rounded uppercase tracking-tighter">{getTypeLabel(project.category)}</span>
-                  <span className="text-[9px] font-mono text-slate-400 italic">ID_{project.id.substring(0,6)}</span>
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 mb-4 uppercase italic tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">{project.title}</h3>
-                {(project.image_urls?.length ?? 0) > 0 && (
-                  <div className="flex gap-2 mb-4">
-                    {(project.image_urls || []).slice(0, 3).map((url: string, i: number) => (
-                      <div key={i} className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shrink-0">
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
+            <div
+              key={project.id}
+              className="bg-white border-2 border-slate-200 rounded-2xl p-5 sm:p-6 hover:border-violet-200 hover:shadow-md transition-all group"
+            >
+              <div className="flex gap-4">
+                <Link href={`/dashboard/perfil/${project.owner_id}`} className="shrink-0">
+                  <div className="w-12 h-12 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center text-sm font-black text-slate-400 bg-slate-50">
+                    {project.profiles?.avatar_url ? (
+                      <img src={project.profiles.avatar_url} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      project.profiles?.full_name?.[0]
+                    )}
                   </div>
-                )}
-                <p className="text-sm text-slate-600 leading-relaxed line-clamp-4 font-medium mb-8">"{project.description}"</p>
-                
-                {project.tech_stack?.trim() && (
-                  <div className="flex flex-wrap gap-2 mb-8">
-                    {project.tech_stack.split(',').map((stack: string) => (
-                      <span key={stack} className="text-[8px] font-mono font-black border border-slate-200 px-2 py-0.5 rounded text-slate-400 uppercase">
-                        {stack.trim()}
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-slate-700">
+                      {formatAuthorName(project.profiles?.full_name)}
+                    </span>
+                    <span className="text-slate-400 text-sm">•</span>
+                    <span className="text-slate-500 text-sm">{formatTimeAgo(new Date(project.created_at))}.</span>
+                    {project.category && (
+                      <span className="px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-wide">
+                        {getTypeLabel(project.category)}
                       </span>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
-              
-              <div className="flex flex-col gap-3 border-t-2 border-slate-50 pt-8">
-                <div className="flex items-center justify-between">
-                  <Link href={`/dashboard/perfil/${project.owner_id}`} className="flex items-center gap-3 hover:opacity-80">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center font-black">
-                      {project.profiles?.avatar_url ? <img src={project.profiles.avatar_url} className="w-full h-full object-cover" alt="" /> : project.profiles?.full_name?.[0]}
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-violet-700 transition-colors mt-2 leading-snug">
+                    {project.title}
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed mt-2 line-clamp-3">
+                    {project.description}
+                  </p>
+                  {(project.image_urls?.length ?? 0) > 0 && (
+                    <div className="flex gap-2 mt-4">
+                      {(project.image_urls || []).slice(0, 3).map((url: string, i: number) => (
+                        <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <p className="text-[11px] font-black text-slate-900 uppercase leading-none">{project.profiles?.full_name}</p>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase mt-1 tracking-widest">{project.profiles?.role}</p>
-                    </div>
-                  </Link>
-                  {project.owner_id !== myId ? (
-                    <Link href={`/dashboard/chat/${project.owner_id}`} className="px-4 py-2 bg-violet-50 text-violet-600 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#4c1d95] hover:text-white transition-all shrink-0">
-                      Conectar ↗
-                    </Link>
-                  ) : (
-                    <span className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest shrink-0 cursor-not-allowed">Seu projeto</span>
                   )}
+                  {project.tech_stack?.trim() && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {project.tech_stack.split(',').slice(0, 5).map((s: string) => (
+                        <span
+                          key={s}
+                          className="text-[9px] font-mono font-bold border border-slate-200 px-2 py-0.5 rounded text-slate-500"
+                        >
+                          {s.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-slate-100">
+                    {project.owner_id !== myId ? (
+                      <>
+                        <Link
+                          href={`/dashboard/chat/${project.owner_id}`}
+                          className="px-4 py-2 bg-violet-100 text-violet-700 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-violet-200 transition-colors"
+                        >
+                          Conectar
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={interestSent[project.id]}
+                          onClick={() => sendInterest(project)}
+                          className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                            interestSent[project.id]
+                              ? 'bg-green-100 text-green-700 border border-green-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200'
+                          }`}
+                        >
+                          {interestSent[project.id] ? 'Interesse enviado ✓' : 'Tenho interesse'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                        Sua oportunidade
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {project.owner_id !== myId && (
-                  <button
-                    type="button"
-                    disabled={interestSent[project.id]}
-                    onClick={() => sendInterest(project)}
-                    className={`w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${interestSent[project.id] ? 'bg-green-100 text-green-700 border-2 border-green-200' : 'bg-slate-100 text-slate-700 hover:bg-indigo-100 hover:text-indigo-700 border-2 border-slate-200'}`}
-                  >
-                    {interestSent[project.id] ? 'Interesse enviado ✓' : 'Tenho interesse'}
-                  </button>
-                )}
               </div>
             </div>
           ))}

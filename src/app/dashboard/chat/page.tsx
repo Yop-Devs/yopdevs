@@ -69,7 +69,7 @@ export default function ChatListPage() {
         {contacts.length === 0 && (
           <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-3xl">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Nenhum_Canal_Ativo</p>
-            <Link href="/dashboard/projetos" className="text-[#4c1d95] text-[10px] font-bold uppercase underline mt-4 block">Explorar Marketplace para Iniciar Contatos</Link>
+            <Link href="/dashboard/projetos" className="text-[#4c1d95] text-[10px] font-bold uppercase underline mt-4 block">Explorar oportunidades para conectar</Link>
           </div>
         )}
       </div>

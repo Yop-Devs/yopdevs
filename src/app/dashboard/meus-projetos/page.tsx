@@ -71,7 +71,7 @@ export default function MyProjectsPage() {
         <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-300 text-center">
           <p className="text-gray-500">Você ainda não publicou nenhum projeto.</p>
           <Link href="/dashboard/projetos" className="text-indigo-600 font-bold mt-2 inline-block">
-            Ir para o Marketplace →
+            Ver oportunidades →
           </Link>
         </div>
       ) : null}

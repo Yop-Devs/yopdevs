@@ -364,7 +364,7 @@ export default function ChatRoomPage() {
       {isFriend === false && (
         <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-b-3xl text-center">
           <p className="text-sm font-bold text-amber-800">Só é possível enviar mensagens para amigos.</p>
-          <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-violet-600 underline font-black">Membros</Link> e aguarde a aceitação.</p>
+          <p className="text-xs text-amber-700 mt-1">Adicione <span className="font-black">{receiver?.full_name || 'esta pessoa'}</span> em <Link href="/dashboard/membros" className="text-violet-600 underline font-black">Conexões</Link> e aguarde a aceitação.</p>
         </div>
       )}
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 p-3 sm:p-4 rounded-b-2xl sm:rounded-b-3xl flex flex-col gap-1.5 sm:gap-2 shadow-lg">

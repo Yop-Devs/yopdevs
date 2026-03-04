@@ -149,7 +149,7 @@ export default function DashboardPage() {
             Configurações
           </Link>
           <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-violet-800 shadow-lg transition-all">
-            Lançar Projeto
+            Publicar oportunidade
           </Link>
           <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 shadow-md transition-all">
             Novo Post
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Projetos hoje</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Oportunidades hoje</p>
             <p className="text-lg font-bold text-slate-800">{projectsToday.length}</p>
           </div>
         </Link>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1 pr-8">
                   <h3 className="font-bold text-slate-800 mb-1">Bem-vindo à rede</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">
-                    Use o fórum para tirar dúvidas, o Marketplace para lançar projetos e o chat para conversar.
+                    Use o fórum para tirar dúvidas, as Oportunidades para encontrar parceiros e o chat para conversar.
                   </p>
                 </div>
               </div>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
             </span>
             <span className="text-slate-400">•</span>
             <span className="text-sm font-medium text-slate-700">
-              <span className="font-bold text-violet-700">{projectsToday.length}</span> novo{projectsToday.length !== 1 ? 's' : ''} projeto{projectsToday.length !== 1 ? 's' : ''} hoje
+              <span className="font-bold text-violet-700">{projectsToday.length}</span> nova{projectsToday.length !== 1 ? 's' : ''} oportunidade{projectsToday.length !== 1 ? 's' : ''} hoje
             </span>
           </div>
 
@@ -241,9 +241,9 @@ export default function DashboardPage() {
             {activityItems.length === 0 ? (
               <div className="p-8 bg-white border border-slate-100 rounded-xl text-center">
                 <p className="text-slate-500 text-sm font-medium mb-2">Nenhuma atividade recente.</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Seja o primeiro a lançar um projeto ou criar um tópico no fórum.</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Seja o primeiro a publicar uma oportunidade ou criar um tópico no fórum.</p>
                 <div className="flex gap-3 justify-center mt-4">
-                  <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Lançar projeto</Link>
+                  <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Publicar oportunidade</Link>
                   <Link href="/dashboard/forum/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Novo tópico</Link>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-[9px] font-bold text-violet-500 mb-1.5 uppercase tracking-tighter">
-                              {isPost ? 'Novo no fórum' : 'Novo projeto'} • {formatTimeAgo(new Date(d.created_at))}
+                              {isPost ? 'Novo no fórum' : 'Nova oportunidade'} • {formatTimeAgo(new Date(d.created_at))}
                             </p>
                             <h4 className="text-lg font-black text-slate-900 group-hover:text-violet-600 transition-colors mb-2 leading-tight">{d.title}</h4>
                             <p className="text-[10px] text-slate-500 font-medium">
@@ -336,16 +336,16 @@ export default function DashboardPage() {
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Atalhos rápidos</h4>
             <div className="space-y-2">
               <Link href="/dashboard/projetos" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
-                Ver projetos
+                Ver oportunidades
               </Link>
               <Link href="/dashboard/forum" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
                 Comunidade
               </Link>
               <Link href="/dashboard/membros" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
-                Ver Amigos
+                Conexões
               </Link>
               <Link href="/dashboard/notificacoes" className="block px-4 py-3 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all">
-                Notificações
+                Central de Atividades
               </Link>
             </div>
           </div>
