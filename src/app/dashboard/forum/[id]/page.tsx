@@ -102,11 +102,10 @@ export default function PostDetailPage() {
     const iLiked = postLike.iLiked
     if (iLiked) {
       await supabase.from('post_likes').delete().eq('post_id', id).eq('user_id', myId)
-      setPostLike((prev) => ({ count: Math.max(0, prev.count - 1), iLiked: false }))
     } else {
       await supabase.from('post_likes').insert([{ post_id: id, user_id: myId }])
-      setPostLike((prev) => ({ count: prev.count + 1, iLiked: true }))
     }
+    loadData()
   }
 
   const toggleUseful = async () => {
@@ -114,11 +113,10 @@ export default function PostDetailPage() {
     const iUsed = postUseful.iUsed
     if (iUsed) {
       await supabase.from('post_reactions').delete().eq('post_id', id).eq('user_id', myId).eq('reaction_type', 'useful')
-      setPostUseful((prev) => ({ count: Math.max(0, prev.count - 1), iUsed: false }))
     } else {
       await supabase.from('post_reactions').insert([{ post_id: id, user_id: myId, reaction_type: 'useful' }])
-      setPostUseful((prev) => ({ count: prev.count + 1, iUsed: true }))
     }
+    loadData()
   }
 
   const toggleInteresting = async () => {
@@ -126,11 +124,10 @@ export default function PostDetailPage() {
     const iUsed = postInteresting.iUsed
     if (iUsed) {
       await supabase.from('post_reactions').delete().eq('post_id', id).eq('user_id', myId).eq('reaction_type', 'interesting')
-      setPostInteresting((prev) => ({ count: Math.max(0, prev.count - 1), iUsed: false }))
     } else {
       await supabase.from('post_reactions').insert([{ post_id: id, user_id: myId, reaction_type: 'interesting' }])
-      setPostInteresting((prev) => ({ count: prev.count + 1, iUsed: true }))
     }
+    loadData()
   }
 
   const requestDeletePost = () => {
@@ -177,7 +174,7 @@ export default function PostDetailPage() {
   if (!post) return <div className="p-10 font-mono text-[10px] text-center uppercase text-slate-400">Acessando_Dados_da_Discussao...</div>
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6 space-y-10 pb-32">
+    <div className="max-w-4xl mx-auto w-full min-w-0 py-4 sm:py-8 md:py-12 px-4 sm:px-6 space-y-6 sm:space-y-8 md:space-y-10 pb-24 sm:pb-32">
       {/* Tópico Principal */}
       <article className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm relative">
         <div className="flex items-center gap-4 mb-8">

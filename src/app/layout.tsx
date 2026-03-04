@@ -32,7 +32,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-br" className={fredoka.variable}>
+    <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.png" type="image/png" />

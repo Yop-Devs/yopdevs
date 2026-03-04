@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [latestPosts, setLatestPosts] = useState<any[]>([])
   const [projectsToday, setProjectsToday] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
+  const [activeTodayCount, setActiveTodayCount] = useState(0)
   const [recentComments, setRecentComments] = useState<any[]>([])
   const [activityItems, setActivityItems] = useState<{ type: 'post' | 'project'; data: any; commentCount?: number; likeCount?: number; viewsCount?: number; iLiked?: boolean }[]>([])
   const [showWelcome, setShowWelcome] = useState(false)
@@ -53,6 +54,8 @@ export default function DashboardPage() {
 
       const online = (profilesRes.data || []).filter((p) => isOnline(p.last_seen))
       setOnlineCount(online.length)
+      const activeToday = (profilesRes.data || []).filter((p) => p.last_seen && new Date(p.last_seen) >= todayStart)
+      setActiveTodayCount(activeToday.length)
 
       setRecentComments(commentsRes.data || [])
 
@@ -99,21 +102,20 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData() }, [])
 
-  const toggleLike = useCallback(async (postId: string, currentILiked: boolean, currentCount: number) => {
+  const toggleLike = useCallback(async (postId: string, currentILiked: boolean) => {
     if (!myId) return
-    setActivityItems((prev) => prev.map((item) => {
-      if (item.type !== 'post' || item.data.id !== postId) return item
-      return {
-        ...item,
-        iLiked: !currentILiked,
-        likeCount: currentCount + (currentILiked ? -1 : 1),
-      }
-    }))
     if (currentILiked) {
       await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', myId)
     } else {
       await supabase.from('post_likes').insert([{ post_id: postId, user_id: myId }])
     }
+    const { data: likes } = await supabase.from('post_likes').select('user_id').eq('post_id', postId)
+    const count = likes?.length ?? 0
+    const iLiked = myId ? (likes?.some((l) => l.user_id === myId) ?? false) : false
+    setActivityItems((prev) => prev.map((item) => {
+      if (item.type !== 'post' || item.data.id !== postId) return item
+      return { ...item, iLiked, likeCount: count }
+    }))
   }, [myId])
 
   const handleDismissWelcome = () => {
@@ -133,10 +135,10 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b border-slate-200 pb-6 sm:pb-8">
-        <div>
-          <h1 className="leading-none text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">
+    <div className="max-w-[1400px] mx-auto w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6 md:py-10 space-y-4 sm:space-y-6 md:space-y-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b border-slate-200 pb-4 sm:pb-6 md:pb-8">
+        <div className="min-w-0">
+          <h1 className="leading-none text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">
             YOP Devs
           </h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-3">
@@ -144,21 +146,21 @@ export default function DashboardPage() {
           </p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
-          <Link href="/dashboard/perfil" className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+        <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+          <Link href="/dashboard/perfil" className="w-full sm:w-auto flex justify-center sm:inline-flex px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
             Configurações
           </Link>
-          <Link href="/dashboard/projetos/novo" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-violet-800 shadow-lg transition-all">
+          <Link href="/dashboard/projetos/novo" className="w-full sm:w-auto flex justify-center sm:inline-flex px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-violet-800 shadow-lg transition-all">
             Publicar oportunidade
           </Link>
-          <Link href="/dashboard/forum/novo" className="px-5 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 shadow-md transition-all">
-            Novo Post
+          <Link href="/dashboard/forum#composer" className="w-full sm:w-auto flex justify-center sm:inline-flex px-5 py-2.5 bg-[#4c1d95] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 shadow-md transition-all">
+            Publicar na Comunidade
           </Link>
         </div>
       </header>
 
       {/* Feed no topo: Postagens, Projetos hoje, Pessoas online, Comentários */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Link href="/dashboard/forum" className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:border-violet-200 hover:shadow-md transition-all">
           <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
@@ -197,32 +199,68 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-8">
-          {/* Card boas-vindas: apenas primeira vez */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+        <div className="lg:col-span-8 space-y-4 sm:space-y-6 lg:space-y-8 min-w-0">
+          {/* Modal de boas-vindas: primeira vez */}
           {showWelcome && (
-            <div className="bg-white border-2 border-violet-200 rounded-xl p-4 sm:p-5 shadow-sm relative">
-              <button
-                type="button"
-                onClick={handleDismissWelcome}
-                className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                aria-label="Fechar"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <div className="flex gap-4 items-start">
-                <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-violet-200 bg-slate-100 flex items-center justify-center p-1">
-                  <Image src="/logoprincipal.png?v=4" alt="YOP" width={48} height={48} className="w-full h-full object-contain" unoptimized />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+              <div className="bg-white rounded-2xl border-2 border-violet-200 shadow-xl max-w-md w-full p-6 sm:p-8 relative">
+                <button
+                  type="button"
+                  onClick={handleDismissWelcome}
+                  className="absolute top-3 right-3 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  aria-label="Fechar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div className="flex flex-col items-center text-center mb-6">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-violet-200 bg-slate-100 flex items-center justify-center p-1 mb-4">
+                    <Image src="/logoprincipal.png?v=4" alt="YOP" width={64} height={64} className="w-full h-full object-contain" unoptimized />
+                  </div>
+                  <h2 id="welcome-title" className="text-xl sm:text-2xl font-black text-slate-800 mb-1">
+                    Bem-vindo à YopDevs 🚀
+                  </h2>
+                  <p className="text-slate-600 text-sm">Sua rede de devs e criadores. Comece por aqui:</p>
                 </div>
-                <div className="min-w-0 flex-1 pr-8">
-                  <h3 className="font-bold text-slate-800 mb-1">Bem-vindo à rede</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Use o fórum para tirar dúvidas, as Oportunidades para encontrar parceiros e o chat para conversar.
-                  </p>
-                </div>
+                <ul className="space-y-3 mb-6">
+                  <li>
+                    <Link href="/dashboard/perfil" onClick={handleDismissWelcome} className="flex items-center gap-3 p-3 rounded-xl border-2 border-slate-200 hover:border-violet-300 hover:bg-violet-50/50 transition-all text-left">
+                      <span className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold">1</span>
+                      <span className="font-medium text-slate-800">Complete seu perfil</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/dashboard/forum#composer" onClick={handleDismissWelcome} className="flex items-center gap-3 p-3 rounded-xl border-2 border-slate-200 hover:border-violet-300 hover:bg-violet-50/50 transition-all text-left">
+                      <span className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold">2</span>
+                      <span className="font-medium text-slate-800">Publique algo</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/dashboard/membros" onClick={handleDismissWelcome} className="flex items-center gap-3 p-3 rounded-xl border-2 border-slate-200 hover:border-violet-300 hover:bg-violet-50/50 transition-all text-left">
+                      <span className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold">3</span>
+                      <span className="font-medium text-slate-800">Conecte-se com alguém</span>
+                    </Link>
+                  </li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={handleDismissWelcome}
+                  className="w-full py-3 px-4 bg-[#4c1d95] text-white rounded-xl text-sm font-bold uppercase tracking-wider hover:bg-violet-800 transition-colors"
+                >
+                  Vamos lá
+                </button>
               </div>
             </div>
           )}
+
+          {/* Destaque: Devs ativos hoje */}
+          <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 border border-amber-200/80 rounded-xl">
+            <span className="text-lg">🔥</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">Devs ativos hoje</p>
+              <p className="text-xs text-slate-600"><span className="font-black text-amber-600">{activeTodayCount}</span> pessoa{activeTodayCount !== 1 ? 's' : ''} passou por aqui</p>
+            </div>
+          </div>
 
           {/* Elemento de movimento: pessoas online, novos projetos */}
           <div className="flex flex-wrap gap-4 py-3 px-4 bg-violet-50 border border-violet-200/60 rounded-xl">
@@ -244,7 +282,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">Seja o primeiro a publicar uma oportunidade ou criar um tópico no fórum.</p>
                 <div className="flex gap-3 justify-center mt-4">
                   <Link href="/dashboard/projetos/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Publicar oportunidade</Link>
-                  <Link href="/dashboard/forum/novo" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Novo tópico</Link>
+                  <Link href="/dashboard/forum#composer" className="text-[10px] font-black text-violet-600 hover:underline uppercase">Publicar na Comunidade</Link>
                 </div>
               </div>
             ) : (
@@ -304,7 +342,7 @@ export default function DashboardPage() {
                           {isPost && (
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(d.id, iLiked, likes) }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(d.id, iLiked) }}
                               className={`flex items-center gap-1 hover:scale-110 transition-transform ${iLiked ? 'text-pink-500' : 'text-slate-400 hover:text-pink-400'}`}
                               title={iLiked ? 'Descurtir' : 'Curtir'}
                             >
@@ -331,7 +369,7 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        <aside className="lg:col-span-4 space-y-8">
+        <aside className="lg:col-span-4 space-y-4 sm:space-y-6 lg:space-y-8 min-w-0 order-first lg:order-none">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Atalhos rápidos</h4>
             <div className="space-y-2">

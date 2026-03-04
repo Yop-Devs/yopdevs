@@ -61,7 +61,7 @@ export default function MyProjectsPage() {
   if (loading) return <div className="p-8">Carregando seus projetos...</div>
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Gestão de Projetos</h1>
         <p className="text-gray-500">Veja quem demonstrou interesse nas suas ideias.</p>

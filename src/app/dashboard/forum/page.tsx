@@ -107,6 +107,19 @@ export default function ForumPage() {
 
   useEffect(() => { fetchPosts() }, [])
 
+  // Rolar até o composer quando a URL tiver #composer (ex.: link "Publicar na Comunidade" do dashboard)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#composer') {
+      const scroll = () => {
+        const el = document.getElementById('composer')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+      const t = setTimeout(scroll, 300)
+      return () => clearTimeout(t)
+    }
+  }, [loading])
+
   const handleNewPostImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'))
     const total = [...newPostImages, ...files].slice(0, MAX_IMAGES)
@@ -167,47 +180,74 @@ export default function ForumPage() {
     setPublishing(false)
   }
 
+  const refetchReactionsForPost = useCallback(async (postId: string) => {
+    const [likesRes, reactionsRes] = await Promise.all([
+      supabase.from('post_likes').select('user_id').eq('post_id', postId),
+      supabase.from('post_reactions').select('user_id, reaction_type').eq('post_id', postId),
+    ])
+    const likes = likesRes.data || []
+    const reactions = (reactionsRes.data || []) as { user_id: string; reaction_type: string }[]
+    const likeCount = likes.length
+    const iLiked = myId ? likes.some((l) => l.user_id === myId) : false
+    const usefulCount = reactions.filter((r) => r.reaction_type === 'useful').length
+    const interestingCount = reactions.filter((r) => r.reaction_type === 'interesting').length
+    const iUseful = myId ? reactions.some((r) => r.reaction_type === 'useful' && r.user_id === myId) : false
+    const iInteresting = myId ? reactions.some((r) => r.reaction_type === 'interesting' && r.user_id === myId) : false
+    setLikeCounts((prev) => ({ ...prev, [postId]: likeCount }))
+    setUsefulCounts((prev) => ({ ...prev, [postId]: usefulCount }))
+    setInterestingCounts((prev) => ({ ...prev, [postId]: interestingCount }))
+    setMyLikedIds((prev) => {
+      const next = new Set(prev)
+      if (iLiked) next.add(postId)
+      else next.delete(postId)
+      return next
+    })
+    setMyUsefulIds((prev) => {
+      const next = new Set(prev)
+      if (iUseful) next.add(postId)
+      else next.delete(postId)
+      return next
+    })
+    setMyInterestingIds((prev) => {
+      const next = new Set(prev)
+      if (iInteresting) next.add(postId)
+      else next.delete(postId)
+      return next
+    })
+  }, [myId])
+
   const toggleLike = useCallback(async (postId: string) => {
     if (!myId) return
     const liked = myLikedIds.has(postId)
-    setMyLikedIds((prev) => {
-      const next = new Set(prev)
-      if (liked) next.delete(postId)
-      else next.add(postId)
-      return next
-    })
-    setLikeCounts((prev) => ({ ...prev, [postId]: (prev[postId] || 0) + (liked ? -1 : 1) }))
-    if (liked) await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', myId)
-    else await supabase.from('post_likes').insert([{ post_id: postId, user_id: myId }])
-  }, [myId])
+    if (liked) {
+      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', myId)
+    } else {
+      await supabase.from('post_likes').insert([{ post_id: postId, user_id: myId }])
+    }
+    await refetchReactionsForPost(postId)
+  }, [myId, myLikedIds, refetchReactionsForPost])
 
   const toggleUseful = useCallback(async (postId: string) => {
     if (!myId) return
     const active = myUsefulIds.has(postId)
-    setMyUsefulIds((prev) => {
-      const next = new Set(prev)
-      if (active) next.delete(postId)
-      else next.add(postId)
-      return next
-    })
-    setUsefulCounts((prev) => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (active ? -1 : 1)) }))
-    if (active) await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', myId).eq('reaction_type', 'useful')
-    else await supabase.from('post_reactions').insert([{ post_id: postId, user_id: myId, reaction_type: 'useful' }])
-  }, [myId])
+    if (active) {
+      await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', myId).eq('reaction_type', 'useful')
+    } else {
+      await supabase.from('post_reactions').insert([{ post_id: postId, user_id: myId, reaction_type: 'useful' }])
+    }
+    await refetchReactionsForPost(postId)
+  }, [myId, myUsefulIds, refetchReactionsForPost])
 
   const toggleInteresting = useCallback(async (postId: string) => {
     if (!myId) return
     const active = myInterestingIds.has(postId)
-    setMyInterestingIds((prev) => {
-      const next = new Set(prev)
-      if (active) next.delete(postId)
-      else next.add(postId)
-      return next
-    })
-    setInterestingCounts((prev) => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (active ? -1 : 1)) }))
-    if (active) await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', myId).eq('reaction_type', 'interesting')
-    else await supabase.from('post_reactions').insert([{ post_id: postId, user_id: myId, reaction_type: 'interesting' }])
-  }, [myId])
+    if (active) {
+      await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', myId).eq('reaction_type', 'interesting')
+    } else {
+      await supabase.from('post_reactions').insert([{ post_id: postId, user_id: myId, reaction_type: 'interesting' }])
+    }
+    await refetchReactionsForPost(postId)
+  }, [myId, myInterestingIds, refetchReactionsForPost])
 
   const filteredPosts = posts
     .filter((post) => post.title?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -228,20 +268,20 @@ export default function ForumPage() {
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase tracking-widest text-center">Sincronizando_Dados...</div>
 
   return (
-    <div className="max-w-[1200px] mx-auto py-6 sm:py-10 px-4 sm:px-6 space-y-6 sm:space-y-8">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 border-slate-200 pb-6">
-        <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Comunidade YOP</h1>
+    <div className="max-w-[1200px] mx-auto w-full min-w-0 py-4 sm:py-6 md:py-10 px-4 sm:px-6 space-y-4 sm:space-y-6 md:space-y-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 border-b-2 border-slate-200 pb-4 sm:pb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter text-slate-800">Comunidade YOP</h1>
           <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Conecte, compartilhe e aprenda com a rede</p>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
           <input
             type="text"
             placeholder="Pesquisar..."
-            className="px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-[#4c1d95] transition-all w-64"
+            className="w-full sm:w-64 px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-[#4c1d95] transition-all min-w-0"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setSortBy('recent')} className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'recent' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}>Recentes</button>
             <button type="button" onClick={() => setSortBy('comments')} className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'comments' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}>Mais comentados</button>
             <button type="button" onClick={() => setSortBy('likes')} className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest border-2 transition-all ${sortBy === 'likes' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-violet-600'}`}>Mais curtidos</button>
@@ -250,8 +290,8 @@ export default function ForumPage() {
       </header>
 
       {/* Composer: publicar direto na comunidade */}
-      <form id="composer" onSubmit={publishPost} className="bg-white border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4">
-        <div className="flex gap-4 items-start">
+      <form id="composer" onSubmit={publishPost} className="bg-white border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 w-full min-w-0">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-start">
           <div className="w-12 h-12 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center text-base font-black text-slate-400 bg-slate-50 shrink-0">
             {myProfile?.avatar_url ? <img src={myProfile.avatar_url} className="w-full h-full object-cover" alt="" /> : myProfile?.full_name?.[0]}
           </div>
@@ -299,7 +339,7 @@ export default function ForumPage() {
           <p className={`text-sm font-medium ${publishStatus.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{publishStatus.text}</p>
         )}
         <div className="flex justify-end">
-          <button type="submit" disabled={publishing || !newPostContent.trim() || !myId} className="px-6 py-2.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button type="submit" disabled={publishing || !newPostContent.trim() || !myId} className="w-full sm:w-auto px-6 py-2.5 bg-[#4c1d95] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-violet-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             {publishing ? 'Publicando...' : 'Publicar'}
           </button>
         </div>
@@ -332,7 +372,7 @@ export default function ForumPage() {
             const interestingCount = interestingCounts[post.id] ?? 0
 
             return (
-              <div key={post.id} className={`bg-white rounded-2xl p-5 sm:p-6 transition-all group ${isEmAlta ? 'border-2 border-violet-400 shadow-md group-hover:shadow-lg group-hover:border-violet-500 group-hover:-translate-y-0.5' : 'border-2 border-slate-200 group-hover:border-violet-200 group-hover:shadow-md group-hover:-translate-y-0.5'}`}>
+              <div key={post.id} className={`bg-white rounded-2xl p-4 sm:p-5 md:p-6 transition-all group w-full min-w-0 ${isEmAlta ? 'border-2 border-violet-400 shadow-md group-hover:shadow-lg group-hover:border-violet-500 group-hover:-translate-y-0.5' : 'border-2 border-slate-200 group-hover:border-violet-200 group-hover:shadow-md group-hover:-translate-y-0.5'}`}>
                 {isEmAlta && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-black uppercase tracking-wider">🔥 Em alta</span>

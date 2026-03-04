@@ -217,21 +217,21 @@ export default function NotificationsPage() {
   if (loading) return <div className="p-10 text-center text-slate-500">Carregando atividades...</div>
 
   return (
-    <div className="max-w-[1000px] mx-auto py-6 sm:py-12 px-4 sm:px-6 space-y-6 sm:space-y-10">
-      <header className="border-b-2 border-slate-200 pb-6 space-y-4">
-        <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Central de Atividades</h1>
+    <div className="max-w-[1000px] mx-auto w-full min-w-0 py-4 sm:py-6 md:py-12 px-4 sm:px-6 space-y-4 sm:space-y-6 md:space-y-10">
+      <header className="border-b-2 border-slate-200 pb-4 sm:pb-6 space-y-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter text-slate-800">Central de Atividades</h1>
           <p className="text-slate-500 text-sm mt-2">Acompanhe interações, convites e movimentações na sua rede.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             {categories.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setFilterCategory(c)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filterCategory === c ? 'bg-[#4c1d95] text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-bold transition-all ${filterCategory === c ? 'bg-[#4c1d95] text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 <span className="mr-2">{categoryIcon(c)}</span>
                 {categoryLabel(c)}
@@ -339,7 +339,7 @@ function ActivityCard({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
-      className={`bg-white rounded-2xl p-5 sm:p-6 transition-all cursor-pointer ${unread ? 'border-2 border-violet-300 shadow-sm' : 'border-2 border-slate-200'} hover:border-violet-200 hover:shadow-md`}
+      className={`bg-white rounded-2xl p-4 sm:p-5 md:p-6 transition-all cursor-pointer w-full min-w-0 ${unread ? 'border-2 border-violet-300 shadow-sm' : 'border-2 border-slate-200'} hover:border-violet-200 hover:shadow-md`}
     >
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center text-sm font-black text-slate-400 bg-slate-50 shrink-0">
@@ -375,7 +375,7 @@ function ActivityCard({
         <button
           type="button"
           onClick={onOpen}
-          className="px-4 py-2 rounded-xl bg-[#4c1d95] text-white text-sm font-bold hover:bg-violet-800 transition-all"
+          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#4c1d95] text-white text-sm font-bold hover:bg-violet-800 transition-all"
         >
           Ver
         </button>
@@ -383,7 +383,7 @@ function ActivityCard({
           type="button"
           onClick={onMarkRead}
           disabled={!unread}
-          className="px-4 py-2 rounded-xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-4 py-2 rounded-xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Marcar como lida
         </button>

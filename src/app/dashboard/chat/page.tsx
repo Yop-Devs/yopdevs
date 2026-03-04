@@ -37,7 +37,7 @@ export default function ChatListPage() {
   if (loading) return <div className="p-10 font-mono text-[10px] text-slate-400 uppercase text-center">Iniciando_Protocolo_de_Comunicação...</div>
 
   return (
-    <div className="max-w-[1000px] mx-auto py-6 sm:py-12 px-4 sm:px-6 space-y-6 sm:space-y-10">
+    <div className="max-w-[1000px] mx-auto w-full min-w-0 py-4 sm:py-6 md:py-12 px-4 sm:px-6 space-y-4 sm:space-y-6 md:space-y-10">
       <header className="border-b border-slate-200 pb-4 sm:pb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter">Comunicações</h1>

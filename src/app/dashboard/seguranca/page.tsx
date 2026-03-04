@@ -84,9 +84,9 @@ export default function SecurityPage() {
   const browserName = typeof navigator !== 'undefined' ? getBrowserName() : 'Navegador'
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-0 space-y-8">
+    <div className="max-w-2xl mx-auto w-full min-w-0 px-4 sm:px-6 space-y-4 sm:space-y-6 md:space-y-8">
       <header>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Segurança da Conta</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Segurança da Conta</h1>
         <p className="text-slate-500 text-sm mt-2">Gerencie sua senha e proteja sua conta.</p>
       </header>
 
@@ -158,7 +158,7 @@ export default function SecurityPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-all shadow-sm"
+            className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-all shadow-sm min-w-0"
           >
             {loading ? 'Atualizando...' : 'Atualizar senha com segurança'}
           </button>

@@ -119,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-100 text-slate-900 overflow-hidden overflow-x-hidden">
       
       {/* OVERLAY MOBILE */}
       {isSidebarOpen && (
@@ -203,7 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* CONTEÚDO DA PÁGINA */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-slate-100 min-w-0">
           {children}
         </main>
       </div>

@@ -175,19 +175,19 @@ export default function ConexoesPage() {
   ]
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
-      <header className="border-b-2 border-slate-200 pb-6">
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Conexões</h1>
+    <div className="max-w-[1200px] mx-auto w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6 md:py-10 space-y-4 sm:space-y-6 md:space-y-8">
+      <header className="border-b-2 border-slate-200 pb-4 sm:pb-6">
+        <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter text-slate-800">Conexões</h1>
         <p className="text-slate-500 font-medium text-sm mt-2">
           Conecte-se com devs, empreendedores e criadores.
         </p>
-        <div className="flex flex-wrap gap-2 mt-6">
+        <div className="flex flex-wrap gap-2 mt-4 sm:mt-6">
           {tabButtons.map(({ key, label }) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 tab === key
                   ? 'bg-[#4c1d95] text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

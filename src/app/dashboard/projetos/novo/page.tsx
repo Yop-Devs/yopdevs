@@ -126,9 +126,9 @@ export default function NovaOportunidadePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-800">Publicar oportunidade</h1>
+    <div className="max-w-2xl mx-auto w-full min-w-0 py-4 sm:py-8 md:py-12 px-4 sm:px-6">
+      <header className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter text-slate-800">Publicar oportunidade</h1>
         <p className="text-slate-500 text-sm mt-2">Conte o que você busca ou o que você oferece. Sem formalidade.</p>
       </header>
 

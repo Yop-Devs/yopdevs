@@ -22,12 +22,37 @@ function parseSpecialties(s: string): string[] {
   return (s || '').split(',').map((t) => t.trim()).filter(Boolean)
 }
 
+function profileCompletionPercent(form: {
+  full_name: string
+  avatar_url: string
+  title: string
+  bio: string
+  specialties: string
+  github_url: string
+  linkedin_url: string
+  website_url: string
+  location: string
+  looking_for: string
+}): number {
+  let score = 0
+  if (form.full_name?.trim()) score++
+  if (form.avatar_url?.trim()) score++
+  if (form.title?.trim()) score++
+  if (form.bio?.trim()) score++
+  if (form.specialties?.trim()) score++
+  if (form.github_url?.trim() || form.linkedin_url?.trim() || form.website_url?.trim()) score++
+  if (form.location?.trim()) score++
+  if (form.looking_for?.trim()) score++
+  return Math.round((score / 8) * 100)
+}
+
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [profileRole, setProfileRole] = useState<string>('')
+  const [projectCount, setProjectCount] = useState(0)
   const [formData, setFormData] = useState({
     full_name: '',
     title: '',
@@ -40,6 +65,7 @@ export default function ProfilePage() {
     location: '',
     specialties: '',
     looking_for: '',
+    quick_responder: false,
   })
 
   useEffect(() => {
@@ -61,8 +87,11 @@ export default function ProfilePage() {
             location: data.location || '',
             specialties: data.specialties || '',
             looking_for: data.looking_for || '',
+            quick_responder: !!data.quick_responder,
           })
         }
+        const { count } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', user.id)
+        setProjectCount(count ?? 0)
       }
       setLoading(false)
     }
@@ -110,6 +139,7 @@ export default function ProfilePage() {
         location: formData.location || null,
         specialties: formData.specialties || null,
         looking_for: formData.looking_for || null,
+        quick_responder: formData.quick_responder,
       })
       .eq('id', user.id)
     setSaving(false)
@@ -123,6 +153,7 @@ export default function ProfilePage() {
   }
 
   const tags = parseSpecialties(formData.specialties)
+  const completionPercent = profileCompletionPercent(formData)
 
   if (loading) {
     return (
@@ -133,7 +164,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto py-8 sm:py-12 px-4 sm:px-6">
+    <div className="max-w-[1100px] mx-auto w-full min-w-0 py-4 sm:py-8 md:py-12 px-4 sm:px-6">
       {status && (
         <div
           className={`mb-6 rounded-xl px-4 py-3 text-sm font-medium ${
@@ -146,9 +177,25 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+      {/* Barra de progresso do perfil */}
+      <div className="mb-6 sm:mb-8 p-4 sm:p-5 bg-white rounded-2xl border-2 border-slate-200 shadow-sm">
+        <p className="text-sm font-bold text-slate-700 mb-2">
+          Seu perfil está <span className="text-[#4c1d95]">{completionPercent}%</span> completo
+        </p>
+        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#4c1d95] rounded-full transition-all duration-300"
+            style={{ width: `${Math.min(100, completionPercent)}%` }}
+          />
+        </div>
+        {completionPercent < 100 && (
+          <p className="text-xs text-slate-500 mt-2">Complete os campos abaixo para aparecer melhor na rede.</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-14">
         {/* COLUNA ESQUERDA: CARTÃO VISUAL / SOCIAL */}
-        <aside className="lg:col-span-5 space-y-6">
+        <aside className="lg:col-span-5 space-y-4 sm:space-y-6 min-w-0 order-first lg:order-none">
           <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 sm:p-8 shadow-sm">
             <div className="relative group w-full aspect-square max-w-[240px] mx-auto">
               <div className="w-full h-full rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
@@ -177,6 +224,11 @@ export default function ProfilePage() {
                   {AVAILABILITY_BADGES.find((b) => b.value === formData.availability_badge)?.label}
                 </p>
               )}
+              {projectCount >= 1 && (
+                <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold uppercase mt-2">
+                  🏆 Primeiro Projeto Publicado
+                </span>
+              )}
               {profileRole === 'ADMIN' && (
                 <span className="inline-block px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 text-[10px] font-bold uppercase">
                   Admin
@@ -187,7 +239,7 @@ export default function ProfilePage() {
         </aside>
 
         {/* COLUNA DIREITA: INFORMAÇÕES */}
-        <form onSubmit={handleSave} className="lg:col-span-7 space-y-8">
+        <form onSubmit={handleSave} className="lg:col-span-7 space-y-6 sm:space-y-8 min-w-0">
           <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
             <h3 className="text-sm font-bold text-slate-800">Informações do perfil</h3>
 
@@ -289,6 +341,22 @@ export default function ProfilePage() {
                   <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <p className="text-sm font-medium text-slate-800">Responde rápido</p>
+                <p className="text-xs text-slate-500 mt-0.5">Seu perfil e oportunidades mostrarão que você responde rápido. Gera confiança.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.quick_responder}
+                onClick={() => setFormData((prev) => ({ ...prev, quick_responder: !prev.quick_responder }))}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 transition-colors ${formData.quick_responder ? 'bg-[#4c1d95] border-[#4c1d95]' : 'bg-slate-200 border-slate-200'}`}
+              >
+                <span className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform ${formData.quick_responder ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
             </div>
           </div>
 

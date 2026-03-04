@@ -42,6 +42,7 @@ export default function ProfileByIdPage() {
     location: string | null
     specialties: string | null
     looking_for: string | null
+    quick_responder: boolean
   } | null>(null)
   const [stats, setStats] = useState({ posts: 0, projects: 0 })
 
@@ -80,6 +81,7 @@ export default function ProfileByIdPage() {
         location: data.location || null,
         specialties: data.specialties || null,
         looking_for: data.looking_for || null,
+        quick_responder: !!data.quick_responder,
       })
       const [{ count: postsCount }, { count: projectsCount }] = await Promise.all([
         supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', id),
@@ -131,7 +133,7 @@ export default function ProfileByIdPage() {
   const hasLinks = profile.github_url || profile.linkedin_url || profile.website_url
 
   return (
-    <div className="max-w-[1100px] mx-auto py-8 sm:py-12 px-4 sm:px-6">
+    <div className="max-w-[1100px] mx-auto w-full min-w-0 py-4 sm:py-8 md:py-12 px-4 sm:px-6">
       <Link
         href="/dashboard/membros"
         className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-[#4c1d95] mb-6"
@@ -139,9 +141,9 @@ export default function ProfileByIdPage() {
         ← Voltar às conexões
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-14 min-w-0">
         {/* COLUNA ESQUERDA: CARTÃO SOCIAL */}
-        <aside className="lg:col-span-5">
+        <aside className="lg:col-span-5 min-w-0 order-first lg:order-none">
           <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 sm:p-8 shadow-sm">
             <div className="w-full aspect-square max-w-[260px] mx-auto rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
               {profile.avatar_url ? (
@@ -165,20 +167,32 @@ export default function ProfileByIdPage() {
                   {AVAILABILITY_LABELS[profile.availability_badge]}
                 </p>
               )}
+              <div className="flex flex-wrap justify-center gap-2 mt-2">
+                {stats.projects >= 1 && (
+                  <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold uppercase">
+                    🏆 Primeiro Projeto Publicado
+                  </span>
+                )}
+                {profile.quick_responder && (
+                  <span className="inline-block px-2.5 py-1 rounded-lg bg-green-100 text-green-800 text-[10px] font-bold uppercase">
+                    ⚡ Responde rápido
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
                 onClick={requestConnect}
-                className="px-5 py-2.5 rounded-xl bg-[#4c1d95] text-white text-sm font-bold hover:bg-violet-800 transition-all"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#4c1d95] text-white text-sm font-bold hover:bg-violet-800 transition-all"
               >
                 Conectar
               </button>
               <button
                 type="button"
                 onClick={sendToChat}
-                className="px-5 py-2.5 rounded-xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:border-violet-300 hover:bg-violet-50 transition-all"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:border-violet-300 hover:bg-violet-50 transition-all"
               >
                 Enviar mensagem
               </button>
