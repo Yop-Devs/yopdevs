@@ -249,12 +249,12 @@ function LandingPageContent() {
             </p>
           </div>
           <div className="flex-1 flex justify-center items-center min-h-0 w-full min-w-0 overflow-hidden px-4 lg:px-8">
-            <div className="relative w-full max-w-xl aspect-[4/3] rounded-lg overflow-hidden bg-slate-200/50">
+            <div className="relative w-full max-w-xl aspect-[16/9] rounded-lg overflow-hidden bg-slate-200/50 flex items-center justify-center">
               <Image
                 src="/imagem01.png"
                 alt=""
                 fill
-                className="object-cover object-center rounded-lg shadow-md border border-slate-200/80"
+                className="object-contain object-center rounded-lg shadow-md border border-slate-200/80"
                 sizes="(max-width: 1024px) 90vw, 50vw"
               />
             </div>
