@@ -20,6 +20,44 @@
   }
 }
 
+/* PWA standalone: safe areas para header e conteúdo (evita menu sob a notch e tela desproporcional) */
+.safe-top {
+  padding-top: constant(safe-area-inset-top, 0px);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.main-below-header {
+  padding-top: calc(3.5rem + constant(safe-area-inset-top, 0px));
+  padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+}
+@media (min-width: 1024px) {
+  .main-below-header {
+    padding-top: 0;
+  }
+}
+.main-safe-bottom {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 640px) {
+  .main-safe-bottom {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 768px) {
+  .main-safe-bottom {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 1024px) {
+  .main-safe-bottom {
+    padding-bottom: 2rem;
+  }
+}
+/* PWA: altura de tela correta em standalone (evita corte/desproporção) */
+.h-screen-pwa {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* Animações da landing */
 @keyframes fade-in-up {
   from {

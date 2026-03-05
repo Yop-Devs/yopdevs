@@ -119,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900 overflow-hidden max-w-full">
+    <div className="flex h-screen h-screen-pwa bg-slate-100 text-slate-900 overflow-hidden max-w-full">
       
       {/* OVERLAY MOBILE — backdrop escuro, blur leve, animação suave, não empurra layout */}
       <div
@@ -202,29 +202,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ÁREA DE CONTEÚDO PRINCIPAL */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* HEADER MOBILE — altura fixa 56px, centralização perfeita, sem overflow */}
-        <header className="fixed top-0 left-0 right-0 z-30 w-full h-14 flex items-center justify-between px-4 bg-violet-900 border-b border-violet-800 lg:hidden shrink-0 overflow-hidden relative">
-          {/* Botão hambúrguer — área clicável 40x40px, ícone 24px proporcional, alinhamento vertical perfeito */}
-          <div className="flex items-center shrink-0 min-w-10 min-h-10">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 text-white hover:text-violet-200 rounded-lg active:opacity-80 transition-colors"
-              aria-label="Abrir menu"
-            >
-              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-          </div>
-          <Link href="/dashboard" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-14">
-            <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={140} height={44} className="h-8 w-auto max-w-[140px] object-contain object-center" unoptimized />
-          </Link>
-          <div className="flex items-center justify-center w-10 h-10 shrink-0 bg-violet-800 rounded-full font-black text-[10px] text-white leading-none">
-            {profile?.full_name?.[0] || '?'}
+        {/* HEADER MOBILE — safe-area no PWA (não fica sob notch), hambúrguer sempre clicável (z-10) */}
+        <header className="fixed top-0 left-0 right-0 z-30 w-full safe-top flex flex-col bg-violet-900 border-b border-violet-800 lg:hidden shrink-0 overflow-hidden">
+          <div className="h-14 flex items-center justify-between px-4 relative">
+            {/* Botão hambúrguer — z-10 acima do logo para garantir toque no PWA */}
+            <div className="relative z-10 flex items-center shrink-0 min-w-10 min-h-10">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 -ml-1 text-white hover:text-violet-200 rounded-lg active:opacity-80 transition-colors touch-manipulation"
+                aria-label="Abrir menu"
+              >
+                <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </button>
+            </div>
+            <Link href="/dashboard" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-14 z-0">
+              <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={140} height={44} className="h-8 w-auto max-w-[140px] object-contain object-center" unoptimized />
+            </Link>
+            <div className="relative z-10 flex items-center justify-center w-10 h-10 shrink-0 bg-violet-800 rounded-full font-black text-[10px] text-white leading-none">
+              {profile?.full_name?.[0] || '?'}
+            </div>
           </div>
         </header>
 
-        {/* CONTEÚDO DA PÁGINA — pt-14 compensa header mobile fixo */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 lg:pt-0 px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 md:pb-8 bg-slate-100 min-w-0 max-w-full">
+        {/* CONTEÚDO DA PÁGINA — main-below-header = safe-area + 56px no PWA */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden main-below-header lg:pt-0 px-4 sm:px-6 md:px-8 main-safe-bottom bg-slate-100 min-w-0 max-w-full">
           {children}
         </main>
       </div>
