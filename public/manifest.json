@@ -9,25 +9,25 @@
   "theme_color": "#7c3aed",
   "icons": [
     {
-      "src": "/logodash.png",
+      "src": "/logoprincipal.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logodash.png",
+      "src": "/logoprincipal.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logodash.png",
+      "src": "/logoprincipal.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/logodash.png",
+      "src": "/logoprincipal.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

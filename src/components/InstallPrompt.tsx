@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
-const STORAGE_KEY = 'yop-install-prompt-dismissed'
-const DISMISS_DAYS = 7
+const SESSION_KEY = 'yop-install-prompt-dismissed'
 
 function getIsMobile(): boolean {
   if (typeof window === 'undefined') return false
@@ -22,13 +21,10 @@ function getIsAndroid(): boolean {
   return /Android/i.test(window.navigator.userAgent)
 }
 
-function wasDismissedRecently(): boolean {
-  if (typeof localStorage === 'undefined') return false
+function wasDismissedThisSession(): boolean {
+  if (typeof sessionStorage === 'undefined') return false
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return false
-    const until = parseInt(raw, 10)
-    return Date.now() < until
+    return sessionStorage.getItem(SESSION_KEY) === '1'
   } catch {
     return false
   }
@@ -36,7 +32,7 @@ function wasDismissedRecently(): boolean {
 
 function setDismissed(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000))
+    sessionStorage.setItem(SESSION_KEY, '1')
   } catch {}
 }
 
@@ -66,13 +62,13 @@ export default function InstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [isClient])
 
-  // Mostrar na home ou no dashboard, só em mobile, após 1s, e se não dispensou nos últimos 7 dias
+  // Mostrar na home ou no dashboard, só em mobile, após 1s; se dispensou nesta sessão não mostra de novo
   useEffect(() => {
     if (!isClient || !isMobile) return
     const isHome = pathname === '/'
     const isDashboard = pathname?.startsWith('/dashboard') ?? false
     if (!isHome && !isDashboard) return
-    if (wasDismissedRecently()) return
+    if (wasDismissedThisSession()) return
 
     const timer = setTimeout(() => setShowBanner(true), 1000)
     return () => clearTimeout(timer)
