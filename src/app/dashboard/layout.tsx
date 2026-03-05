@@ -129,7 +129,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onClick={() => isSidebarOpen && setIsSidebarOpen(false)}
       />
 
-      {/* SIDEBAR — overlay (não empurra); animação suave ao abrir/fechar */}
+      {/* SIDEBAR — overlay; no PWA pt-safe para logo não ficar sob a barra de status */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-violet-900 flex flex-col border-r border-violet-800
         transition-transform duration-300 ease-out
@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-4 sm:p-6 flex items-center justify-center relative bg-violet-900 border-b border-white/20 shrink-0">
+        <div className="sidebar-top-safe pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 flex items-center justify-center relative bg-violet-900 border-b border-white/20 shrink-0">
           <Link href="/dashboard" className="flex items-center justify-center w-full min-h-[4rem]">
             <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={280} height={88} className="h-12 sm:h-14 w-auto object-contain object-center" priority unoptimized />
           </Link>

@@ -52,6 +52,17 @@
     padding-bottom: 2rem;
   }
 }
+/* Menu lateral no PWA: topo abaixo da barra de status (logo visível) */
+.sidebar-top-safe {
+  padding-top: calc(1rem + constant(safe-area-inset-top, 0px));
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+}
+@media (min-width: 1024px) {
+  .sidebar-top-safe {
+    padding-top: 1.5rem;
+  }
+}
+
 /* PWA: altura de tela correta em standalone (evita corte/desproporção) */
 .h-screen-pwa {
   min-height: 100vh;
