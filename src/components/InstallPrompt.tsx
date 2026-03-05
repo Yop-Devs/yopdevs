@@ -125,19 +125,15 @@ export default function InstallPrompt() {
   if (showIOSInstructions && showBanner) {
     return (
       <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">📱 Adicionar ao iPhone/iPad</p>
-        <p className="text-sm font-bold text-slate-900 mb-3">Toque em <strong>Compartilhar</strong> (□ com seta ↑) e depois em <strong>Adicionar à Tela de Início</strong>.</p>
-        <div className="flex gap-3">
-          <button type="button" onClick={handleDismiss} className="px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 rounded-xl">Fechar</button>
-          <a
-            href="https://support.apple.com/pt-br/guide/iphone/iph42ab2f3a/ios"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 py-3.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors shadow-lg text-center"
-          >
-            Ver como fazer
-          </a>
-        </div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-2">📱 Adicionar ao iPhone/iPad</p>
+        <ol className="text-sm text-slate-700 space-y-2 mb-4 list-decimal list-inside">
+          <li>Toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima) na barra inferior do Safari.</li>
+          <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+          <li>Toque em <strong>Adicionar</strong> no canto superior direito.</li>
+        </ol>
+        <button type="button" onClick={handleDismiss} className="w-full py-3.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors shadow-lg">
+          Entendi
+        </button>
       </div>
     )
   }
