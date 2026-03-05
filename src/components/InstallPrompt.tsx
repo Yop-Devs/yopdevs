@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
-const STORAGE_KEY = 'yop-install-prompt-shown'
+const STORAGE_KEY = 'yop-install-prompt-dismissed'
+const DISMISS_DAYS = 7
 
 function getIsMobile(): boolean {
   if (typeof window === 'undefined') return false
@@ -19,6 +20,24 @@ function getIsIOS(): boolean {
 function getIsAndroid(): boolean {
   if (typeof window === 'undefined') return false
   return /Android/i.test(window.navigator.userAgent)
+}
+
+function wasDismissedRecently(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return false
+    const until = parseInt(raw, 10)
+    return Date.now() < until
+  } catch {
+    return false
+  }
+}
+
+function setDismissed(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000))
+  } catch {}
 }
 
 export default function InstallPrompt() {
@@ -47,15 +66,25 @@ export default function InstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [isClient])
 
+  // Mostrar na home ou no dashboard, só em mobile, após 1s, e se não dispensou nos últimos 7 dias
   useEffect(() => {
-    if (!isClient || !isMobile || pathname !== '/') return
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(STORAGE_KEY)) return
+    if (!isClient || !isMobile) return
+    const isHome = pathname === '/'
+    const isDashboard = pathname?.startsWith('/dashboard') ?? false
+    if (!isHome && !isDashboard) return
+    if (wasDismissedRecently()) return
 
-    const timer = setTimeout(() => {
-      setShowBanner(true)
-    }, 2000)
+    const timer = setTimeout(() => setShowBanner(true), 1000)
     return () => clearTimeout(timer)
   }, [isClient, isMobile, pathname])
+
+  // Atalho: abrir prompt ao clicar em "Adicionar ao celular" no dashboard
+  useEffect(() => {
+    if (!isClient) return
+    const handler = () => setShowBanner(true)
+    window.addEventListener('yop-show-install-prompt', handler)
+    return () => window.removeEventListener('yop-show-install-prompt', handler)
+  }, [isClient])
 
   const handleInstall = async () => {
     if (deferredPrompt) {
@@ -63,49 +92,52 @@ export default function InstallPrompt() {
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') {
         setShowBanner(false)
-        sessionStorage.setItem(STORAGE_KEY, '1')
+        setDismissed()
       }
     }
   }
 
   const handleDismiss = () => {
     setShowBanner(false)
-    sessionStorage.setItem(STORAGE_KEY, '1')
+    setDismissed()
   }
 
-  if (!isClient || !showBanner || !isMobile) return null
+  if (!isClient || !isMobile) return null
 
   const showAndroidPrompt = isAndroid && deferredPrompt
   const showIOSInstructions = isIOS
 
-  if (showAndroidPrompt) {
+  if (showAndroidPrompt && showBanner) {
     return (
-      <div className="fixed bottom-6 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border border-violet-200 bg-white text-slate-900">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">App disponível</p>
-        <p className="text-sm font-bold text-slate-900 mb-4">Adicione o YOP DEVS à tela de início para acessar mais rápido.</p>
+      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">📱 App disponível</p>
+        <p className="text-sm font-bold text-slate-900 mb-4">Salve o YopDevs na tela inicial e abra como app.</p>
         <div className="flex gap-3">
-          <button type="button" onClick={handleDismiss} className="px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700">Agora não</button>
-          <button type="button" onClick={handleInstall} className="flex-1 py-3 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors">
-            Adicionar à tela de início
+          <button type="button" onClick={handleDismiss} className="px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 rounded-xl">Agora não</button>
+          <button type="button" onClick={handleInstall} className="flex-1 py-3.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors shadow-lg">
+            Salvar na tela inicial
           </button>
         </div>
       </div>
     )
   }
 
-  if (showIOSInstructions) {
+  if (showIOSInstructions && showBanner) {
     return (
-      <div className="fixed bottom-6 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border border-violet-200 bg-white text-slate-900">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">Adicione ao seu iPhone/iPad</p>
-        <p className="text-sm font-bold text-slate-900 mb-3">Para colocar o YOP DEVS na tela de início:</p>
-        <ol className="text-xs text-slate-600 space-y-2 mb-4 list-decimal list-inside">
-          <li>Toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima) na barra do navegador.</li>
-          <li>Role e toque em <strong>&quot;Adicionar à Tela de Início&quot;</strong>.</li>
-          <li>Toque em <strong>Adicionar</strong> no canto superior direito.</li>
-        </ol>
-        <button type="button" onClick={handleDismiss} className="w-full py-3 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors">
-          Entendi
-        </button>
+      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">📱 Adicionar ao iPhone/iPad</p>
+        <p className="text-sm font-bold text-slate-900 mb-3">Toque em <strong>Compartilhar</strong> (□ com seta ↑) e depois em <strong>Adicionar à Tela de Início</strong>.</p>
+        <div className="flex gap-3">
+          <button type="button" onClick={handleDismiss} className="px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700 rounded-xl">Fechar</button>
+          <a
+            href="https://support.apple.com/pt-br/guide/iphone/iph42ab2f3a/ios"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-3.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-colors shadow-lg text-center"
+          >
+            Ver como fazer
+          </a>
+        </div>
       </div>
     )
   }

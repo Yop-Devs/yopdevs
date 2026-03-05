@@ -168,6 +168,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
+        {/* Atalho PWA: Salvar na tela inicial (mobile) */}
+        <div className="lg:hidden px-4 py-2 border-t border-violet-800">
+          <button
+            type="button"
+            onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('yop-show-install-prompt'))}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-white hover:bg-violet-800 transition-all text-[10px] font-bold uppercase tracking-wider"
+          >
+            <span className="text-lg" aria-hidden>📱</span>
+            <span>Salvar na tela inicial</span>
+          </button>
+        </div>
+
         <div className="p-4 bg-violet-900 border-t border-violet-800 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>

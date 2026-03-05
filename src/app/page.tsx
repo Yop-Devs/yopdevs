@@ -343,6 +343,7 @@ function LandingPageContent() {
       <footer className="flex-shrink-0 border-t border-slate-200 bg-white py-3 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 text-sm text-slate-600">
           <nav className="flex flex-wrap justify-center gap-4">
+            <button type="button" onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('yop-show-install-prompt'))} className="hover:text-[#4c1d95] transition-colors sm:hidden">📱 Salvar na tela inicial</button>
             <button type="button" onClick={() => setInfoCard('termos')} className="hover:text-[#4c1d95] transition-colors">Termos de Uso</button>
             <button type="button" onClick={() => setInfoCard('privacidade')} className="hover:text-[#4c1d95] transition-colors">Privacidade</button>
             <button type="button" onClick={() => setInfoCard('suporte')} className="hover:text-[#4c1d95] transition-colors">Suporte</button>
