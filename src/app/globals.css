@@ -69,6 +69,20 @@
   min-height: 100dvh;
 }
 
+/* Landing/Login no PWA: safe area + espaço para não sair da borda; conteúdo pode rolar */
+.landing-pwa-wrap {
+  padding-top: constant(safe-area-inset-top, 0px);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: constant(safe-area-inset-bottom, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (min-width: 1024px) {
+  .landing-pwa-wrap {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
 /* Animações da landing */
 @keyframes fade-in-up {
   from {

@@ -228,11 +228,11 @@ function LandingPageContent() {
   }
 
   return (
-    <div className="h-screen overflow-hidden max-w-full bg-white text-slate-900 flex flex-col">
-      <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden min-w-0 lg:justify-stretch justify-center">
+    <div className="min-h-screen min-h-[100dvh] max-w-full bg-white text-slate-900 flex flex-col overflow-y-auto overflow-x-hidden">
+      <main className="landing-pwa-wrap flex-1 flex flex-col lg:flex-row min-h-0 min-w-0 overflow-y-auto lg:overflow-hidden justify-start lg:justify-stretch pb-8 sm:pb-10 pt-4 sm:pt-6 lg:pt-0 lg:pb-0">
         {/* Coluna esquerda: logo + texto ao lado, imagens embaixo — metade da tela */}
-        <section className="w-full lg:w-1/2 lg:flex-shrink-0 bg-[#f0f2f5] flex flex-col min-h-0 overflow-hidden px-4 sm:px-6 pt-6 sm:pt-8 lg:pt-6 pb-2 sm:pb-3 lg:pb-4 lg:pl-[5%] lg:pr-6 lg:flex-initial flex-shrink-0">
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 mb-4 lg:mb-6 shrink-0">
+        <section className="w-full lg:w-1/2 lg:flex-shrink-0 bg-[#f0f2f5] flex flex-col min-h-0 overflow-hidden px-4 sm:px-6 pt-4 sm:pt-6 lg:pt-6 pb-4 sm:pb-4 lg:pb-4 lg:pl-[5%] lg:pr-6 lg:flex-initial flex-shrink-0">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 mb-5 sm:mb-6 lg:mb-6 shrink-0">
             <Link href="/" className="shrink-0">
               <Image
                 src="/logoprincipal.png?v=4"
@@ -266,7 +266,7 @@ function LandingPageContent() {
         <div className="hidden lg:block w-[2px] flex-shrink-0 bg-slate-400 self-stretch" aria-hidden />
 
         {/* Coluna direita: formulário de login — metade da tela */}
-        <section className="w-full lg:w-1/2 lg:flex-shrink-0 flex flex-col justify-center items-center px-4 sm:px-6 py-4 sm:py-6 lg:py-10 bg-white min-w-0 flex-1 lg:flex-initial">
+        <section className="w-full lg:w-1/2 lg:flex-shrink-0 flex flex-col justify-center lg:justify-center items-center px-4 sm:px-6 py-5 sm:py-6 lg:py-10 bg-white min-w-0 flex-shrink-0 lg:flex-1 lg:flex-initial">
           <div className="max-w-[420px] w-full min-w-0 rounded-2xl lg:rounded-none bg-white lg:bg-transparent p-5 sm:p-6 lg:p-0 shadow-[0_4px_24px_rgba(76,29,149,0.08)] lg:shadow-none border border-slate-100 lg:border-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-4 sm:mb-6">
               Entrar no YOP Devs
