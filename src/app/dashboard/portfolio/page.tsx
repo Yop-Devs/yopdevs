@@ -334,45 +334,47 @@ export default function DashboardPortfolioPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto bg-slate-100">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
-        {portfolio?.username && (
-          <Link
-            href={`/u/${portfolio.username}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-[#4c1d95] hover:underline"
-          >
-            Ver portfólio público →
-          </Link>
-        )}
-      </div>
-
-      {message && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>
-          {message.text}
+    <div className="flex-1 min-h-screen flex flex-col bg-slate-100">
+      <div className="flex-shrink-0 p-4 md:p-6 pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
+          {portfolio?.username && (
+            <Link
+              href={`/u/${portfolio.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-[#4c1d95] hover:underline"
+            >
+              Ver portfólio público →
+            </Link>
+          )}
         </div>
-      )}
 
-      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              tab === t.id ? 'border-[#4c1d95] text-[#4c1d95]' : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {message && (
+          <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                tab === t.id ? 'border-[#4c1d95] text-[#4c1d95]' : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-6">
+      <div className="flex-1 min-h-0 p-4 md:p-6 pt-6 max-w-4xl mx-auto w-full">
         {tab === 'perfil' && (
-          <form onSubmit={handleSavePerfil} className="space-y-6 min-h-[calc(100dvh-12rem)] min-h-[calc(100vh-12rem)]">
+          <form onSubmit={handleSavePerfil} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nome público</label>
