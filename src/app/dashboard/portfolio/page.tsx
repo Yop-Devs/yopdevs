@@ -334,7 +334,7 @@ export default function DashboardPortfolioPage() {
   ]
 
   return (
-    <div className="flex-1 min-h-screen flex flex-col bg-slate-100">
+    <div className="flex flex-col bg-slate-100 min-w-0">
       <div className="flex-shrink-0 p-4 md:p-6 pb-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
@@ -372,7 +372,7 @@ export default function DashboardPortfolioPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 p-4 md:p-6 pt-6 max-w-4xl mx-auto w-full">
+      <div className="p-4 md:p-6 pt-6 pb-8 max-w-4xl mx-auto w-full">
         {tab === 'perfil' && (
           <form onSubmit={handleSavePerfil} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
