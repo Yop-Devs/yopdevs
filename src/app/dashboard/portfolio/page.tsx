@@ -334,7 +334,7 @@ export default function DashboardPortfolioPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto min-h-full bg-slate-100">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto min-h-[100dvh] min-h-[100vh] bg-slate-100">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
         {portfolio?.username && (

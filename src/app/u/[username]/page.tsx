@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import Logo from '@/components/Logo'
 
 type Portfolio = {
   id: string
@@ -93,8 +92,8 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
   if (error || !portfolio) {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
-        <Link href="/" className="mb-6">
-          <Logo variant="dark" size="lg" />
+        <Link href="/" className="mb-6 block">
+          <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={240} height={76} className="h-12 w-auto object-contain" priority unoptimized />
         </Link>
         <p className="text-slate-600 font-medium text-center max-w-md">{error || 'Portfólio não encontrado.'}</p>
         <Link href="/" className="mt-6 px-6 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all">
@@ -111,12 +110,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
         <header className="fixed top-0 left-0 right-0 z-50 w-full h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-sm flex items-center">
           <div className="max-w-6xl mx-auto w-full h-full px-4 md:px-6 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#4c1d95] rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <Logo variant="dark" size="sm" />
+              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={160} height={50} className="h-8 w-auto object-contain" unoptimized />
             </Link>
             <Link href="/" className="px-4 py-2.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all">
               Entrar na rede
@@ -276,12 +270,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
         <footer className="border-t border-slate-200 bg-slate-800 text-slate-200 py-6 px-4">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <Logo variant="light" size="sm" />
+              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={160} height={50} className="h-8 w-auto object-contain opacity-95 hover:opacity-100" unoptimized />
             </Link>
             <p className="text-sm text-slate-400">Portfólio de {displayName} · YOP Devs</p>
             <Link href="/" className="text-sm font-semibold text-slate-300 hover:text-white">Voltar ao início</Link>
