@@ -12,6 +12,11 @@
 }
 
 @layer base {
+  html,
+  body {
+    height: 100%;
+    overflow-y: auto; /* scroll só no main do dashboard, body não expande além do viewport */
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
