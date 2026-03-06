@@ -466,9 +466,10 @@ export default function DashboardPortfolioPage() {
                   )}
                 </div>
                 <input
+                  id="avatar-upload"
                   type="file"
                   accept="image/*"
-                  className="mt-2 text-sm"
+                  className="sr-only"
                   onChange={async (e) => {
                     const f = e.target.files?.[0]
                     if (!f || !userId) return
@@ -476,9 +477,13 @@ export default function DashboardPortfolioPage() {
                     const url = await uploadFile(f, 'avatar')
                     if (url) setForm((prev) => ({ ...prev, avatar_url: url }))
                     setUploading(null)
+                    e.target.value = ''
                   }}
                 />
-                {uploading === 'avatar' && <p className="text-xs text-slate-500">Enviando...</p>}
+                <label htmlFor="avatar-upload" className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 bg-[#4c1d95] text-white rounded-lg text-sm font-medium cursor-pointer hover:bg-violet-800 transition-colors shadow-sm">
+                  Escolher arquivo
+                </label>
+                {uploading === 'avatar' && <p className="text-xs text-slate-500 mt-1">Enviando...</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Banner</label>
@@ -490,9 +495,10 @@ export default function DashboardPortfolioPage() {
                   )}
                 </div>
                 <input
+                  id="banner-upload"
                   type="file"
                   accept="image/*"
-                  className="mt-2 text-sm"
+                  className="sr-only"
                   onChange={async (e) => {
                     const f = e.target.files?.[0]
                     if (!f || !userId) return
@@ -500,9 +506,13 @@ export default function DashboardPortfolioPage() {
                     const url = await uploadFile(f, 'banner')
                     if (url) setForm((prev) => ({ ...prev, banner_url: url }))
                     setUploading(null)
+                    e.target.value = ''
                   }}
                 />
-                {uploading === 'banner' && <p className="text-xs text-slate-500">Enviando...</p>}
+                <label htmlFor="banner-upload" className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 bg-[#4c1d95] text-white rounded-lg text-sm font-medium cursor-pointer hover:bg-violet-800 transition-colors shadow-sm">
+                  Escolher arquivo
+                </label>
+                {uploading === 'banner' && <p className="text-xs text-slate-500 mt-1">Enviando...</p>}
               </div>
             </div>
             <button type="submit" disabled={saving} className="px-6 py-3 bg-[#4c1d95] text-white rounded-lg font-medium text-sm hover:bg-violet-800 disabled:opacity-60">
@@ -524,9 +534,10 @@ export default function DashboardPortfolioPage() {
                 <label className="block text-sm text-slate-600 mb-1">Imagem do projeto (URL ou envie arquivo)</label>
                 <input type="url" placeholder="URL da imagem" className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm mb-2" value={projectForm.image_url} onChange={(e) => setProjectForm({ ...projectForm, image_url: e.target.value })} />
                 <input
+                  id="project-image-upload"
                   type="file"
                   accept="image/*"
-                  className="text-sm"
+                  className="sr-only"
                   onChange={async (e) => {
                     const f = e.target.files?.[0]
                     if (!f || !userId) return
@@ -534,9 +545,13 @@ export default function DashboardPortfolioPage() {
                     const url = await uploadFile(f, 'project')
                     if (url) setProjectForm((prev) => ({ ...prev, image_url: url }))
                     setUploading(null)
+                    e.target.value = ''
                   }}
                 />
-                {uploading === 'project' && <span className="text-xs text-slate-500">Enviando...</span>}
+                <label htmlFor="project-image-upload" className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#4c1d95] text-white rounded-lg text-sm font-medium cursor-pointer hover:bg-violet-800 transition-colors shadow-sm">
+                  Escolher arquivo
+                </label>
+                {uploading === 'project' && <span className="ml-2 text-xs text-slate-500">Enviando...</span>}
               </div>
               <div className="flex gap-2">
                 <button type="submit" disabled={saving} className="px-4 py-2 bg-[#4c1d95] text-white rounded-lg text-sm font-medium">Salvar</button>
