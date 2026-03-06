@@ -231,8 +231,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* CONTEÚDO DA PÁGINA — main-below-header = safe-area + 56px no PWA */}
-        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden main-below-header lg:pt-0 px-4 sm:px-6 md:px-8 main-safe-bottom bg-slate-100 min-w-0 max-w-full">
-          {children}
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden main-below-header lg:pt-0 px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 md:pb-8 bg-slate-100 min-w-0 max-w-full">
+          {/* Wrapper flex-none evita que o conteúdo expanda e crie espaço em branco ao rolar */}
+          <div className="flex-none min-h-0 min-w-0">
+            {children}
+          </div>
         </main>
       </div>
 
