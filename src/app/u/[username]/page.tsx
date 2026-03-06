@@ -93,7 +93,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6">
         <Link href="/" className="mb-6 block">
-          <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={240} height={76} className="h-12 w-auto object-contain" priority unoptimized />
+          <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={280} height={88} className="h-16 w-auto object-contain" priority unoptimized />
         </Link>
         <p className="text-slate-600 font-medium text-center max-w-md">{error || 'Portfólio não encontrado.'}</p>
         <Link href="/" className="mt-6 px-6 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all">
@@ -110,7 +110,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
         <header className="fixed top-0 left-0 right-0 z-50 w-full h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-sm flex items-center">
           <div className="max-w-6xl mx-auto w-full h-full px-4 md:px-6 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={160} height={50} className="h-8 w-auto object-contain" unoptimized />
+              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={200} height={63} className="h-10 sm:h-12 w-auto object-contain" unoptimized />
             </Link>
             <Link href="/" className="px-4 py-2.5 bg-[#4c1d95] text-white rounded-xl text-sm font-bold hover:bg-violet-800 transition-all">
               Entrar na rede
@@ -270,7 +270,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
         <footer className="border-t border-slate-200 bg-slate-800 text-slate-200 py-6 px-4">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={160} height={50} className="h-8 w-auto object-contain opacity-95 hover:opacity-100" unoptimized />
+              <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={200} height={63} className="h-10 w-auto object-contain opacity-95 hover:opacity-100" unoptimized />
             </Link>
             <p className="text-sm text-slate-400">Portfólio de {displayName} · YOP Devs</p>
             <Link href="/" className="text-sm font-semibold text-slate-300 hover:text-white">Voltar ao início</Link>

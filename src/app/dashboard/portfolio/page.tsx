@@ -334,7 +334,7 @@ export default function DashboardPortfolioPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto min-h-[100dvh] min-h-[100vh] bg-slate-100">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto bg-slate-100">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
         {portfolio?.username && (
@@ -372,7 +372,7 @@ export default function DashboardPortfolioPage() {
 
       <div className="mt-6">
         {tab === 'perfil' && (
-          <form onSubmit={handleSavePerfil} className="space-y-6">
+          <form onSubmit={handleSavePerfil} className="space-y-6 min-h-[calc(100dvh-12rem)] min-h-[calc(100vh-12rem)]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nome público</label>
