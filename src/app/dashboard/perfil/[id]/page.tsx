@@ -45,6 +45,7 @@ export default function ProfileByIdPage() {
     quick_responder: boolean
   } | null>(null)
   const [stats, setStats] = useState({ posts: 0, projects: 0 })
+  const [portfolioUsername, setPortfolioUsername] = useState<string | null>(null)
 
   const isOwnProfile = !!id && !!currentUserId && id === currentUserId
 
@@ -83,11 +84,13 @@ export default function ProfileByIdPage() {
         looking_for: data.looking_for || null,
         quick_responder: !!data.quick_responder,
       })
-      const [{ count: postsCount }, { count: projectsCount }] = await Promise.all([
+      const [{ count: postsCount }, { count: projectsCount }, { data: portfolioRow }] = await Promise.all([
         supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', id),
         supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', id),
+        supabase.from('user_portfolios').select('username').eq('user_id', id).maybeSingle(),
       ])
       setStats({ posts: postsCount ?? 0, projects: projectsCount ?? 0 })
+      if (portfolioRow?.username) setPortfolioUsername(portfolioRow.username)
       setLoading(false)
     }
     loadProfile()
@@ -181,6 +184,16 @@ export default function ProfileByIdPage() {
               </div>
             </div>
 
+            {portfolioUsername && (
+              <Link
+                href={`/u/${portfolioUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 block w-full sm:w-auto text-center px-5 py-2.5 rounded-xl border-2 border-[#4c1d95] text-[#4c1d95] text-sm font-bold hover:bg-violet-50 transition-all"
+              >
+                Ver portfólio completo →
+              </Link>
+            )}
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
