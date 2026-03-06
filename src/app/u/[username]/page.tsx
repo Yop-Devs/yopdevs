@@ -225,11 +225,6 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
                   <div key={ex.id} className="relative pl-6 border-l-2 border-slate-200">
                     <div className="absolute left-0 top-0 w-3 h-3 -translate-x-[7px] rounded-full bg-[#4c1d95]" />
                     <p className="font-bold text-slate-900">{ex.role} · {ex.company}</p>
-                    <p className="text-xs text-slate-500">
-                      {ex.start_date ? new Date(ex.start_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '?'}
-                      {' – '}
-                      {ex.end_date ? new Date(ex.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : 'Atual'}
-                    </p>
                     {ex.description && <p className="text-sm text-slate-600 mt-2">{ex.description}</p>}
                   </div>
                 ))}

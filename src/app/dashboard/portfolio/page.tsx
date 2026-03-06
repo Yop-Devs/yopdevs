@@ -334,7 +334,7 @@ export default function DashboardPortfolioPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto min-h-full bg-slate-100">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-xl font-bold text-slate-900">Meu Portfólio</h1>
         {portfolio?.username && (
@@ -611,10 +611,6 @@ export default function DashboardPortfolioPage() {
               <input type="text" required placeholder="Cargo" className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" value={expForm.role} onChange={(e) => setExpForm({ ...expForm, role: e.target.value })} />
               <input type="text" required placeholder="Empresa" className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" value={expForm.company} onChange={(e) => setExpForm({ ...expForm, company: e.target.value })} />
               <textarea placeholder="Descrição" className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm min-h-[80px]" value={expForm.description} onChange={(e) => setExpForm({ ...expForm, description: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <input type="month" placeholder="Início" className="px-4 py-2 border border-slate-300 rounded-lg text-sm" value={expForm.start_date} onChange={(e) => setExpForm({ ...expForm, start_date: e.target.value })} />
-                <input type="month" placeholder="Fim" className="px-4 py-2 border border-slate-300 rounded-lg text-sm" value={expForm.end_date} onChange={(e) => setExpForm({ ...expForm, end_date: e.target.value })} />
-              </div>
               <div className="flex gap-2">
                 <button type="submit" disabled={saving} className="px-4 py-2 bg-[#4c1d95] text-white rounded-lg text-sm font-medium">Salvar</button>
                 {editingExp && (
@@ -628,11 +624,6 @@ export default function DashboardPortfolioPage() {
                   <div className="flex justify-between items-start gap-2">
                     <div>
                       <p className="font-semibold text-slate-900">{ex.role} · {ex.company}</p>
-                      <p className="text-xs text-slate-500">
-                        {ex.start_date ? new Date(ex.start_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '?'}
-                        {' – '}
-                        {ex.end_date ? new Date(ex.end_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : 'Atual'}
-                      </p>
                       {ex.description && <p className="text-sm text-slate-600 mt-1">{ex.description}</p>}
                     </div>
                     <div className="flex gap-2 shrink-0">
