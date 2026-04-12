@@ -5,7 +5,10 @@ import withPWA from "next-pwa";
 const pwaRuntimeCache = require("./pwa-runtime-cache.js") as Array<unknown>;
 
 const nextConfig: NextConfig = {
-  /* Configurações básicas são suficientes para o Next.js 16 */
+  // Next 16 usa Turbopack por defeito; o next-pwa adiciona webpack. Um objeto vazio
+  // satisfaz o Next e evita o erro "webpack config and no turbopack config".
+  // Para build/dev com PWA, use os scripts com `--webpack` (package.json).
+  turbopack: {},
 };
 
 const pwaConfig = withPWA({

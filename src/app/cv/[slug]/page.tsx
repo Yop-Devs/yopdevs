@@ -201,7 +201,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             )}
             <a href="#contact" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:inline">Contact</a>
             {isGabriel && (
-              <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+              <Link href="/u/gabriel-costa-carrara" className="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors">
                 PT
               </Link>
             )}
@@ -518,7 +518,7 @@ export default function CVPage({ params }: { params: Promise<{ slug: string }> }
             Resume of <strong className="text-white print:text-slate-900">{profile.full_name}</strong> · yopdevs.com.br/cv/{slug}
           </p>
           {isGabriel ? (
-            <Link href="/portfolio/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors print:text-slate-600">
+            <Link href="/u/gabriel-costa-carrara" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors print:text-slate-600">
               Português
             </Link>
           ) : (
