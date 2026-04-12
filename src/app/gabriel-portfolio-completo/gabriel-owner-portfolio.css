@@ -1,0 +1,123 @@
+/* Tema Lovable/shadcn escopado — só afeta .gabriel-owner-portfolio (Tailwind v4 global intacto) */
+.gabriel-owner-portfolio {
+  --background: 220 20% 7%;
+  --foreground: 210 20% 92%;
+  --card: 220 18% 10%;
+  --card-foreground: 210 20% 92%;
+  --popover: 220 18% 10%;
+  --popover-foreground: 210 20% 92%;
+  --primary: 200 90% 55%;
+  --primary-foreground: 220 20% 7%;
+  --secondary: 220 15% 16%;
+  --secondary-foreground: 210 20% 85%;
+  --muted: 220 15% 14%;
+  --muted-foreground: 215 15% 55%;
+  --accent: 200 90% 55%;
+  --accent-foreground: 220 20% 7%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 220 15% 18%;
+  --input: 220 15% 18%;
+  --ring: 200 90% 55%;
+  --radius: 0.75rem;
+  --gradient-primary: linear-gradient(135deg, hsl(200, 90%, 55%), hsl(180, 80%, 45%));
+  --gradient-hero: linear-gradient(
+    180deg,
+    hsl(220, 20%, 7%) 0%,
+    hsl(220, 25%, 12%) 50%,
+    hsl(220, 20%, 7%) 100%
+  );
+  --gradient-card: linear-gradient(145deg, hsl(220, 18%, 12%), hsl(220, 18%, 8%));
+  --shadow-glow: 0 0 30px hsl(200, 90%, 55%, 0.15);
+  --shadow-card: 0 4px 24px hsl(0, 0%, 0%, 0.3);
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-owner-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+.gabriel-owner-portfolio .font-mono {
+  font-family: var(--font-owner-mono), ui-monospace, monospace;
+}
+
+.gabriel-owner-portfolio *,
+.gabriel-owner-portfolio *::before,
+.gabriel-owner-portfolio *::after {
+  border-color: hsl(var(--border) / 0.5);
+}
+
+.gabriel-owner-portfolio .text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: var(--gradient-primary);
+}
+
+.gabriel-owner-portfolio .bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+.gabriel-owner-portfolio .bg-gradient-hero {
+  background-image: var(--gradient-hero);
+}
+
+.gabriel-owner-portfolio .shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.gabriel-owner-portfolio .shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+.gabriel-owner-portfolio .glass {
+  background-color: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+@keyframes gop-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gop-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gop-pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px hsl(200, 90%, 55%, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(200, 90%, 55%, 0.25);
+  }
+}
+
+.gabriel-owner-portfolio .animate-fade-in-up {
+  animation: gop-fade-in-up 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.gabriel-owner-portfolio .animate-float {
+  animation: gop-float 6s ease-in-out infinite;
+}
+
+.gabriel-owner-portfolio .animate-pulse-glow {
+  animation: gop-pulse-glow 3s ease-in-out infinite;
+}
