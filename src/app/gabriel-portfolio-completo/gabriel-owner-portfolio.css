@@ -121,3 +121,105 @@
 .gabriel-owner-portfolio .animate-pulse-glow {
   animation: gop-pulse-glow 3s ease-in-out infinite;
 }
+
+/* ---------- Impressão (Ctrl+P) ---------- */
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: hsl(220, 20%, 7%) !important;
+  }
+
+  .gabriel-owner-portfolio {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: hsl(220, 20%, 7%) !important;
+  }
+
+  .gabriel-owner-portfolio div.min-h-screen {
+    min-height: 0 !important;
+  }
+
+  .gabriel-owner-portfolio [data-sonner-toaster],
+  .gabriel-owner-portfolio [data-sonner-toaster] *,
+  .gabriel-owner-portfolio .toaster {
+    display: none !important;
+  }
+
+  .gabriel-owner-portfolio nav {
+    display: none !important;
+  }
+
+  .gabriel-owner-portfolio .gop-portfolio-content {
+    padding-top: 0 !important;
+  }
+
+  .gabriel-owner-portfolio .gop-portfolio-content main > section:first-of-type {
+    padding-top: 1rem !important;
+  }
+
+  /* Animações deixam opacity:0 até correr — na impressão o conteúdo sumia depois do hero */
+  .gabriel-owner-portfolio .animate-fade-in-up,
+  .gabriel-owner-portfolio .animate-float,
+  .gabriel-owner-portfolio .animate-pulse-glow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .gabriel-owner-portfolio,
+  .gabriel-owner-portfolio * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .gabriel-owner-portfolio .glass {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: hsl(220, 18%, 12%) !important;
+  }
+
+  /* Contacto: vários .glass — deixar partir para não empurrar o rodapé para página nova só com ele */
+  .gabriel-owner-portfolio #contact .glass {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  /* Manter contacto + rodapé no mesmo fluxo (evita <footer> órfão numa página só) */
+  .gabriel-owner-portfolio .gop-print-contact-footer {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .gabriel-owner-portfolio .gop-print-contact-footer footer {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  .gabriel-owner-portfolio a[href^='http']::after {
+    content: none !important;
+  }
+
+  /* Hiperligações visíveis na impressão */
+  .gabriel-owner-portfolio a[href] {
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+    color: inherit !important;
+  }
+
+  .gabriel-owner-portfolio a[href^='http'],
+  .gabriel-owner-portfolio a[href^='mailto:'] {
+    color: hsl(200, 90%, 58%) !important;
+  }
+}

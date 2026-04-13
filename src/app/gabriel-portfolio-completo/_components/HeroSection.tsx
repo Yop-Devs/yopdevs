@@ -2,13 +2,30 @@
 
 import { useLanguage } from '../i18n/LanguageContext'
 import { ArrowDown, MessageCircle } from 'lucide-react'
-import { useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
-const PORTRAIT_SRC = '/@public/fotogabrielcarrara.jpeg'
+/** Tenta primeiro o caminho que costuma existir no teu deploy; depois o ficheiro em /public. */
+const PORTRAIT_CANDIDATES = ['/@public/fotogabrielcarrara.jpeg', '/fotogabrielcarrara.jpeg'] as const
 
 export default function HeroSection() {
   const { t } = useLanguage()
+  const pathname = usePathname()
+  const [projectsHref, setProjectsHref] = useState('#projects')
+  const [candidateIndex, setCandidateIndex] = useState(0)
   const [imgFailed, setImgFailed] = useState(false)
+
+  useEffect(() => {
+    setProjectsHref(`${window.location.origin}${pathname}#projects`)
+  }, [pathname])
+
+  function onPortraitError() {
+    setCandidateIndex((i) => {
+      if (i < PORTRAIT_CANDIDATES.length - 1) return i + 1
+      setImgFailed(true)
+      return i
+    })
+  }
 
   return (
     <section className="bg-gradient-hero relative flex min-h-screen items-center justify-center overflow-hidden pt-16">
@@ -24,10 +41,11 @@ export default function HeroSection() {
               {!imgFailed ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={PORTRAIT_SRC}
+                  key={candidateIndex}
+                  src={PORTRAIT_CANDIDATES[candidateIndex]}
                   alt="Retrato profissional de Gabriel Carrara"
                   className="h-full w-full object-cover"
-                  onError={() => setImgFailed(true)}
+                  onError={onPortraitError}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[hsl(var(--primary)/0.35)] to-[hsl(var(--card))] text-5xl font-black text-[hsl(var(--foreground))]">
@@ -66,7 +84,7 @@ export default function HeroSection() {
               style={{ animationDelay: '0.4s' }}
             >
               <a
-                href="#projects"
+                href={projectsHref}
                 className="bg-gradient-primary inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90"
               >
                 {t.hero.cta}

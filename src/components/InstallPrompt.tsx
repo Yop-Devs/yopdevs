@@ -105,7 +105,7 @@ export default function InstallPrompt() {
 
   if (showAndroidPrompt && showBanner) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900">
+      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900 print:hidden">
         <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-1">📱 App disponível</p>
         <p className="text-sm font-bold text-slate-900 mb-4">Salve o YopDevs na tela inicial e abra como app.</p>
         <div className="flex gap-3">
@@ -120,7 +120,7 @@ export default function InstallPrompt() {
 
   if (showIOSInstructions && showBanner) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900">
+      <div className="fixed bottom-4 left-4 right-4 z-[999] p-5 rounded-2xl shadow-2xl border-2 border-violet-200 bg-white text-slate-900 print:hidden">
         <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 mb-2">📱 Adicionar ao iPhone/iPad</p>
         <ol className="text-sm text-slate-700 space-y-2 mb-4 list-decimal list-inside">
           <li>Toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima) na barra inferior do Safari.</li>

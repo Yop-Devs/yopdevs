@@ -16,16 +16,20 @@ export default function GabrielOwnerPortfolioPage() {
     <LanguageProvider>
       <div className="min-h-screen selection:bg-[hsl(var(--primary)/0.25)]">
         <Navbar />
-        <main>
-          <HeroSection />
-          <AboutSection />
-          <SkillsSection />
-          <ProjectsSection />
-          <ExperienceSection />
-          <EducationSection />
-          <ContactSection />
-        </main>
-        <Footer />
+        <div className="gop-portfolio-content min-w-0 bg-[#12151c]">
+          <main>
+            <HeroSection />
+            <AboutSection />
+            <SkillsSection />
+            <ProjectsSection />
+            <ExperienceSection />
+            <EducationSection />
+            <div className="gop-print-contact-footer">
+              <ContactSection />
+              <Footer />
+            </div>
+          </main>
+        </div>
       </div>
     </LanguageProvider>
   )

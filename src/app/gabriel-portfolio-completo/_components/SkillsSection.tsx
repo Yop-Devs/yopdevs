@@ -9,7 +9,7 @@ const skillCategories = [
   },
   {
     key: 'backend' as const,
-    skills: ['Node.js', 'Supabase', 'VPS', 'Vercel', 'PostgreSQL'],
+    skills: ['Node.js', 'Python', 'Supabase', 'AWS', 'VPS', 'Vercel', 'PostgreSQL'],
   },
   {
     key: 'automation' as const,

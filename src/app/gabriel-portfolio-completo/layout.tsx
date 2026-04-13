@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Toaster } from '@/components/ui/sonner'
 import './gabriel-owner-portfolio.css'
 
 const inter = Inter({
@@ -34,6 +35,7 @@ export default function GabrielPortfolioLayout({ children }: { children: React.R
   return (
     <div className={`gabriel-owner-portfolio min-h-screen antialiased ${inter.variable} ${jetbrainsMono.variable}`}>
       {children}
+      <Toaster richColors position="bottom-center" />
     </div>
   )
 }
