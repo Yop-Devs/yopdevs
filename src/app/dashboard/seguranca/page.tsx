@@ -2,6 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from '@/components/ui/sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
 
 type PasswordStrength = 'weak' | 'medium' | 'strong' | null
@@ -44,9 +53,11 @@ export default function SecurityPage() {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [status, setStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [sessionCreatedAt, setSessionCreatedAt] = useState<Date | null>(null)
   const [endingSession, setEndingSession] = useState(false)
+  const [accountDeleteOpen, setAccountDeleteOpen] = useState(false)
+  const [accountDeletePassword, setAccountDeletePassword] = useState('')
+  const [accountDeleting, setAccountDeleting] = useState(false)
 
   const strength = useMemo(() => getPasswordStrength(password), [password])
 
@@ -61,15 +72,12 @@ export default function SecurityPage() {
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setStatus(null)
     const { error } = await supabase.auth.updateUser({ password })
     if (error) {
-      setStatus({ type: 'error', text: error.message })
-      setTimeout(() => setStatus(null), 5000)
+      toast.error(error.message)
     } else {
-      setStatus({ type: 'success', text: 'Senha atualizada com sucesso 🔐' })
+      toast.success('Senha atualizada com sucesso.')
       setPassword('')
-      setTimeout(() => setStatus(null), 5000)
     }
     setLoading(false)
   }
@@ -81,6 +89,50 @@ export default function SecurityPage() {
     router.refresh()
   }
 
+  const confirmDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const pwd = accountDeletePassword.trim()
+    if (!pwd) {
+      toast.error('Introduz a tua senha.')
+      return
+    }
+    setAccountDeleting(true)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Sessão inválida. Inicia sessão de novo.')
+        setAccountDeleting(false)
+        return
+      }
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ password: pwd }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível excluir a conta.')
+        setAccountDeleting(false)
+        return
+      }
+      setAccountDeleteOpen(false)
+      setAccountDeletePassword('')
+      toast.success('Conta eliminada.')
+      await supabase.auth.signOut()
+      router.push('/')
+      router.refresh()
+    } catch {
+      toast.error('Erro de rede ao excluir a conta.')
+    } finally {
+      setAccountDeleting(false)
+    }
+  }
+
   const browserName = typeof navigator !== 'undefined' ? getBrowserName() : 'Navegador'
 
   return (
@@ -89,18 +141,6 @@ export default function SecurityPage() {
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Segurança da Conta</h1>
         <p className="text-slate-500 text-sm mt-2">Gerencie sua senha e proteja sua conta.</p>
       </header>
-
-      {status && (
-        <div
-          className={`rounded-xl border-2 px-4 py-3 text-sm font-semibold ${
-            status.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
-        >
-          {status.text}
-        </div>
-      )}
 
       {/* Card: Alterar senha */}
       <section className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden">
@@ -215,23 +255,76 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      {/* 2FA Em breve */}
-      <section className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-slate-800">Autenticação em dois fatores (2FA)</h2>
-            <p className="text-slate-500 text-sm mt-0.5">Proteção extra com código no celular.</p>
-          </div>
-          <span className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold">
-            Em breve
-          </span>
-        </div>
-        <div className="p-5 sm:p-6">
-          <p className="text-sm text-slate-600">
-            Em breve você poderá ativar a autenticação em dois fatores para aumentar ainda mais a segurança da sua conta.
+      {/* Zona de perigo — excluir conta */}
+      <section className="overflow-hidden rounded-2xl border-2 border-red-200 bg-red-50/50 shadow-sm">
+        <div className="border-b border-red-100 bg-red-50/80 px-5 py-4 sm:px-6">
+          <h2 className="text-base font-bold text-red-900">Zona de perigo</h2>
+          <p className="mt-0.5 text-sm text-red-900/85">
+            Elimina a tua conta de utilizador e o acesso à YOP Devs. O servidor remove o registo de autenticação; dados
+            ligados ao teu utilizador na base (perfil, portfólio, posts, amigos, agenda, etc.) são apagados em cascata
+            conforme as regras da base de dados.
           </p>
         </div>
+        <div className="p-5 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setAccountDeleteOpen(true)}
+            className="rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50"
+          >
+            Excluir conta permanentemente
+          </button>
+        </div>
       </section>
+
+      <Dialog
+        open={accountDeleteOpen}
+        onOpenChange={(open) => {
+          setAccountDeleteOpen(open)
+          if (!open) setAccountDeletePassword('')
+        }}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-xl sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900">Excluir conta para sempre?</DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Esta ação é irreversível. Confirma com a tua senha de acesso (email e senha). Se usas só login social,
+              define uma senha aqui em &quot;Alterar senha&quot; antes de continuar.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => void confirmDeleteAccount(e)} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700" htmlFor="account-delete-password">
+                Senha atual
+              </label>
+              <input
+                id="account-delete-password"
+                type="password"
+                autoComplete="current-password"
+                className="w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                value={accountDeletePassword}
+                onChange={(e) => setAccountDeletePassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setAccountDeleteOpen(false)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={accountDeleting}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {accountDeleting ? 'A eliminar…' : 'Sim, excluir a minha conta'}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

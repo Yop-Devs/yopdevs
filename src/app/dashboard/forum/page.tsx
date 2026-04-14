@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { formatTimeAgo, formatAuthorName } from '@/lib/format'
+import { forumPostHeadlineAndBody } from '@/lib/forum-post-display'
 
 type SortBy = 'recent' | 'comments' | 'likes'
 
@@ -153,7 +154,17 @@ export default function ForumPage() {
       setPublishing(false)
       return
     }
-    const title = content.split('\n')[0]?.slice(0, 120) || 'Publicação'
+    const nl = content.indexOf('\n')
+    let title = ''
+    let body = content
+    if (nl !== -1) {
+      const first = content.slice(0, nl).trim()
+      const rest = content.slice(nl + 1).trim()
+      if (first && rest) {
+        title = first.slice(0, 120)
+        body = rest
+      }
+    }
     let imageUrls: string[] = []
     for (let i = 0; i < newPostImages.length; i++) {
       const file = newPostImages[i]
@@ -165,7 +176,7 @@ export default function ForumPage() {
         imageUrls.push(data.publicUrl)
       }
     }
-    const { error } = await supabase.from('posts').insert([{ author_id: myId, title, content, category: newPostTag, image_urls: imageUrls }])
+    const { error } = await supabase.from('posts').insert([{ author_id: myId, title, content: body, category: newPostTag, image_urls: imageUrls }])
     if (error) {
       setPublishStatus({ type: 'error', text: error.message })
       setPublishing(false)
@@ -278,6 +289,7 @@ export default function ForumPage() {
           <input
             type="text"
             placeholder="Pesquisar..."
+            spellCheck={false}
             className="w-full sm:w-64 px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-[#4c1d95] transition-all min-w-0"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -300,8 +312,9 @@ export default function ForumPage() {
             <textarea
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
-              placeholder="Compartilhe uma dúvida, ideia ou conquista..."
+              placeholder="Compartilhe uma dúvida, ideia ou conquista... (opcional: primeira linha, Enter, depois o texto — vira título + corpo)"
               rows={4}
+              spellCheck={false}
               className="w-full p-4 border-2 border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-[#4c1d95] focus:border-[#4c1d95] outline-none transition-all"
               required
             />
@@ -363,7 +376,10 @@ export default function ForumPage() {
             const views = post.views_count ?? 0
             const isEmAlta = comments >= EM_ALTA_COMENTARIOS || views >= EM_ALTA_VISUALIZACOES
             const iLiked = myLikedIds.has(post.id)
-            const preview = post.content ? String(post.content).replace(/\n/g, ' ').slice(0, 120) + (post.content.length > 120 ? '...' : '') : ''
+            const { showHeadline, headline, body: postBody } = forumPostHeadlineAndBody(post.title, post.content)
+            const preview = postBody
+              ? String(postBody).replace(/\n/g, ' ').slice(0, 120) + (postBody.length > 120 ? '...' : '')
+              : ''
             const commentPreviews = previewComments[post.id] || []
 
             const iUseful = myUsefulIds.has(post.id)
@@ -408,8 +424,16 @@ export default function ForumPage() {
                       )}
                     </div>
                     <p className="text-slate-500 text-sm mt-0.5">{formatTimeAgo(new Date(post.created_at))}.</p>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-violet-700 transition-colors mt-2 leading-snug">{post.title}</h3>
-                    {preview && <p className="text-sm text-slate-600 mt-2 leading-relaxed">{preview}</p>}
+                    {showHeadline ? (
+                      <>
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-violet-800 transition-colors mt-2 leading-snug">{headline}</p>
+                        {preview ? <p className="text-sm text-slate-700 font-normal mt-1.5 leading-relaxed">{preview}</p> : null}
+                      </>
+                    ) : (
+                      preview ? (
+                        <p className="text-sm text-slate-800 font-normal group-hover:text-slate-900 transition-colors mt-2 leading-relaxed">{preview}</p>
+                      ) : null
+                    )}
                     {commentPreviews.length > 0 && (
                       <div className="mt-4 pl-4 border-l-2 border-slate-200 space-y-2">
                         {commentPreviews.map((cmt, i) => (

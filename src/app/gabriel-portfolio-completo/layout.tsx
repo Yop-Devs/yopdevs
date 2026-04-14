@@ -16,11 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Gabriel Costa Carrara — Portfólio completo',
+  title: 'Portfólio Gabriel',
   description:
     'Desenvolvedor full stack, automação e produto. Portfólio pessoal com projetos, experiência e contato — YOP Devs.',
   openGraph: {
-    title: 'Gabriel Costa Carrara — Portfólio completo',
+    title: 'YOP | Portfólio Gabriel',
     description: 'Full stack, automação e sistemas. YOP Devs e projetos em produção.',
     type: 'website',
     url: 'https://yopdevs.com.br/gabriel-portfolio-completo',

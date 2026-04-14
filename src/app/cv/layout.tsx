@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Resume | YOP Devs',
+  title: 'Resume',
   description: 'Professional resume — CEO & builder. Open to opportunities in Ireland, Canada, USA and worldwide. View projects and contact.',
   openGraph: {
-    title: 'Resume — CEO & Builder · Open to Ireland, Canada, USA',
+    title: 'YOP | Resume',
     description: 'Professional resume. Open to full-time, contract and remote roles. View projects and get in touch.',
     type: 'website',
   },

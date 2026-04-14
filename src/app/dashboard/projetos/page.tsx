@@ -42,7 +42,7 @@ export default function OportunidadesPage() {
     if (user) setMyId(user.id)
     const { data } = await supabase
       .from('projects')
-      .select('*, profiles(full_name, avatar_url, role, quick_responder)')
+      .select('*, profiles(full_name, avatar_url, role)')
       .order('created_at', { ascending: false })
     if (data) setProjects(data)
     setLoading(false)
@@ -173,11 +173,6 @@ export default function OportunidadesPage() {
                     {projectCountByOwner[project.owner_id] === 1 && (
                       <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold uppercase">
                         🏆 Primeiro Projeto
-                      </span>
-                    )}
-                    {project.profiles?.quick_responder && (
-                      <span className="px-2.5 py-1 rounded-lg bg-green-100 text-green-800 text-[10px] font-bold uppercase">
-                        ⚡ Responde rápido
                       </span>
                     )}
                   </div>

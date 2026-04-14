@@ -114,11 +114,11 @@ export default function NovoPostPage() {
         )}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase ml-1">Assunto do Tópico</label>
-          <input required className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+          <input required spellCheck={false} className="w-full p-4 border border-slate-200 rounded-xl text-sm font-bold outline-none" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase ml-1">Conteúdo</label>
-          <textarea required rows={8} className="w-full p-4 border border-slate-200 rounded-xl text-sm outline-none resize-none" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} />
+          <textarea required rows={8} spellCheck={false} className="w-full p-4 border border-slate-200 rounded-xl text-sm outline-none resize-none" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-900 uppercase ml-1">Imagens (até 3)</label>

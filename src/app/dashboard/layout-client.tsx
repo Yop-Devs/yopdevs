@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import FriendsOnlineWidget from '@/components/FriendsOnlineWidget'
+import { Toaster } from '@/components/ui/sonner'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
@@ -95,13 +96,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => window.removeEventListener('notifications-updated', handler)
   }, [])
 
+  /* Impede scroll no documento: h-screen vs barra de URL / PWA deixa faixa clara por baixo; o scroll fica só no <main>. */
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      htmlHeight: html.style.height,
+      htmlBg: html.style.backgroundColor,
+      bodyOverflow: body.style.overflow,
+      bodyHeight: body.style.height,
+      bodyOverscroll: body.style.overscrollBehavior,
+    }
+    html.style.overflow = 'hidden'
+    html.style.height = '100%'
+    html.style.backgroundColor = 'rgb(241 245 249)' /* slate-100 */
+    body.style.overflow = 'hidden'
+    body.style.height = '100%'
+    body.style.overscrollBehavior = 'none'
+    return () => {
+      html.style.overflow = prev.htmlOverflow
+      html.style.height = prev.htmlHeight
+      html.style.backgroundColor = prev.htmlBg
+      body.style.overflow = prev.bodyOverflow
+      body.style.height = prev.bodyHeight
+      body.style.overscrollBehavior = prev.bodyOverscroll
+    }
+  }, [])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-slate-100 font-semibold text-sm text-slate-700">
+    <div className="fixed inset-0 z-0 flex items-center justify-center bg-slate-100 font-semibold text-sm text-slate-700">
       Verificando acesso...
     </div>
   )
@@ -113,6 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Meus Projetos', href: '/dashboard/meus-projetos', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { name: 'Conexões', href: '/dashboard/membros', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
     { name: 'Central de Atividades', href: '/dashboard/notificacoes', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+    { name: 'Agenda', href: '/dashboard/agenda', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
     { name: 'Perfil', href: '/dashboard/perfil', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
     { name: 'Portfólio', href: '/dashboard/portfolio', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { name: 'Segurança', href: '/dashboard/seguranca', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
@@ -120,7 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   return (
-    <div className="flex h-screen h-screen-pwa bg-slate-100 text-slate-900 overflow-hidden max-w-full">
+    <div className="fixed inset-0 z-0 flex min-h-0 w-full max-w-full overflow-hidden bg-slate-100 text-slate-900">
       
       {/* OVERLAY MOBILE — backdrop escuro, blur leve, animação suave, não empurra layout */}
       <div
@@ -132,13 +162,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* SIDEBAR — overlay; no PWA pt-safe para logo não ficar sob a barra de status */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-violet-900 flex flex-col border-r border-violet-800
+        fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 flex flex-col border-r border-slate-900
         transition-transform duration-300 ease-out
-        rounded-l-3xl overflow-hidden
+        overflow-hidden
         lg:relative lg:translate-x-0 
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="sidebar-top-safe pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 flex items-center justify-center relative bg-violet-900 border-b border-white/20 shrink-0">
+        <div className="sidebar-top-safe pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 flex items-center justify-center relative bg-slate-950 border-b border-white/10 shrink-0">
           <Link href="/dashboard" className="flex items-center justify-center w-full min-h-[4rem]">
             <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={280} height={88} className="h-12 sm:h-14 w-auto object-contain object-center" priority unoptimized />
           </Link>
@@ -148,50 +178,61 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-          {navItems.filter((item) => {
-            if ('adminOnly' in item && item.adminOnly) return showAdminLink
-            return true
-          }).map((item) => {
-            const isNotifications = item.href === '/dashboard/notificacoes'
-            return (
-              <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between gap-3 px-4 py-3 rounded-none text-[10px] font-bold uppercase tracking-wider transition-all ${pathname === item.href ? 'bg-violet-600 text-white shadow-md' : 'text-white hover:bg-violet-800'}`}>
-                <span className="flex items-center gap-3 min-w-0">
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
-                  <span className="truncate">{item.name}</span>
-                </span>
-                {isNotifications && unreadCount > 0 && (
-                  <span className="shrink-0 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
-                    {unreadCount > 99 ? '99+' : unreadCount}
+          {navItems
+            .filter((item) => {
+              if ('adminOnly' in item && item.adminOnly) return showAdminLink
+              return true
+            })
+            .map((item) => {
+              const isNotifications = item.href === '/dashboard/notificacoes'
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    pathname === item.href ? 'bg-slate-800 text-white border-l-2 border-white' : 'text-white hover:bg-slate-900 border-l-2 border-transparent'
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                    </svg>
+                    <span className="truncate">{item.name}</span>
                   </span>
-                )}
-              </Link>
-            )
-          })}
+                  {isNotifications && unreadCount > 0 ? (
+                    <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center bg-red-500 px-1.5 text-[9px] font-black text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  ) : null}
+                </Link>
+              )
+            })}
         </nav>
 
         {/* Atalho PWA: Salvar na tela inicial (mobile) */}
-        <div className="lg:hidden px-4 py-2 border-t border-violet-800">
+        <div className="lg:hidden px-4 py-2 border-t border-slate-900">
           <button
             type="button"
             onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('yop-show-install-prompt'))}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-white hover:bg-violet-800 transition-all text-[10px] font-bold uppercase tracking-wider"
+            className="flex items-center gap-3 w-full px-4 py-3 text-white hover:bg-slate-900 transition-all text-[10px] font-bold uppercase tracking-wider"
           >
             <span className="text-lg" aria-hidden>📱</span>
             <span>Salvar na tela inicial</span>
           </button>
         </div>
 
-        <div className="p-4 bg-violet-900 border-t border-violet-800 flex items-center gap-3">
+        <div className="p-4 bg-slate-950 border-t border-slate-900 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-white truncate uppercase">{profile?.full_name}</p>
-            <p className="text-[8px] text-violet-200 font-semibold uppercase tracking-wider">
+            <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wider">
               {showAdminLink ? 'Administrador On-line' : 'Usuário On-line'}
             </p>
           </div>
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-violet-700 text-white hover:bg-violet-800 hover:border-violet-600 hover:text-red-200 transition-all text-[10px] font-bold uppercase tracking-wider"
+            className="flex items-center gap-2 px-3 py-2 border border-slate-600 text-white hover:bg-slate-900 hover:border-slate-500 hover:text-red-200 transition-all text-[10px] font-bold uppercase tracking-wider"
             title="Sair da conta"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -204,14 +245,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* HEADER MOBILE — safe-area no PWA (não fica sob notch), hambúrguer sempre clicável (z-10) */}
-        <header className="fixed top-0 left-0 right-0 z-30 w-full safe-top flex flex-col bg-violet-900 border-b border-violet-800 lg:hidden shrink-0 overflow-hidden">
+        <header className="fixed top-0 left-0 right-0 z-30 w-full safe-top flex flex-col bg-slate-950 border-b border-slate-900 lg:hidden shrink-0 overflow-hidden">
           <div className="h-14 flex items-center justify-between px-4 relative">
             {/* Botão hambúrguer — z-10 acima do logo para garantir toque no PWA */}
             <div className="relative z-10 flex items-center shrink-0 min-w-10 min-h-10">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(true)}
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 -ml-1 text-white hover:text-violet-200 rounded-lg active:opacity-80 transition-colors touch-manipulation"
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 -ml-1 text-white hover:text-slate-300 active:opacity-80 transition-colors touch-manipulation"
                 aria-label="Abrir menu"
               >
                 <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -220,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-14 z-0">
               <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={140} height={44} className="h-8 w-auto max-w-[140px] object-contain object-center" unoptimized />
             </Link>
-            <div className="relative z-10 flex items-center justify-center w-10 h-10 shrink-0 bg-violet-800 rounded-full overflow-hidden">
+            <div className="relative z-10 flex items-center justify-center w-10 h-10 shrink-0 bg-slate-900 overflow-hidden border border-slate-700">
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -231,15 +272,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* CONTEÚDO DA PÁGINA — main-below-header = safe-area + 56px no PWA */}
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden main-below-header lg:pt-0 px-4 sm:px-6 md:px-8 bg-slate-100 min-w-0 max-w-full">
-          {/* Wrapper: flex-none + pb no conteúdo (não no main) evita espaço em branco rolável */}
-          <div className="flex-none min-h-0 min-w-0 pb-6 pb-safe-bottom">
+        <main className="main-below-header lg:pt-0 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-100 px-4 min-w-0 max-w-full sm:px-6 md:px-8">
+          <div className="min-h-full min-w-0 flex-1 bg-slate-100 pb-6 pb-safe-bottom">
             {children}
           </div>
         </main>
       </div>
 
       <FriendsOnlineWidget />
+      <Toaster richColors position="bottom-center" closeButton />
     </div>
   )
 }

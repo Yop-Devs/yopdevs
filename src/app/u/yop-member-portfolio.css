@@ -1,0 +1,206 @@
+/* Tema alinhado ao portfólio pessoal (Gabriel) — ciano/teal, escopado a .yop-member-portfolio */
+.yop-member-portfolio {
+  --background: 220 20% 7%;
+  --foreground: 210 20% 92%;
+  --card: 220 18% 10%;
+  --card-foreground: 210 20% 92%;
+  --popover: 220 18% 10%;
+  --popover-foreground: 210 20% 92%;
+  --primary: 200 90% 55%;
+  --primary-foreground: 220 20% 7%;
+  --secondary: 220 15% 16%;
+  --secondary-foreground: 210 20% 85%;
+  --muted: 220 15% 14%;
+  --muted-foreground: 215 15% 55%;
+  --accent: 200 90% 55%;
+  --accent-foreground: 220 20% 7%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 220 15% 18%;
+  --input: 220 15% 18%;
+  --ring: 200 90% 55%;
+  --radius: 0.75rem;
+  --gradient-primary: linear-gradient(135deg, hsl(200, 90%, 55%), hsl(180, 80%, 45%));
+  --gradient-hero: linear-gradient(
+    180deg,
+    hsl(220, 20%, 7%) 0%,
+    hsl(220, 25%, 12%) 50%,
+    hsl(220, 20%, 7%) 100%
+  );
+  --gradient-card: linear-gradient(145deg, hsl(220, 18%, 12%), hsl(220, 18%, 8%));
+  --shadow-glow: 0 0 30px hsl(200, 90%, 55%, 0.15);
+  --shadow-card: 0 4px 24px hsl(0, 0%, 0%, 0.3);
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-yop-portfolio-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+.yop-member-portfolio .font-mono {
+  font-family: var(--font-yop-portfolio-mono), ui-monospace, monospace;
+}
+
+.yop-member-portfolio *,
+.yop-member-portfolio *::before,
+.yop-member-portfolio *::after {
+  border-color: hsl(var(--border) / 0.5);
+}
+
+.yop-member-portfolio .text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: var(--gradient-primary);
+}
+
+.yop-member-portfolio .bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+.yop-member-portfolio .bg-gradient-hero {
+  background-image: var(--gradient-hero);
+}
+
+.yop-member-portfolio .shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.yop-member-portfolio .shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+.yop-member-portfolio .glass {
+  background-color: hsl(var(--card) / 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+@keyframes ymp-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ymp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes ymp-pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px hsl(200, 90%, 55%, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 42px hsl(200, 90%, 55%, 0.28);
+  }
+}
+
+.yop-member-portfolio .animate-fade-in-up {
+  animation: ymp-fade-in-up 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.yop-member-portfolio .animate-float {
+  animation: ymp-float 6s ease-in-out infinite;
+}
+
+.yop-member-portfolio .animate-pulse-glow {
+  animation: ymp-pulse-glow 3s ease-in-out infinite;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: hsl(220, 20%, 7%) !important;
+  }
+
+  .yop-member-portfolio {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: hsl(220, 20%, 7%) !important;
+  }
+
+  .yop-member-portfolio div.min-h-screen {
+    min-height: 0 !important;
+  }
+
+  .yop-member-portfolio nav {
+    display: none !important;
+  }
+
+  .yop-member-portfolio .ymp-content main > section:first-of-type {
+    padding-top: 1rem !important;
+  }
+
+  .yop-member-portfolio .animate-fade-in-up,
+  .yop-member-portfolio .animate-float,
+  .yop-member-portfolio .animate-pulse-glow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .yop-member-portfolio,
+  .yop-member-portfolio * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .yop-member-portfolio .glass {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: hsl(220, 18%, 11%) !important;
+  }
+
+  .yop-member-portfolio #contact .glass {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .yop-member-portfolio .ymp-print-footer-wrap {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .yop-member-portfolio .ymp-print-footer-wrap footer {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  .yop-member-portfolio a[href] {
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+    color: inherit !important;
+  }
+
+  .yop-member-portfolio a[href^='http'],
+  .yop-member-portfolio a[href^='mailto:'] {
+    color: hsl(200, 90%, 58%) !important;
+  }
+}

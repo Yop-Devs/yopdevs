@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ username: string }> }
@@ -38,10 +41,17 @@ export async function GET(
     supabase.from('portfolio_experiences').select('*').eq('user_id', portfolio.user_id).order('start_date', { ascending: false }),
   ])
 
-  return NextResponse.json({
-    portfolio,
-    skills: (skillsRes.data ?? []).map((s) => s.skill_name),
-    projects: projectsRes.data ?? [],
-    experiences: experiencesRes.data ?? [],
-  })
+  return NextResponse.json(
+    {
+      portfolio,
+      skills: (skillsRes.data ?? []).map((s) => s.skill_name),
+      projects: projectsRes.data ?? [],
+      experiences: experiencesRes.data ?? [],
+    },
+    {
+      headers: {
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
+      },
+    }
+  )
 }

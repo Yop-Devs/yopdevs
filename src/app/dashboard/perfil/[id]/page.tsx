@@ -42,7 +42,6 @@ export default function ProfileByIdPage() {
     location: string | null
     specialties: string | null
     looking_for: string | null
-    quick_responder: boolean
   } | null>(null)
   const [stats, setStats] = useState({ posts: 0, projects: 0 })
   const [portfolioUsername, setPortfolioUsername] = useState<string | null>(null)
@@ -82,7 +81,6 @@ export default function ProfileByIdPage() {
         location: data.location || null,
         specialties: data.specialties || null,
         looking_for: data.looking_for || null,
-        quick_responder: !!data.quick_responder,
       })
       const [{ count: postsCount }, { count: projectsCount }, { data: portfolioRow }] = await Promise.all([
         supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', id),
@@ -174,11 +172,6 @@ export default function ProfileByIdPage() {
                 {stats.projects >= 1 && (
                   <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold uppercase">
                     🏆 Primeiro Projeto Publicado
-                  </span>
-                )}
-                {profile.quick_responder && (
-                  <span className="inline-block px-2.5 py-1 rounded-lg bg-green-100 text-green-800 text-[10px] font-bold uppercase">
-                    ⚡ Responde rápido
                   </span>
                 )}
               </div>

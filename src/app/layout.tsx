@@ -5,8 +5,8 @@ import { fredoka } from '@/components/Logo'
 
 export const metadata = {
   title: {
-    default: 'YOP DEVS — Equity & Growth',
-    template: '%s | YOP DEVS',
+    default: 'YOP | Home',
+    template: 'YOP | %s',
   },
   description: 'Rede exclusiva para conexões entre CTOs e empresários. Marketplace de equity, fóruns técnicos e notificações de alto impacto.',
   manifest: '/manifest.json',
@@ -15,7 +15,7 @@ export const metadata = {
     apple: '/favicon.png',
   },
   openGraph: {
-    title: 'YOP DEVS — Equity & Growth',
+    title: 'YOP | Home',
     description: 'Infraestrutura para mentes brilhantes. Conectamos engenharia de software com tese estratégica de negócios.',
     type: 'website',
   },

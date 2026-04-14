@@ -65,7 +65,6 @@ export default function ProfilePage() {
     location: '',
     specialties: '',
     looking_for: '',
-    quick_responder: false,
   })
 
   useEffect(() => {
@@ -87,7 +86,6 @@ export default function ProfilePage() {
             location: data.location || '',
             specialties: data.specialties || '',
             looking_for: data.looking_for || '',
-            quick_responder: !!data.quick_responder,
           })
         }
         const { count } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', user.id)
@@ -139,7 +137,6 @@ export default function ProfilePage() {
         location: formData.location || null,
         specialties: formData.specialties || null,
         looking_for: formData.looking_for || null,
-        quick_responder: formData.quick_responder,
       })
       .eq('id', user.id)
     setSaving(false)
@@ -343,21 +340,6 @@ export default function ProfilePage() {
               </select>
             </div>
 
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div>
-                <p className="text-sm font-medium text-slate-800">Responde rápido</p>
-                <p className="text-xs text-slate-500 mt-0.5">Seu perfil e oportunidades mostrarão que você responde rápido. Gera confiança.</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={formData.quick_responder}
-                onClick={() => setFormData((prev) => ({ ...prev, quick_responder: !prev.quick_responder }))}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 transition-colors ${formData.quick_responder ? 'bg-[#4c1d95] border-[#4c1d95]' : 'bg-slate-200 border-slate-200'}`}
-              >
-                <span className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform ${formData.quick_responder ? 'translate-x-5' : 'translate-x-1'}`} />
-              </button>
-            </div>
           </div>
 
           {/* Links profissionais */}

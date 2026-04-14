@@ -48,6 +48,10 @@
     height: 100%;
     overflow-y: auto; /* scroll só no main do dashboard, body não expande além do viewport */
   }
+  /* Evita “flash” branco por baixo em mobile quando o viewport dinâmico não coincide com 100vh */
+  html {
+    background-color: var(--color-background);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

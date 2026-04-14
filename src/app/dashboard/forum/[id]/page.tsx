@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import ConfirmModal from '@/components/ConfirmModal'
 import { formatTimeAgo, formatAuthorName } from '@/lib/format'
+import { forumPostHeadlineAndBody } from '@/lib/forum-post-display'
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -173,6 +174,8 @@ export default function PostDetailPage() {
 
   if (!post) return <div className="p-10 font-mono text-[10px] text-center uppercase text-slate-400">Acessando_Dados_da_Discussao...</div>
 
+  const { showHeadline, headline, body: postBody } = forumPostHeadlineAndBody(post.title, post.content)
+
   return (
     <div className="max-w-4xl mx-auto w-full min-w-0 py-4 sm:py-8 md:py-12 px-4 sm:px-6 space-y-6 sm:space-y-8 md:space-y-10 pb-24 sm:pb-32">
       {/* Tópico Principal */}
@@ -190,8 +193,10 @@ export default function PostDetailPage() {
           </div>
         </div>
 
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-4 sm:mb-6 leading-tight break-words">{post.title}</h1>
-        <p className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">{post.content}</p>
+        {showHeadline ? (
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 uppercase italic tracking-tight mb-4 sm:mb-6 leading-tight break-words">{headline}</h1>
+        ) : null}
+        <p className={`leading-relaxed font-medium whitespace-pre-wrap text-lg ${showHeadline ? 'text-slate-600' : 'text-slate-800'}`}>{postBody}</p>
         {(post.image_urls?.length ?? 0) > 0 && (
           <div className="mt-6 flex flex-wrap gap-3">
             {(post.image_urls || []).map((url: string, i: number) => (
@@ -294,6 +299,7 @@ export default function PostDetailPage() {
         <form onSubmit={sendComment} className="mt-12 bg-white border border-slate-200 p-6 rounded-3xl shadow-lg">
           <textarea 
             rows={4}
+            spellCheck={false}
             className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium focus:border-[#4c1d95] outline-none resize-none transition-all"
             placeholder="Adicione sua visão técnica ou solução..."
             value={newComment}
