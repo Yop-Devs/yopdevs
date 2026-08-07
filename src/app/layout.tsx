@@ -5,25 +5,26 @@ import { fredoka } from '@/components/Logo'
 
 export const metadata = {
   title: {
-    default: 'YOP | Home',
-    template: 'YOP | %s',
+    default: 'YOP Devs | Empresa de Desenvolvimento',
+    template: 'YOP Devs | %s',
   },
-  description: 'Rede exclusiva para conexões entre CTOs e empresários. Marketplace de equity, fóruns técnicos e notificações de alto impacto.',
+  description:
+    'YOP Devs — empresa de desenvolvimento. Sites, sistemas web, apps e automações. Tecnologia que transforma ideias em sistemas.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.png',
-    apple: '/favicon.png',
+    icon: '/yop-icon-512.png',
+    apple: '/yop-icon-512.png',
   },
   openGraph: {
-    title: 'YOP | Home',
-    description: 'Infraestrutura para mentes brilhantes. Conectamos engenharia de software com tese estratégica de negócios.',
+    title: 'YOP Devs | Empresa de Desenvolvimento',
+    description: 'Tecnologia que transforma ideias em sistemas. Projetos reais em produção.',
     type: 'website',
   },
   robots: 'index, follow',
 }
 
 export const viewport = {
-  themeColor: '#7c3aed',
+  themeColor: '#0a1740',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -36,8 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logoprincipal.png" />
+        <link rel="icon" href="/yop-icon-512.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/yop-icon-512.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script

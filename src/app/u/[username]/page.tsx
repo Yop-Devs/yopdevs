@@ -101,7 +101,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ user
           <MemberLanguageSwitcher />
         </div>
         <Link href="/" className="block">
-          <Image src="/logoprincipal.png?v=4" alt="YOP Devs" width={280} height={88} className="h-14 w-auto object-contain" priority unoptimized />
+          <Image src="/yop-logo.png?v=2" alt="YOP Devs" width={280} height={88} className="h-14 w-auto object-contain" priority unoptimized />
         </Link>
         <p className="max-w-md text-sm text-[hsl(var(--muted-foreground))]">{error || t.errorNotFound}</p>
         <Link

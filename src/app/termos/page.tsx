@@ -7,7 +7,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto w-full min-w-0 space-y-6 sm:space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <Link href="/" className="flex items-center">
-            <Image src="/logoprincipal.png?v=4" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
+            <Image src="/yop-logo.png?v=2" alt="YOP DEVS" width={220} height={70} className="h-12 w-auto object-contain" unoptimized />
           </Link>
           <nav className="flex gap-4 text-sm font-semibold">
             <Link href="/termos" className="text-[#4c1d95]">Termos de Uso</Link>

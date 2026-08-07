@@ -197,3 +197,185 @@
 .animate-caret-blink {
   animation: caret-blink 1s ease-out infinite;
 }
+
+/* Landing YOP Devs */
+@keyframes yop-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes yop-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes yop-pulse-line {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+@keyframes yop-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.yop-float { animation: yop-float 6s ease-in-out infinite; }
+.yop-float-delay { animation: yop-float 7.5s ease-in-out infinite; animation-delay: -2s; }
+.yop-marquee { animation: yop-marquee 32s linear infinite; }
+.yop-rise { animation: yop-rise 0.8s ease-out both; }
+.yop-pulse-line { animation: yop-pulse-line 3s ease-in-out infinite; }
+
+@keyframes yop-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes yop-orbit-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes yop-glow-soft {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.04); }
+}
+.yop-orbit {
+  animation: yop-orbit 28s linear infinite;
+}
+.yop-orbit-reverse {
+  animation: yop-orbit-reverse 36s linear infinite;
+}
+.yop-glow-soft {
+  animation: yop-glow-soft 7s ease-in-out infinite;
+}
+
+@keyframes yop-brand-pass {
+  0% {
+    background-position: 120% center;
+  }
+  100% {
+    background-position: -120% center;
+  }
+}
+.yop-brand {
+  display: inline-flex;
+  align-items: baseline;
+  position: relative;
+}
+.yop-brand-text {
+  display: inline-block;
+  background-image: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0.72) 38%,
+    rgba(255, 255, 255, 1) 46%,
+    rgba(196, 181, 253, 1) 50%,
+    rgba(255, 255, 255, 1) 54%,
+    rgba(255, 255, 255, 0.72) 62%,
+    rgba(255, 255, 255, 0.72) 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.35));
+  animation: yop-brand-pass 2.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yop-brand-text {
+    animation: none;
+    background-image: none;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    filter: none;
+  }
+}
+
+@keyframes yop-logo-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+.yop-logo-slide {
+  animation: yop-logo-slide 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yop-logo-slide {
+    animation: none;
+  }
+}
+
+.yop-services-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+}
+
+@keyframes yop-service-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes yop-service-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(167, 139, 250, 0);
+  }
+}
+@keyframes yop-service-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.yop-service-spotlight {
+  animation: yop-service-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.yop-service-icon-ring {
+  animation: yop-service-ring 2.4s ease-out infinite;
+}
+.yop-service-progress {
+  animation: yop-service-progress 4.2s linear both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yop-service-spotlight,
+  .yop-service-icon-ring,
+  .yop-service-progress {
+    animation: none;
+  }
+}
+
+/* Scroll reveal */
+.yop-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.yop-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.yop-reveal-delay-1 { transition-delay: 0.08s; }
+.yop-reveal-delay-2 { transition-delay: 0.16s; }
+.yop-reveal-delay-3 { transition-delay: 0.24s; }
+.yop-reveal-delay-4 { transition-delay: 0.32s; }
+.yop-reveal-delay-5 { transition-delay: 0.4s; }
+.yop-reveal-delay-6 { transition-delay: 0.48s; }
+@media (prefers-reduced-motion: reduce) {
+  .yop-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+

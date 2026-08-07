@@ -1,10 +1,5 @@
-import type { Metadata } from 'next'
-import DashboardHomeClient from './DashboardHomeClient'
-
-export const metadata: Metadata = {
-  title: 'Home',
-}
+import { redirect } from 'next/navigation'
 
 export default function DashboardPage() {
-  return <DashboardHomeClient />
+  redirect('/dashboard/portfolio')
 }

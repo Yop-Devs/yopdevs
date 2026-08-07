@@ -1,502 +1,915 @@
-"use client"
+'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
+import { Space_Grotesk, JetBrains_Mono, Wallpoet } from 'next/font/google'
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
+import { isEmailAllowed } from '@/lib/allowed-emails'
+import {
+  FEATURED_PROJECTS,
+  SERVICES,
+  TECH_STACK,
+  type FeaturedProject,
+} from '@/lib/featured-projects'
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-yop-display',
+})
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-yop-mono',
+})
+
+const wallpoet = Wallpoet({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-yop-brand',
+})
+
+type AuthMode = 'login' | 'reset'
+
+function BrandMark({ className = '' }: { className?: string }) {
+  return (
+    <span className={`yop-brand ${wallpoet.className} ${className}`} aria-label="YOP Devs">
+      <span className="yop-brand-text" aria-hidden>
+        YOP Devs
+      </span>
+    </span>
+  )
+}
+
+function ServiceIcon({ name, className = 'h-5 w-5 shrink-0 text-violet-200' }: { name: string; className?: string }) {
+  const cls = className
+  switch (name) {
+    case 'globe':
+      return (
+        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5-2.5 4-5.5 4-9s-1.5-6.5-4-9m0 18c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9m-7.5 9h15" />
+        </svg>
+      )
+    case 'code':
+      return (
+        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M8 9l-3 3 3 3m8-6l3 3-3 3M13 5l-2 14" />
+        </svg>
+      )
+    case 'mobile':
+      return (
+        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M12 18h.01M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2z" />
+        </svg>
+      )
+    default:
+      return (
+        <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )
+  }
+}
+
+function CircuitDecor() {
+  return (
+    <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-40" aria-hidden>
+      <defs>
+        <linearGradient id="yop-line" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="40%" stopColor="#fff" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M40 720 H280 L340 660 H520" stroke="url(#yop-line)" strokeWidth="1.5" fill="none" />
+      <circle cx="280" cy="720" r="4" fill="#fff" fillOpacity="0.7" />
+      <circle cx="340" cy="660" r="4" fill="#fff" fillOpacity="0.7" />
+      <path d="M1480 180 H1680 L1740 240 H1880" stroke="url(#yop-line)" strokeWidth="1.5" fill="none" />
+      <circle cx="1680" cy="180" r="4" fill="#fff" fillOpacity="0.7" />
+      <circle cx="1740" cy="240" r="4" fill="#fff" fillOpacity="0.7" />
+      <path d="M80 120 H180 L220 160" stroke="url(#yop-line)" strokeWidth="1.2" fill="none" />
+      <circle cx="180" cy="120" r="3.5" fill="#fff" fillOpacity="0.55" />
+    </svg>
+  )
+}
+
+const PROCESS_STEPS = [
+  {
+    n: '01',
+    title: 'Descoberta',
+    text: 'Mapeamos processos, regras de negócio e o resultado que precisa existir em produção.',
+  },
+  {
+    n: '02',
+    title: 'Construção',
+    text: 'Desenvolvemos com arquitetura limpa, segurança, performance e UX orientada a operação.',
+  },
+  {
+    n: '03',
+    title: 'Entrega e evolução',
+    text: 'Publicamos, treinamos o time e evoluímos com métricas reais de uso.',
+  },
+] as const
 
 function LandingPageContent() {
   const searchParams = useSearchParams()
-  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
+  const [mode, setMode] = useState<AuthMode>('login')
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [birthDate, setBirthDate] = useState('')
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [infoCard, setInfoCard] = useState<'termos' | 'privacidade' | 'suporte' | null>(null)
-  const [suporteForm, setSuporteForm] = useState({ name: '', email: '', message: '' })
-  const [suporteStatus, setSuporteStatus] = useState<'idle' | 'sending' | 'success'>('idle')
-  const [suporteError, setSuporteError] = useState<string | null>(null)
+  const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({})
+  const [heroReady, setHeroReady] = useState(false)
+  const [logoIndex, setLogoIndex] = useState(0)
+  const [serviceIndex, setServiceIndex] = useState(0)
+  const [servicePaused, setServicePaused] = useState(false)
+  const [lightbox, setLightbox] = useState<FeaturedProject | null>(null)
+  const [galleryIndex, setGalleryIndex] = useState(0)
 
   const closeModal = useCallback(() => {
     setShowModal(false)
     setMessage(null)
   }, [])
 
-  const closeInfoCard = useCallback(() => {
-    setInfoCard(null)
-  }, [])
-
-  const handleSuporteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSuporteStatus('sending')
-    setSuporteError(null)
-    try {
-      const res = await fetch('/api/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(suporteForm),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setSuporteError(data?.error?.message ?? 'Falha ao enviar. Tente novamente.')
-        setSuporteStatus('idle')
-        return
-      }
-      setSuporteStatus('success')
-      setSuporteForm({ name: '', email: '', message: '' })
-      setTimeout(() => setSuporteStatus('idle'), 5000)
-    } catch {
-      setSuporteError('Erro de conexão. Tente novamente.')
-      setSuporteStatus('idle')
-    }
-  }
-
   function getAuthErrorMessage(err: unknown): string {
     const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
-    if (msg.includes('already registered') || msg.includes('user already registered') || msg.includes('already been registered'))
-      return 'Já existe uma conta com este e-mail. Faça login ou use "Esqueci minha senha".'
-    if (msg.includes('password') && (msg.includes('6') || msg.includes('least')))
-      return 'A senha deve ter no mínimo 6 caracteres.'
     if (msg.includes('invalid login') || msg.includes('invalid credentials'))
       return 'E-mail ou senha incorretos. Tente novamente.'
     if (msg.includes('email not confirmed') || msg.includes('confirm your email'))
-      return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada ou use "Esqueci minha senha".'
+      return 'Confirme seu e-mail antes de entrar.'
     if (msg.includes('invalid email') || msg.includes('valid email'))
       return 'Informe um e-mail válido.'
-    if (msg.includes('signup') && msg.includes('disabled'))
-      return 'Cadastros estão temporariamente desativados. Entre em contato com o suporte.'
+    if (msg.includes('password') && (msg.includes('6') || msg.includes('least')))
+      return 'A senha deve ter no mínimo 6 caracteres.'
     return err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
   }
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setHeroReady(true))
+    return () => cancelAnimationFrame(t)
+  }, [])
+
+  useEffect(() => {
+    if (FEATURED_PROJECTS.length <= 1) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const id = window.setInterval(() => {
+      setLogoIndex((i) => (i + 1) % FEATURED_PROJECTS.length)
+    }, 2800)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (servicePaused || SERVICES.length <= 1) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const id = window.setInterval(() => {
+      setServiceIndex((i) => (i + 1) % SERVICES.length)
+    }, 4200)
+    return () => window.clearInterval(id)
+  }, [servicePaused])
 
   useEffect(() => {
     const err = searchParams.get('error')
     if (err === 'auth-code-error') {
       setShowModal(true)
       setMode('login')
-      setMessage({ type: 'error', text: 'Falha ao confirmar login. Tente novamente.' })
-      window.history.replaceState({}, '', '/')
+      setMessage({ type: 'error', text: 'Falha na autenticação. Tente novamente.' })
+    } else if (err === 'unauthorized') {
+      setShowModal(true)
+      setMode('login')
+      setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
     }
   }, [searchParams])
 
   useEffect(() => {
-    if (!showModal) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeModal()
+    async function redirectIfLoggedIn() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email && isEmailAllowed(session.user.email)) {
+        window.location.href = '/dashboard/portfolio'
+      }
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [showModal, closeModal])
+    redirectIfLoggedIn()
+  }, [])
 
   useEffect(() => {
-    if (!infoCard) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeInfoCard()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [infoCard, closeInfoCard])
+    const nodes = document.querySelectorAll('.yop-reveal')
+    if (!nodes.length) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.14, rootMargin: '0px 0px -8% 0px' }
+    )
+    nodes.forEach((node) => observer.observe(node))
+    return () => observer.disconnect()
+  }, [])
 
-  const handleGoogleAuth = async () => {
-    setGoogleLoading(true)
-    setMessage(null)
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      })
-      if (error) {
-        setMessage({ type: 'error', text: getAuthErrorMessage(error) })
-        setGoogleLoading(false)
-        return
-      }
-      // Redirecionamento é feito pelo Supabase
-    } catch (err) {
-      setMessage({ type: 'error', text: getAuthErrorMessage(err) })
-    } finally {
-      setGoogleLoading(false)
-    }
+  const openLightbox = (project: FeaturedProject) => {
+    setLightbox(project)
+    setGalleryIndex(0)
   }
 
-  const handleAuth = async (e: React.FormEvent, forceMode?: 'login' | 'signup' | 'reset') => {
+  const galleryImages = lightbox
+    ? (('gallery' in lightbox && lightbox.gallery?.length)
+        ? [...lightbox.gallery]
+        : [lightbox.print])
+    : []
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    const currentMode = forceMode ?? mode
-    setMessage(null)
-    if (currentMode === 'signup') {
-      if (password.length < 6) {
-        setMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres.' })
-        return
-      }
-      if (password !== confirmPassword) {
-        setMessage({ type: 'error', text: 'As senhas não coincidem. Digite a mesma senha nos dois campos.' })
-        return
-      }
-      if (!email.trim()) {
-        setMessage({ type: 'error', text: 'Informe seu e-mail.' })
-        return
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email.trim())) {
-        setMessage({ type: 'error', text: 'Informe um e-mail válido.' })
-        return
-      }
-    }
     setLoading(true)
+    setMessage(null)
+
     try {
-      if (currentMode === 'signup') {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName, birth_date: birthDate } },
+      if (mode === 'reset') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
         })
-        if (!signUpError) {
-          if (signUpData.session) {
-            await supabase.auth.setSession({
-              access_token: signUpData.session.access_token,
-              refresh_token: signUpData.session.refresh_token,
-            })
-            window.location.href = '/dashboard'
-          } else {
-            setMessage({ type: 'success', text: 'Cadastro realizado! Verifique seu e-mail para confirmar.' })
-          }
-          return
+        if (error) {
+          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+        } else {
+          setMessage({ type: 'success', text: 'Se o e-mail existir, enviamos um link de redefinição.' })
         }
-        const msg = (signUpError.message ?? '').toLowerCase()
-        const isEmailSendError =
-          msg.includes('confirm') || msg.includes('sending') || msg.includes('email') ||
-          (signUpError as { status?: number }).status === 500
-        if (isEmailSendError) {
-          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-          if (!loginError && loginData.session) {
-            await supabase.auth.setSession({
-              access_token: loginData.session.access_token,
-              refresh_token: loginData.session.refresh_token,
-            })
-            window.location.href = '/dashboard'
-            return
-          }
-          setMessage({
-            type: 'success',
-            text: 'Conta criada. Use "Esqueci minha chave de segurança" com este e-mail para acessar.',
-          })
-          return
-        }
-        setMessage({ type: 'error', text: getAuthErrorMessage(signUpError) })
+        setLoading(false)
         return
-      } else if (currentMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) {
-          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
-          setLoading(false)
-          return
-        }
-        if (data.session) {
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          })
-          window.location.href = '/dashboard'
-        }
-      } else {
-        if (!email.trim()) {
-          setMessage({ type: 'error', text: 'Informe seu e-mail para receber o link de redefinição.' })
-          setLoading(false)
-          return
-        }
-        const { error } = await supabase.auth.resetPasswordForEmail(email)
-        if (error) {
-          setMessage({ type: 'error', text: getAuthErrorMessage(error) })
-          setLoading(false)
-          return
-        }
-        setMessage({ type: 'success', text: 'Link enviado para o e-mail informado. Verifique sua caixa de entrada.' })
       }
-    } catch (err: unknown) {
+
+      if (!isEmailAllowed(email)) {
+        setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+        setLoading(false)
+        return
+      }
+
+      if (!isEmailAllowed(data.session?.user?.email)) {
+        await supabase.auth.signOut()
+        setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+        setLoading(false)
+        return
+      }
+
+      window.location.href = '/dashboard/portfolio'
+    } catch (err) {
       setMessage({ type: 'error', text: getAuthErrorMessage(err) })
-    } finally {
       setLoading(false)
     }
   }
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    handleAuth(e, 'login')
+  const openLogin = () => {
+    setMode('login')
+    setMessage(null)
+    setShowModal(true)
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] max-w-full bg-white text-slate-900 flex flex-col overflow-y-auto overflow-x-hidden">
-      <main className="landing-pwa-wrap flex-1 flex flex-col lg:flex-row min-h-0 min-w-0 overflow-y-auto lg:overflow-hidden justify-start lg:justify-stretch pb-8 sm:pb-10 pt-4 sm:pt-6 lg:pt-0 lg:pb-0">
-        {/* Coluna esquerda: logo + texto ao lado, imagens embaixo — metade da tela */}
-        <section className="w-full lg:w-1/2 lg:flex-shrink-0 bg-[#f0f2f5] flex flex-col min-h-0 overflow-hidden px-4 sm:px-6 pt-4 sm:pt-6 lg:pt-6 pb-4 sm:pb-4 lg:pb-4 lg:pl-[5%] lg:pr-6 lg:flex-initial flex-shrink-0">
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 mb-5 sm:mb-6 lg:mb-6 shrink-0">
-            <Link href="/" className="shrink-0">
-              <Image
-                src="/logoprincipal.png?v=4"
-                alt="YOP DEVS"
-                width={420}
-                height={132}
-                className="h-16 sm:h-20 lg:h-28 w-auto object-contain"
-                priority
-                unoptimized
-              />
-            </Link>
-            <p className="text-sm sm:text-base lg:text-2xl font-bold text-slate-900 leading-snug max-w-lg text-center">
-              <span className="text-[#4c1d95]">Ideias. Código. Negócios.</span> Tudo no mesmo lugar.
+    <div
+      className={`${spaceGrotesk.variable} ${jetbrains.variable} ${wallpoet.variable} ${spaceGrotesk.className} relative min-h-screen text-white selection:bg-violet-400/30`}
+      style={{
+        background: 'linear-gradient(165deg, #071338 0%, #1b0f4d 38%, #0a1845 72%, #071338 100%)',
+      }}
+    >
+      {/* Fundo contínuo da página — mesma atmosfera em todas as secções */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 70% 45% at 30% 12%, rgba(124,58,237,0.38), transparent 58%),
+              radial-gradient(ellipse 50% 40% at 88% 8%, rgba(59,130,246,0.22), transparent 52%),
+              radial-gradient(ellipse 55% 35% at 70% 48%, rgba(99,102,241,0.18), transparent 55%),
+              radial-gradient(ellipse 50% 40% at 20% 78%, rgba(124,58,237,0.16), transparent 55%),
+              radial-gradient(ellipse 45% 30% at 85% 88%, rgba(59,130,246,0.14), transparent 50%)
+            `,
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.28]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1.2px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+      </div>
+
+      {/* HERO */}
+      <section className="relative isolate min-h-[100svh] overflow-hidden">
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-violet-500/20 blur-[120px] yop-glow-soft" aria-hidden />
+        <div className="pointer-events-none absolute -right-10 top-10 h-80 w-80 rounded-full border border-white/10" aria-hidden />
+        <div className="pointer-events-none absolute -right-24 top-24 h-[28rem] w-[28rem] rounded-full border border-white/5" aria-hidden />
+        <CircuitDecor />
+
+        <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
+          <Link href="/" className="group relative inline-flex items-center">
+            <BrandMark className="text-[1.7rem] leading-none tracking-[0.08em] text-white sm:text-[2rem]" />
+            <span className="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-lg bg-violet-400/0 blur-md transition group-hover:bg-violet-400/15" aria-hidden />
+          </Link>
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <a href="#servicos" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white md:inline">Serviços</a>
+            <a href="#projetos" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white sm:inline">Projetos</a>
+            <a href="#tecnologias" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white lg:inline">Tecnologias</a>
+            <Link href="/gabriel-portfolio-completo" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white sm:inline">CEO</Link>
+            <button
+              type="button"
+              onClick={openLogin}
+              className="ml-1 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20"
+            >
+              Login
+            </button>
+          </nav>
+        </header>
+
+        <div
+          className={`relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-8 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-8 lg:pb-20 lg:pt-14 ${
+            heroReady ? 'yop-rise opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div>
+            <p className={`${jetbrains.className} mb-4 text-[11px] uppercase tracking-[0.32em] text-violet-200/80`}>
+              Empresa de desenvolvimento
+            </p>
+
+            <h1 className="max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.35rem]">
+              Tecnologia que transforma ideias em sistemas
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-white/70 sm:text-lg">
+              SaaS, painéis, apps e automações em produção — com padrão corporativo de TI.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <a
+                href="#projetos"
+                className="group inline-flex items-center gap-3 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-[#1a0f4a] shadow-[0_10px_40px_rgba(255,255,255,0.18)] transition hover:scale-[1.02]"
+              >
+                Ver projetos
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a0f4a] text-white transition group-hover:translate-x-0.5">→</span>
+              </a>
+              <a
+                href="#contato"
+                className="inline-flex items-center rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Falar conosco
+              </a>
+            </div>
+
+            <div className={`${jetbrains.className} mt-10 flex flex-wrap gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.22em] text-white/45`}>
+              <span>Mais de 25 projetos entregues</span>
+              <span>Full stack</span>
+              <span>Entrega ponta a ponta</span>
+            </div>
+          </div>
+
+          {/* Circular logos showcase — one at a time */}
+          <div className="relative mx-auto flex h-[20rem] w-full max-w-md items-center justify-center sm:h-[22rem] lg:h-[24rem] lg:max-w-lg">
+            <div className="yop-orbit absolute h-[92%] w-[92%] rounded-full border border-white/15" />
+            <div className="yop-orbit-reverse absolute h-[74%] w-[74%] rounded-full border border-white/10" />
+            <div className="absolute inset-[14%] overflow-hidden rounded-full border border-white/25 bg-[#070d24]/90 shadow-[0_0_70px_rgba(124,58,237,0.32)] backdrop-blur-sm transition hover:shadow-[0_0_90px_rgba(167,139,250,0.42)]">
+              {(() => {
+                const project = FEATURED_PROJECTS[logoIndex] ?? FEATURED_PROJECTS[0]
+                return (
+                  <a
+                    key={project.key}
+                    href={project.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={project.name}
+                    className="yop-logo-slide absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 sm:px-10"
+                  >
+                    {!imgFailed[`logo-${project.key}`] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={project.logo}
+                        alt={project.name}
+                        className="max-h-16 w-auto max-w-[80%] object-contain sm:max-h-20"
+                        onError={() => setImgFailed((prev) => ({ ...prev, [`logo-${project.key}`]: true }))}
+                      />
+                    ) : (
+                      <span className={`${jetbrains.className} text-center text-base font-medium uppercase tracking-[0.16em] text-white/85`}>
+                        {project.short}
+                      </span>
+                    )}
+                    <span className={`${jetbrains.className} text-[10px] uppercase tracking-[0.18em] text-white/40`}>
+                      {project.tag}
+                    </span>
+                  </a>
+                )
+              })()}
+              <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-1.5">
+                {FEATURED_PROJECTS.map((p, i) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    aria-label={`Ver logo ${p.name}`}
+                    aria-current={i === logoIndex ? 'true' : undefined}
+                    onClick={() => setLogoIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === logoIndex ? 'w-4 bg-violet-300' : 'w-1.5 bg-white/30 hover:bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className={`${jetbrains.className} absolute -bottom-1 rounded-full border border-white/20 bg-[#120a38]/80 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em] text-white/80 backdrop-blur`}>
+              Alguns projetos já desenvolvidos
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SERVICES */}
+      <section id="servicos" className="relative overflow-hidden py-20 lg:py-28">
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
+          <div className="absolute -left-24 top-16 h-64 w-64 rounded-full bg-violet-500/15 blur-3xl" />
+          <div className="absolute -right-16 bottom-8 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+        </div>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="yop-reveal max-w-2xl">
+            <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Serviços</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Soluções de TI para o seu negócio</h2>
+            <p className="mt-3 text-sm text-white/65 sm:text-base">
+              Do site institucional ao sistema empresarial completo — com entrega ponta a ponta.
             </p>
           </div>
-          {/* Imagem hero: só em desktop (lg+). No celular não aparece — só logo e conteúdo. */}
-          <div className="hidden lg:flex flex-1 justify-center items-center min-h-0 w-full min-w-0 overflow-hidden px-4 lg:px-8">
-            <div className="relative w-full max-w-xl aspect-[4/3] rounded-lg overflow-hidden bg-slate-200/50">
-              <Image
-                src="/imagem01.png"
-                alt=""
-                fill
-                className="object-cover object-center rounded-lg shadow-md border border-slate-200/80"
-                sizes="(max-width: 1024px) 90vw, 50vw"
-              />
-            </div>
-          </div>
-        </section>
 
-        {/* Linha divisória vertical no meio da tela */}
-        <div className="hidden lg:block w-[2px] flex-shrink-0 bg-slate-400 self-stretch" aria-hidden />
-
-        {/* Coluna direita: formulário de login — metade da tela */}
-        <section className="w-full lg:w-1/2 lg:flex-shrink-0 flex flex-col justify-center lg:justify-center items-center px-4 sm:px-6 py-5 sm:py-6 lg:py-10 bg-white min-w-0 flex-shrink-0 lg:flex-1 lg:flex-initial">
-          <div className="max-w-[420px] w-full min-w-0 rounded-2xl lg:rounded-none bg-white lg:bg-transparent p-5 sm:p-6 lg:p-0 shadow-[0_4px_24px_rgba(76,29,149,0.08)] lg:shadow-none border border-slate-100 lg:border-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-4 sm:mb-6">
-              Entrar no YOP Devs
-            </h1>
-
-            {message && (
-              <div role="alert" aria-live="polite" className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                {message.text}
-              </div>
-            )}
-
-            {/* Criar conta: CTA principal (foco em aquisição) */}
-            <button
-              type="button"
-              onClick={() => { setMode('signup'); setMessage(null); setShowModal(true); }}
-              className="w-full py-4 bg-[#4c1d95] text-white rounded-lg font-bold text-base hover:bg-violet-800 transition-colors shadow-lg mb-4"
-            >
-              Criar nova conta
-            </button>
-
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-white border-2 border-[#4c1d95] text-[#4c1d95] rounded-lg font-semibold text-base hover:bg-violet-50 transition-colors disabled:opacity-60"
-            >
-              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              {googleLoading ? 'Entrando...' : 'Login com Google'}
-            </button>
-
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <p className="text-xs text-slate-400 mb-3 text-center">Já tem conta?</p>
-              <form onSubmit={handleLoginSubmit} className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="E-mail"
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg outline-none focus:border-[#4c1d95] focus:ring-1 focus:ring-[#4c1d95] text-slate-900 text-sm"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <input
-                  type="password"
-                  placeholder="Senha"
-                  minLength={6}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg outline-none focus:border-[#4c1d95] focus:ring-1 focus:ring-[#4c1d95] text-slate-900 text-sm"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-white border-2 border-[#4c1d95] text-[#4c1d95] rounded-lg font-medium text-sm hover:bg-violet-50 transition-colors disabled:opacity-60"
+          <div
+            className="yop-reveal yop-reveal-delay-1 mt-12 grid items-stretch gap-5 lg:grid-cols-2"
+            onMouseEnter={() => setServicePaused(true)}
+            onMouseLeave={() => setServicePaused(false)}
+          >
+            {(() => {
+              const active = SERVICES[serviceIndex] ?? SERVICES[0]
+              const accentRing =
+                active.accent === 'cyan'
+                  ? 'from-cyan-300/40 via-blue-400/20 to-transparent'
+                  : active.accent === 'fuchsia'
+                    ? 'from-fuchsia-300/40 via-violet-400/20 to-transparent'
+                    : active.accent === 'amber'
+                      ? 'from-amber-300/40 via-orange-400/20 to-transparent'
+                      : 'from-violet-300/40 via-indigo-400/20 to-transparent'
+              const accentGlow =
+                active.accent === 'cyan'
+                  ? 'shadow-[0_0_80px_rgba(34,211,238,0.22)]'
+                  : active.accent === 'fuchsia'
+                    ? 'shadow-[0_0_80px_rgba(232,121,249,0.22)]'
+                    : active.accent === 'amber'
+                      ? 'shadow-[0_0_80px_rgba(251,191,36,0.2)]'
+                      : 'shadow-[0_0_80px_rgba(167,139,250,0.25)]'
+              return (
+                <div
+                  key={active.label}
+                  className={`yop-service-spotlight relative h-full overflow-hidden rounded-[2rem] border border-white/20 bg-[#0b1538]/80 p-7 backdrop-blur-md sm:p-9 ${accentGlow}`}
                 >
-                  {loading ? 'Entrando...' : 'Entrar na sua conta'}
-                </button>
-              </form>
-              <div className="mt-3 text-center">
-                <Link href="/forgot-password" className="text-sm text-[#4c1d95] hover:underline">
-                  Esqueceu a senha?
-                </Link>
-              </div>
+                  <div className={`pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-gradient-to-br ${accentRing} blur-2xl`} aria-hidden />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" aria-hidden />
+                  <div className="relative flex flex-wrap items-start justify-between gap-4">
+                    <div className="yop-service-icon-wrap relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white">
+                      <span className="yop-service-icon-ring absolute inset-0 rounded-2xl" aria-hidden />
+                      <ServiceIcon name={active.icon} className="h-7 w-7 shrink-0 text-white" />
+                    </div>
+                    <span className={`${jetbrains.className} rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-violet-100/80`}>
+                      0{serviceIndex + 1} / 0{SERVICES.length}
+                    </span>
+                  </div>
+                  <h3 className="relative mt-6 text-2xl font-bold tracking-tight text-white sm:text-3xl">{active.label}</h3>
+                  <p className="relative mt-3 max-w-xl text-sm leading-relaxed text-white/70 sm:text-[0.95rem]">
+                    {active.detail}
+                  </p>
+                  <ul className="relative mt-6 space-y-2.5">
+                    {active.points.map((point) => (
+                      <li key={point} className="flex items-start gap-2.5 text-sm text-white/75">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-300" aria-hidden />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href="#contato"
+                    className="relative mt-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:scale-[1.02] hover:bg-violet-100"
+                  >
+                    Quero este serviço
+                    <span aria-hidden>→</span>
+                  </a>
+                </div>
+              )
+            })()}
+
+            <div className="flex h-full flex-col justify-between gap-3">
+              {SERVICES.map((s, i) => {
+                const isActive = i === serviceIndex
+                return (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onMouseEnter={() => setServiceIndex(i)}
+                    onFocus={() => setServiceIndex(i)}
+                    onClick={() => {
+                      setServiceIndex(i)
+                      setServicePaused(true)
+                    }}
+                    className={`group flex w-full flex-1 items-start gap-4 rounded-2xl border p-4 text-left transition duration-300 sm:p-5 ${
+                      isActive
+                        ? 'border-violet-300/50 bg-white/12 shadow-[0_12px_40px_rgba(124,58,237,0.2)]'
+                        : 'border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.07]'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition ${
+                        isActive
+                          ? 'border-violet-300/40 bg-violet-400/20 text-white'
+                          : 'border-white/10 bg-white/5 text-white/70 group-hover:text-white'
+                      }`}
+                    >
+                      <ServiceIcon name={s.icon} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-white">{s.label}</span>
+                        <span className={`${jetbrains.className} text-[10px] text-white/35`}>0{i + 1}</span>
+                      </span>
+                      <span className={`mt-1 block text-sm leading-snug transition ${isActive ? 'text-white/65' : 'text-white/45'}`}>
+                        {s.description}
+                      </span>
+                      {isActive && (
+                        <span className="mt-3 block h-0.5 overflow-hidden rounded-full bg-white/10">
+                          <span className={`yop-service-progress block h-full origin-left rounded-full bg-gradient-to-r from-violet-300 to-cyan-300 ${servicePaused ? 'scale-x-100' : ''}`} />
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
-      {/* Rodapé */}
-      <footer className="flex-shrink-0 border-t border-slate-200 bg-white py-3 px-6">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 text-sm text-slate-600">
-          <nav className="flex flex-wrap justify-center gap-4">
-            <button type="button" onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('yop-show-install-prompt'))} className="hover:text-[#4c1d95] transition-colors sm:hidden">📱 Salvar na tela inicial</button>
-            <button type="button" onClick={() => setInfoCard('termos')} className="hover:text-[#4c1d95] transition-colors">Termos de Uso</button>
-            <button type="button" onClick={() => setInfoCard('privacidade')} className="hover:text-[#4c1d95] transition-colors">Privacidade</button>
-            <button type="button" onClick={() => setInfoCard('suporte')} className="hover:text-[#4c1d95] transition-colors">Suporte</button>
-          </nav>
-          <span className="text-slate-500">© 2026 YOP Devs. Todos os direitos reservados.</span>
+      {/* PROJECTS */}
+      <section id="projetos" className="relative py-20 lg:py-28">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.14),transparent_60%)]" aria-hidden />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-14 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="yop-reveal">
+              <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Portfólio</p>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Projetos em produção</h2>
+              <p className="mt-3 max-w-lg text-sm text-white/65 sm:text-base">
+                Cases reais entregues para empresas e organizações — clique para ampliar os prints.
+              </p>
+            </div>
+            <a href="#contato" className="yop-reveal yop-reveal-delay-2 text-sm font-medium text-violet-200 hover:underline">
+              Quero um projeto assim →
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {FEATURED_PROJECTS.map((project, i) => (
+              <article
+                key={project.key}
+                className={`yop-reveal yop-reveal-delay-${(i % 4) + 1} group overflow-hidden rounded-3xl border border-white/15 bg-white/5 backdrop-blur-md transition duration-500 hover:-translate-y-1 hover:border-violet-300/40 hover:shadow-[0_0_50px_rgba(124,58,237,0.2)]`}
+              >
+                <button type="button" onClick={() => openLightbox(project)} className="relative block w-full text-left">
+                  <div className="relative aspect-[16/10] overflow-hidden bg-[#0a1740]">
+                    {!imgFailed[project.key] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={project.print}
+                        alt={`Print de ${project.name}`}
+                        className="h-full w-full object-cover object-top transition duration-700 group-hover:scale-[1.03]"
+                        loading="lazy"
+                        onError={() => setImgFailed((prev) => ({ ...prev, [project.key]: true }))}
+                      />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                        <span className="text-sm font-semibold text-white/50">{project.name}</span>
+                        <span className={`${jetbrains.className} text-[10px] uppercase tracking-wider text-white/30`}>
+                          Aguardando print
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#120a38]/90 via-transparent to-transparent" />
+                    <span className={`${jetbrains.className} absolute bottom-3 left-3 rounded-full border border-white/20 bg-[#120a38]/70 px-3 py-1.5 text-[10px] uppercase tracking-wider text-violet-100 backdrop-blur`}>
+                      Ampliar
+                    </span>
+                  </div>
+                  <div className="p-6 sm:p-7">
+                    <span className={`${jetbrains.className} text-[10px] uppercase tracking-[0.22em] text-violet-200/80`}>
+                      {project.tag}
+                    </span>
+                    <h3 className="mt-2 text-2xl font-semibold text-white">{project.name}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-white/60">{project.description}</p>
+                  </div>
+                </button>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PROCESS */}
+      <section className="relative py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.12),transparent_65%)]" aria-hidden />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="yop-reveal">
+            <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Método</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Como entregamos</h2>
+            <p className="mt-3 max-w-xl text-sm text-white/65">
+              Um processo claro, do briefing à operação em produção.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {PROCESS_STEPS.map((step, i) => (
+              <div
+                key={step.n}
+                className={`yop-reveal yop-reveal-delay-${i + 1} rounded-3xl border border-white/15 bg-white/5 p-6 backdrop-blur transition hover:border-violet-300/35 hover:bg-white/10`}
+              >
+                <span className={`${jetbrains.className} text-3xl font-bold text-violet-300/40`}>{step.n}</span>
+                <h3 className="mt-2 text-xl font-semibold text-white">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/60">{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TECH */}
+      <section id="tecnologias" className="py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="yop-reveal">
+            <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Stack</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Tecnologias e plataformas</h2>
+            <p className="mt-3 max-w-xl text-sm text-white/65">
+              Ferramentas modernas para produtos estáveis, seguros e fáceis de evoluir.
+            </p>
+          </div>
+          <div className="mt-12 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+            {TECH_STACK.map((tech, i) => (
+              <div
+                key={tech.name}
+                className={`yop-reveal yop-reveal-delay-${(i % 6) + 1} group flex flex-col items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-2 py-5 backdrop-blur transition hover:-translate-y-1 hover:border-violet-300/40 hover:bg-white/10`}
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-[#120a38] text-sm font-bold text-violet-100 transition group-hover:scale-105">
+                  {tech.short}
+                </span>
+                <span className="text-center text-[11px] font-medium text-white/70">{tech.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CEO */}
+      <section className="relative py-20 lg:py-24">
+        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="yop-reveal max-w-2xl">
+            <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Liderança</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Gabriel Carrara
+              <span className="mt-1 block text-xl font-medium text-white/55 sm:text-2xl">CEO &amp; Desenvolvedor</span>
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/65 sm:text-base">
+              Full stack, automações e sistemas empresariais — do desenho da solução à operação do dia a dia.
+            </p>
+          </div>
+          <Link
+            href="/gabriel-portfolio-completo"
+            className="yop-reveal yop-reveal-delay-2 inline-flex shrink-0 items-center gap-3 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#1a0f4a] transition hover:scale-[1.02]"
+          >
+            Ver portfólio
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a0f4a] text-white">→</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contato" className="relative py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(124,58,237,0.14),transparent_60%)]" aria-hidden />
+        <div className="yop-reveal relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <p className={`${jetbrains.className} mb-2 text-[11px] uppercase tracking-[0.3em] text-violet-200/80`}>Contato</p>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Vamos construir o seu sistema</h2>
+          <p className="mx-auto mt-4 max-w-lg text-sm text-white/65 sm:text-base">
+            Conte o desafio. Desenhamos, desenvolvemos e colocamos em produção.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/suporte"
+              className="inline-flex items-center gap-3 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#1a0f4a] transition hover:scale-[1.02]"
+            >
+              Abrir conversa
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a0f4a] text-white">→</span>
+            </Link>
+            <Link
+              href="/gabriel-portfolio-completo"
+              className="inline-flex rounded-full border border-white/30 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Ver trabalho do CEO
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/10 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:flex-row sm:px-6 lg:px-8">
+          <Link href="/" className="inline-flex items-center">
+            <BrandMark className="text-lg tracking-[0.08em] text-white/90" />
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/50">
+            <a href="#projetos" className="hover:text-white">Projetos</a>
+            <a href="#servicos" className="hover:text-white">Serviços</a>
+            <Link href="/gabriel-portfolio-completo" className="hover:text-white">Portfólio</Link>
+            <Link href="/termos" className="hover:text-white">Termos</Link>
+            <Link href="/privacidade" className="hover:text-white">Privacidade</Link>
+            <Link href="/suporte" className="hover:text-white">Suporte</Link>
+          </div>
+          <p className="text-xs text-white/40">© {new Date().getFullYear()} YOP Devs</p>
         </div>
       </footer>
 
-      {/* Card de informações (Termos, Privacidade, Suporte) */}
-      {infoCard && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="info-card-title">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeInfoCard} aria-hidden="true" />
-          <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <h2 id="info-card-title" className="text-xl font-bold text-slate-900">
-                {infoCard === 'termos' && 'Termos de Uso'}
-                {infoCard === 'privacidade' && 'Privacidade'}
-                {infoCard === 'suporte' && 'Suporte'}
-              </h2>
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#071338]/85 p-3 backdrop-blur-md sm:p-6"
+          onClick={() => setLightbox(null)}
+          role="presentation"
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#120a38] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Print de ${lightbox.name}`}
+          >
+            <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{lightbox.name}</p>
+                <p className={`${jetbrains.className} truncate text-[10px] text-white/40`}>
+                  {lightbox.tag}
+                  {galleryImages.length > 1 ? ` · ${galleryIndex + 1}/${galleryImages.length}` : ''}
+                </p>
+              </div>
+              {galleryImages.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setGalleryIndex((i) => (i - 1 + galleryImages.length) % galleryImages.length)}
+                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80"
+                    aria-label="Anterior"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGalleryIndex((i) => (i + 1) % galleryImages.length)}
+                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80"
+                    aria-label="Seguinte"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+              <a
+                href={lightbox.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/80"
+              >
+                Abrir site ↗
+              </a>
               <button
                 type="button"
-                onClick={closeInfoCard}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                onClick={() => setLightbox(null)}
+                className="rounded-lg p-1.5 text-white/50 hover:bg-white/5 hover:text-white"
                 aria-label="Fechar"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              {infoCard === 'termos' && (
-                <div className="space-y-6 text-sm leading-relaxed">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Última atualização: Janeiro de 2026</p>
-                  <div className="space-y-3">
-                    <h3 className="text-base font-bold text-slate-900">1. O Ecossistema</h3>
-                    <p className="text-slate-600">O YOP Devs é uma rede exclusiva para conexão entre desenvolvedores e empresários. Ao acessar, você concorda em manter o profissionalismo e a integridade das informações compartilhadas.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-base font-bold text-slate-900">2. Propriedade Intelectual</h3>
-                    <p className="text-slate-600">Todas as teses de negócios e códigos compartilhados no fórum permanecem sob propriedade de seus respectivos autores, a menos que um contrato de sociedade (Equity) seja firmado entre as partes.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-base font-bold text-slate-900">3. Conduta</h3>
-                    <p className="text-slate-600">É estritamente proibido o uso de bots, scripts de automação não autorizados ou qualquer comportamento que comprometa a segurança do Protocolo YOP Devs.</p>
-                  </div>
-                </div>
-              )}
-              {infoCard === 'privacidade' && (
-                <div className="space-y-6 text-sm leading-relaxed">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Proteção de Dados v1.0</p>
-                  <p className="text-slate-600">Sua privacidade é nossa prioridade. No YOP Devs, seus dados de navegação e credenciais são criptografados de ponta a ponta via Supabase Auth.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <h3 className="text-slate-900 font-bold mb-2">O que coletamos?</h3>
-                      <p className="text-slate-600 text-sm">Nome, e-mail e data de nascimento para validação de perfil e segurança da rede.</p>
-                    </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <h3 className="text-slate-900 font-bold mb-2">Uso de Cookies</h3>
-                      <p className="text-slate-600 text-sm">Utilizamos cookies apenas para manter sua sessão ativa.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {infoCard === 'suporte' && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-6">Envie sua dúvida ou sugestão.</p>
-                  {suporteError && (
-                    <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm font-medium">
-                      {suporteError}
-                    </div>
-                  )}
-                  {suporteStatus === 'success' ? (
-                    <div className="bg-violet-50 border border-violet-200 p-6 rounded-2xl text-center">
-                      <p className="text-[#4c1d95] font-bold text-sm">Mensagem enviada com sucesso!</p>
-                      <p className="text-slate-600 text-xs mt-1">Responderemos em até 24 horas.</p>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSuporteSubmit} className="space-y-4">
-                      <input type="text" placeholder="Seu nome" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#4c1d95] text-sm" value={suporteForm.name} onChange={(e) => setSuporteForm({ ...suporteForm, name: e.target.value })} required />
-                      <input type="email" placeholder="Seu e-mail" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#4c1d95] text-sm" value={suporteForm.email} onChange={(e) => setSuporteForm({ ...suporteForm, email: e.target.value })} required />
-                      <textarea placeholder="Descreva o problema ou sugestão" rows={4} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#4c1d95] text-sm resize-none" value={suporteForm.message} onChange={(e) => setSuporteForm({ ...suporteForm, message: e.target.value })} required />
-                      <button type="submit" disabled={suporteStatus === 'sending'} className="w-full py-3 bg-[#4c1d95] text-white rounded-xl font-bold text-sm hover:bg-violet-800 transition-all disabled:opacity-60">
-                        {suporteStatus === 'sending' ? 'Enviando...' : 'Enviar'}
-                      </button>
-                    </form>
-                  )}
-                </div>
-              )}
+            <div className="min-h-0 flex-1 overflow-auto bg-[#0a1340]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={galleryImages[galleryIndex] ?? lightbox.print}
+                alt={`Print de ${lightbox.name}`}
+                className="mx-auto w-full object-contain object-top"
+              />
             </div>
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto border-t border-white/10 bg-[#0a1340]/80 px-3 py-2">
+                {galleryImages.map((src, i) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setGalleryIndex(i)}
+                    className={`h-14 w-24 shrink-0 overflow-hidden rounded-lg border transition ${
+                      i === galleryIndex ? 'border-violet-300' : 'border-white/10 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-full w-full object-cover object-top" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Modal login/cadastro com e-mail e senha */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal} aria-hidden="true" />
-          <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl max-h-[95vh] flex flex-col items-stretch">
-            <h2 id="modal-title" className="text-xl font-bold text-slate-900 mb-4 text-center">
-              {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Resetar senha'}
-            </h2>
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium text-sm hover:bg-slate-50 transition-colors disabled:opacity-60 mb-3"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              {googleLoading ? 'Entrando...' : 'Continuar com Google'}
-            </button>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#071338]/80 p-4 backdrop-blur-md"
+          onClick={closeModal}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/20 bg-[#120a38] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-title"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h2 id="auth-title" className="text-lg font-semibold text-white">
+                {mode === 'login' ? 'Área privada' : 'Redefinir senha'}
+              </h2>
+              <button type="button" onClick={closeModal} className="rounded-lg p-1 text-white/50 hover:text-white" aria-label="Fechar">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
             {message && (
-              <div role="alert" aria-live="polite" className={`mb-3 px-3 py-2 rounded-lg text-xs font-medium ${message.type === 'success' ? 'bg-violet-50 text-violet-800 border border-violet-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <div
+                className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                  message.type === 'success' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'
+                }`}
+              >
                 {message.text}
               </div>
             )}
-            <form onSubmit={handleAuth} className="space-y-2.5 shrink-0">
-              {mode === 'signup' && (
-                <div className="grid grid-cols-2 gap-2">
-                  <input type="text" placeholder="Nome completo" className="col-span-2 sm:col-span-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-violet-500 text-slate-900 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                  <div className="col-span-2 sm:col-span-1">
-                    <input type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-violet-500 text-slate-900 text-sm" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required title="Data de nascimento" />
-                  </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-white/50">E-mail</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white outline-none ring-violet-400/40 placeholder:text-white/25 focus:ring-2"
+                  placeholder="seu@email.com"
+                  autoComplete="email"
+                />
+              </div>
+              {mode === 'login' && (
+                <div>
+                  <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-white/50">Senha</label>
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white outline-none ring-violet-400/40 placeholder:text-white/25 focus:ring-2"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
                 </div>
               )}
-              <input type="email" placeholder="E-mail" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-violet-500 text-slate-900 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              {mode !== 'reset' && (
-                <>
-                  <input type="password" placeholder="Senha (mín. 6)" minLength={6} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-violet-500 text-slate-900 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  {mode === 'signup' && (
-                    <>
-                      <input type="password" placeholder="Confirmar senha" minLength={6} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-violet-500 text-slate-900 text-sm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-                      {confirmPassword && password !== confirmPassword && (
-                        <p className="text-xs text-red-600 font-medium -mt-1">As senhas não coincidem.</p>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-              <button type="submit" disabled={loading} className="w-full py-2.5 bg-[#4c1d95] text-white rounded-lg font-semibold text-sm hover:bg-violet-800 transition-all disabled:opacity-60">
-                {loading ? 'Processando...' : mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Enviar link'}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-full bg-white py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:brightness-95 disabled:opacity-60"
+              >
+                {loading ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Enviar link'}
               </button>
             </form>
-            <div className="mt-3 flex flex-col gap-1.5 text-center text-xs shrink-0">
-              <button type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage(null); }} className="text-violet-600 font-semibold hover:underline">
-                {mode === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar'}
-              </button>
-              {mode === 'login' && (
-                <button type="button" onClick={() => { setMode('reset'); setMessage(null); }} className="text-slate-500 hover:text-slate-700">Esqueci minha senha</button>
+
+            <div className="mt-4 text-center text-sm text-white/45">
+              {mode === 'login' ? (
+                <button type="button" onClick={() => { setMode('reset'); setMessage(null) }} className="font-medium text-violet-200 hover:underline">
+                  Esqueci minha senha
+                </button>
+              ) : (
+                <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="font-medium text-violet-200 hover:underline">
+                  Voltar ao login
+                </button>
               )}
             </div>
           </div>
@@ -508,11 +921,13 @@ function LandingPageContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-violet-600 text-sm font-semibold animate-pulse">Carregando...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#0a1740] text-white/50">
+          A carregar...
+        </div>
+      }
+    >
       <LandingPageContent />
     </Suspense>
   )

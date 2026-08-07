@@ -172,7 +172,7 @@ export default function MemberPublicPortfolio({
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex shrink-0 items-center gap-2" onClick={() => setMobileOpen(false)}>
               <Image
-                src="/logoprincipal.png?v=4"
+                src="/yop-logo.png?v=2"
                 alt="YOP Devs"
                 width={200}
                 height={63}
@@ -654,7 +654,7 @@ export default function MemberPublicPortfolio({
             <footer className="border-t border-[hsl(var(--border)/0.5)] py-10">
               <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-4 text-center sm:px-6 lg:px-8">
                 <Image
-                  src="/logoprincipal.png?v=4"
+                  src="/yop-logo.png?v=2"
                   alt="YOP Devs"
                   width={200}
                   height={63}
