@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Portfólio Gabriel',
   description:
-    'Desenvolvedor full stack, automação e produto. Portfólio pessoal com projetos, experiência e contato — YOP Devs.',
+    'Desenvolvedor full stack, automação e produto. Portfólio pessoal com projetos, experiência e contato da YOP Devs.',
   openGraph: {
     title: 'YOP | Portfólio Gabriel',
     description: 'Full stack, automação e sistemas. YOP Devs e projetos em produção.',

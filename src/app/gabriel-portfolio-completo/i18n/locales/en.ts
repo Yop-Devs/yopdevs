@@ -11,14 +11,14 @@ export const en = {
     greeting: "Hi, I'm",
     role: 'Full Stack Developer & Automation Specialist',
     subtitle:
-      'Turning ideas into robust digital solutions. Passionate about technology, automation, and innovation — available for international projects and opportunities worldwide.',
+      'Turning ideas into robust digital solutions. Passionate about technology, automation, and innovation, available for international projects and opportunities worldwide.',
     cta: 'See my work',
     contact: 'Get in touch',
   },
   about: {
     title: 'About Me',
     description:
-      'IT Technician graduated from the Federal Institute of Mato Grosso — Pontes e Lacerda Campus (2021). With solid experience in web development, automation, AI integrations, and administrative management, I build complete solutions that deliver real results for businesses and clients.',
+      'IT Technician graduated from the Federal Institute of Mato Grosso, Pontes e Lacerda Campus (2021). With solid experience in web development, automation, AI integrations, and administrative management, I build complete solutions that deliver real results for businesses and clients.',
     highlight:
       'Currently seeking to expand my career internationally, bringing my technical and administrative expertise to new markets and global challenges.',
     location: 'Location',
@@ -52,7 +52,7 @@ export const en = {
       westham: {
         name: 'Westham Sport Club',
         description:
-          'Club website and admin panel: news, matches (FUT11, Fut7 and Futsal), projects, members, store, players and cash — all managed in one complete admin.',
+          'Club website and admin panel: news, matches (FUT11, Fut7 and Futsal), projects, members, store, players and cash, all managed in one complete admin.',
       },
       palha: {
         name: 'Palha Weddings',
@@ -70,7 +70,7 @@ export const en = {
           'Platform for gas station owners and managers: fuel analyses, metrological checks, documents with expiry alerts, WhatsApp, Mercado Pago, automatic releases and a public page for customers to follow RAQ records.',
       },
       demolay: {
-        name: 'Chapter 862 — Order of DeMolay',
+        name: 'Chapter 862, Order of DeMolay',
         description:
           'Complete chapter system: public site, member area, admin panel, users, finances, minutes, attendance, applications, news, calendar, seals and raffles with ticket number sales.',
       },
@@ -83,12 +83,12 @@ export const en = {
       fenix: {
         company: 'Fênix Consórcios e Investimentos',
         role: 'Administrative Director & Senior Technician',
-        period: '2024 — Present',
+        period: '2024 - Present',
         description:
           'Responsible for the complete web system, automations, and administrative management. Credit release processes, personal document analysis, payment history, business classification, contracts, customer service, sales (+$1M in credit letters), vehicle inspection, and operational leadership.',
       },
       gazin: {
-        company: 'Gazin — Electronics Industry & Commerce',
+        company: 'Gazin, Electronics Industry & Commerce',
         role: 'Multiple Roles (Apprentice → Stock Manager)',
         period: 'Before 2024',
         description:
@@ -100,7 +100,7 @@ export const en = {
     title: 'Education & Certifications',
     items: {
       ifmt: {
-        institution: 'Federal Institute of Mato Grosso — Pontes e Lacerda Campus',
+        institution: 'Federal Institute of Mato Grosso, Pontes e Lacerda Campus',
         course: 'IT Technician (Integrated with High School)',
         year: '2021',
       },
@@ -125,7 +125,7 @@ export const en = {
   extras: {
     title: 'Activities & Leadership',
     demolay: {
-      title: 'Order of DeMolay — Knights of Guaporé Chapter #862',
+      title: 'Order of DeMolay, Knights of Guaporé Chapter #862',
       description:
         'Youth organization focused on personal and professional development. National recognition with campaigns and merits. Senior DeMolay and current President of the Senior College. Creator of the institutional website and chapter management system.',
     },

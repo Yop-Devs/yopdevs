@@ -11,14 +11,14 @@ export const ptBr = {
     greeting: 'Olá, eu sou',
     role: 'Desenvolvedor Full Stack & Especialista em Automação',
     subtitle:
-      'Transformando ideias em soluções digitais robustas. Apaixonado por tecnologia, automação e inovação — disponível para projetos e oportunidades internacionais.',
+      'Transformando ideias em soluções digitais robustas. Apaixonado por tecnologia, automação e inovação, disponível para projetos e oportunidades internacionais.',
     cta: 'Conheça meu trabalho',
     contact: 'Entre em contato',
   },
   about: {
     title: 'Sobre Mim',
     description:
-      'Técnico em Informática formado pelo Instituto Federal de Mato Grosso — Campus Pontes e Lacerda (2021). Com experiência sólida em desenvolvimento web, automações, integrações com IA e gestão administrativa, construo soluções completas que geram resultados reais para empresas e clientes.',
+      'Técnico em Informática formado pelo Instituto Federal de Mato Grosso, Campus Pontes e Lacerda (2021). Com experiência sólida em desenvolvimento web, automações, integrações com IA e gestão administrativa, construo soluções completas que geram resultados reais para empresas e clientes.',
     highlight:
       'Atualmente busco expandir minha carreira internacionalmente, trazendo minha experiência técnica e administrativa para novos mercados e desafios globais.',
     location: 'Localização',
@@ -53,7 +53,7 @@ export const ptBr = {
       westham: {
         name: 'Westham Sport Club',
         description:
-          'Site e painel do clube: notícias, jogos (FUT11, Fut7 e Futsal), projetos, sócios, loja, jogadores e caixa — tudo gerido num admin completo.',
+          'Site e painel do clube: notícias, jogos (FUT11, Fut7 e Futsal), projetos, sócios, loja, jogadores e caixa, tudo gerido num admin completo.',
       },
       palha: {
         name: 'Palha Weddings',
@@ -71,7 +71,7 @@ export const ptBr = {
           'Plataforma para donos e gerentes de postos: análises de combustíveis, verificação metrológica, documentos com avisos de vencimento, WhatsApp, Mercado Pago, liberações automáticas e página pública para clientes acompanharem os RAQs.',
       },
       demolay: {
-        name: 'Capítulo 862 — Ordem DeMolay',
+        name: 'Capítulo 862, Ordem DeMolay',
         description:
           'Sistema completo do capítulo: site público, área do membro, painel admin, usuários, finanças, atas, frequência, candidaturas, notícias, calendário, selos e sorteios com venda de números de rifa.',
       },
@@ -84,7 +84,7 @@ export const ptBr = {
       fenix: {
         company: 'Fênix Consórcios e Investimentos',
         role: 'Diretor Administrativo & Técnico Sênior',
-        period: '2024 — Presente',
+        period: '2024 - Presente',
         description:
           'Responsável pelo sistema web completo, automações e gestão administrativa. Processos de liberação de crédito, análise de documentos pessoais, histórico de pagamentos, classificação empresarial, contratos, atendimento ao cliente, vendas (+R$5 milhões em cartas de crédito), vistoria de veículos e liderança operacional.',
       },
@@ -101,7 +101,7 @@ export const ptBr = {
     title: 'Formação & Certificações',
     items: {
       ifmt: {
-        institution: 'Instituto Federal de Mato Grosso — Campus Pontes e Lacerda',
+        institution: 'Instituto Federal de Mato Grosso, Campus Pontes e Lacerda',
         course: 'Técnico em Informática (Integrado ao Ensino Médio)',
         year: '2021',
       },
@@ -126,7 +126,7 @@ export const ptBr = {
   extras: {
     title: 'Atividades & Liderança',
     demolay: {
-      title: 'Ordem DeMolay — Capítulo Cavaleiros do Guaporé nº 862',
+      title: 'Ordem DeMolay, Capítulo Cavaleiros do Guaporé nº 862',
       description:
         'Organização de jovens focada em desenvolvimento pessoal e profissional. Destaque nacional com campanhas e méritos. Sênior DeMolay e atual Presidente do Colégio de Sêniores. Criador do site institucional e sistema de gestão do capítulo.',
     },

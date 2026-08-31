@@ -28,39 +28,46 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="bg-gradient-hero relative flex min-h-screen items-center justify-center overflow-hidden pt-16">
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-16">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -left-32 h-64 w-64 rounded-full bg-[hsl(var(--primary)/0.08)] blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="gop-orb gop-orb-a absolute -left-16 top-[18%] h-64 w-64 rounded-full bg-sky-400/25 blur-3xl" />
+        <div className="gop-orb gop-orb-b absolute -right-20 top-[28%] h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl" />
+        <div className="gop-orb gop-orb-c absolute bottom-[12%] left-[38%] h-56 w-56 rounded-full bg-cyan-400/18 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(12,20,36,0.25)_100%)]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-12 lg:flex-row lg:gap-20">
-          <div className="relative animate-float">
-            <div className="animate-pulse-glow h-56 w-56 overflow-hidden rounded-full border-2 border-[hsl(var(--primary)/0.35)] shadow-glow lg:h-72 lg:w-72">
-              {!imgFailed ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={candidateIndex}
-                  src={PORTRAIT_CANDIDATES[candidateIndex]}
-                  alt="Retrato profissional de Gabriel Carrara"
-                  className="h-full w-full object-cover"
-                  onError={onPortraitError}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[hsl(var(--primary)/0.35)] to-[hsl(var(--card))] text-5xl font-black text-[hsl(var(--foreground))]">
-                  GC
-                </div>
-              )}
+          <div className="relative shrink-0">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-500/25 bg-gradient-to-br from-slate-800/90 to-slate-900/95 p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-2">
+              <div className="relative h-72 w-64 overflow-hidden rounded-xl bg-slate-900 sm:h-80 sm:w-72 sm:rounded-2xl">
+                {!imgFailed ? (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950" aria-hidden />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      key={candidateIndex}
+                      src={PORTRAIT_CANDIDATES[candidateIndex]}
+                      alt="Retrato profissional de Gabriel Carrara"
+                      className="relative h-full w-full object-cover object-[center_12%] brightness-[1.02] contrast-[1.03]"
+                      onError={onPortraitError}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-slate-900/20"
+                      aria-hidden
+                    />
+                  </>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-5xl font-black text-slate-100">
+                    GC
+                  </div>
+                )}
+              </div>
             </div>
-            <div
-              className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full border-4 border-[hsl(var(--background))] bg-emerald-500"
-              title="Disponível"
-            />
           </div>
 
           <div className="max-w-2xl text-center lg:text-left">
-            <p className="animate-fade-in-up mb-2 font-mono text-sm text-[hsl(var(--primary))]">{t.hero.greeting}</p>
+            <p className="animate-fade-in-up mb-2 font-mono text-sm tracking-wide text-sky-300/80">{t.hero.greeting}</p>
             <h1
               className="animate-fade-in-up mb-4 text-4xl font-bold tracking-tight text-[hsl(var(--foreground))] sm:text-5xl lg:text-6xl"
               style={{ animationDelay: '0.1s' }}
@@ -68,7 +75,7 @@ export default function HeroSection() {
               Gabriel Costa Carrara
             </h1>
             <p
-              className="animate-fade-in-up mb-4 text-lg font-medium text-[hsl(var(--primary))] sm:text-xl"
+              className="animate-fade-in-up mb-4 text-lg font-medium text-sky-200/90 sm:text-xl"
               style={{ animationDelay: '0.2s' }}
             >
               {t.hero.role}
@@ -94,7 +101,7 @@ export default function HeroSection() {
                 href="https://wa.me/5565992263485"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[hsl(var(--primary)/0.35)] px-6 py-3 font-semibold text-[hsl(var(--primary))] transition-colors hover:bg-[hsl(var(--primary)/0.1)]"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-500/35 bg-slate-800/30 px-6 py-3 font-semibold text-slate-100 transition-colors hover:bg-slate-700/40"
               >
                 <MessageCircle className="h-4 w-4" />
                 {t.hero.contact}

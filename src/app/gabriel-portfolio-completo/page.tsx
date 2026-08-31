@@ -10,13 +10,18 @@ import ExperienceSection from './_components/ExperienceSection'
 import EducationSection from './_components/EducationSection'
 import ContactSection from './_components/ContactSection'
 import Footer from './_components/Footer'
+import PortfolioBackdrop from './_components/PortfolioBackdrop'
+import { usePortfolioReveal } from './_hooks/usePortfolioReveal'
 
 export default function GabrielOwnerPortfolioPage() {
+  usePortfolioReveal()
+
   return (
     <LanguageProvider>
-      <div className="min-h-screen selection:bg-[hsl(var(--primary)/0.25)]">
+      <div className="relative min-h-screen selection:bg-[hsl(var(--primary)/0.25)]">
+        <PortfolioBackdrop />
         <Navbar />
-        <div className="gop-portfolio-content min-w-0 bg-[#12151c]">
+        <div className="gop-portfolio-content relative z-10 min-w-0">
           <main>
             <HeroSection />
             <AboutSection />

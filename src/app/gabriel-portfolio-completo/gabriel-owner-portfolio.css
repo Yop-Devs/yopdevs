@@ -1,35 +1,35 @@
-/* Tema Lovable/shadcn escopado — só afeta .gabriel-owner-portfolio (Tailwind v4 global intacto) */
+/* Tema do portfólio pessoal — escopado em .gabriel-owner-portfolio */
 .gabriel-owner-portfolio {
-  --background: 220 20% 7%;
-  --foreground: 210 20% 92%;
-  --card: 220 18% 10%;
-  --card-foreground: 210 20% 92%;
-  --popover: 220 18% 10%;
-  --popover-foreground: 210 20% 92%;
-  --primary: 200 90% 55%;
-  --primary-foreground: 220 20% 7%;
-  --secondary: 220 15% 16%;
-  --secondary-foreground: 210 20% 85%;
-  --muted: 220 15% 14%;
-  --muted-foreground: 215 15% 55%;
-  --accent: 200 90% 55%;
-  --accent-foreground: 220 20% 7%;
+  --background: 218 32% 14%;
+  --foreground: 210 22% 97%;
+  --card: 218 28% 18%;
+  --card-foreground: 210 20% 96%;
+  --popover: 215 24% 13%;
+  --popover-foreground: 210 20% 96%;
+  --primary: 205 65% 58%;
+  --primary-foreground: 215 28% 8%;
+  --secondary: 215 20% 17%;
+  --secondary-foreground: 210 18% 88%;
+  --muted: 215 18% 15%;
+  --muted-foreground: 215 14% 62%;
+  --accent: 205 65% 58%;
+  --accent-foreground: 215 28% 8%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --border: 220 15% 18%;
-  --input: 220 15% 18%;
-  --ring: 200 90% 55%;
+  --border: 215 18% 22%;
+  --input: 215 18% 22%;
+  --ring: 205 65% 58%;
   --radius: 0.75rem;
-  --gradient-primary: linear-gradient(135deg, hsl(200, 90%, 55%), hsl(180, 80%, 45%));
+  --gradient-primary: linear-gradient(135deg, hsl(205, 65%, 58%), hsl(210, 55%, 48%));
   --gradient-hero: linear-gradient(
     180deg,
-    hsl(220, 20%, 7%) 0%,
-    hsl(220, 25%, 12%) 50%,
-    hsl(220, 20%, 7%) 100%
+    hsl(218, 32%, 14%) 0%,
+    hsl(218, 28%, 19%) 50%,
+    hsl(218, 32%, 14%) 100%
   );
-  --gradient-card: linear-gradient(145deg, hsl(220, 18%, 12%), hsl(220, 18%, 8%));
-  --shadow-glow: 0 0 30px hsl(200, 90%, 55%, 0.15);
-  --shadow-card: 0 4px 24px hsl(0, 0%, 0%, 0.3);
+  --gradient-card: linear-gradient(145deg, hsl(215, 24%, 14%), hsl(215, 24%, 10%));
+  --shadow-glow: 0 0 32px hsl(205, 65%, 58%, 0.12);
+  --shadow-card: 0 8px 32px hsl(0, 0%, 0%, 0.24);
 
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -45,7 +45,7 @@
 .gabriel-owner-portfolio *,
 .gabriel-owner-portfolio *::before,
 .gabriel-owner-portfolio *::after {
-  border-color: hsl(var(--border) / 0.5);
+  border-color: hsl(var(--border) / 0.45);
 }
 
 .gabriel-owner-portfolio .text-gradient {
@@ -72,10 +72,216 @@
 }
 
 .gabriel-owner-portfolio .glass {
-  background-color: hsl(var(--card) / 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid hsl(var(--border) / 0.5);
+  background-color: hsl(var(--card) / 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border) / 0.45);
+}
+
+.gabriel-owner-portfolio .gop-navbar {
+  background-color: hsl(var(--card) / 0.38);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.gabriel-owner-portfolio .gop-brand-shine {
+  background-image: linear-gradient(
+    115deg,
+    #7dd3fc 0%,
+    #bae6fd 18%,
+    #ffffff 36%,
+    #a5b4fc 54%,
+    #38bdf8 72%,
+    #7dd3fc 100%
+  );
+  background-size: 220% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gop-brand-shimmer 5s linear infinite;
+  text-shadow: 0 0 24px rgba(125, 211, 252, 0.25);
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.22));
+}
+
+.gabriel-owner-portfolio .gop-brand-shine::after {
+  content: '';
+  position: absolute;
+  inset: -4px -8px;
+  z-index: -1;
+  border-radius: 0.65rem;
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.18), transparent 70%);
+  opacity: 0.75;
+  animation: gop-brand-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes gop-brand-shimmer {
+  to {
+    background-position: 220% center;
+  }
+}
+
+@keyframes gop-brand-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+.gabriel-owner-portfolio .gop-portfolio-content main > section:nth-of-type(even) {
+  background-color: hsl(var(--card) / 0.28);
+  border-block: 1px solid hsl(215 40% 40% / 0.12);
+  box-shadow: inset 0 1px 0 hsl(200 80% 70% / 0.04);
+}
+
+/* Scroll reveal variants */
+.gabriel-owner-portfolio .gop-reveal {
+  opacity: 0;
+  transition:
+    opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+}
+
+.gabriel-owner-portfolio .gop-reveal-up {
+  transform: translateY(36px);
+}
+
+.gabriel-owner-portfolio .gop-reveal-down {
+  transform: translateY(-28px);
+}
+
+.gabriel-owner-portfolio .gop-reveal-left {
+  transform: translateX(-40px);
+}
+
+.gabriel-owner-portfolio .gop-reveal-right {
+  transform: translateX(40px);
+}
+
+.gabriel-owner-portfolio .gop-reveal-scale {
+  transform: scale(0.94);
+}
+
+.gabriel-owner-portfolio .gop-reveal-blur {
+  transform: translateY(24px);
+  filter: blur(8px);
+}
+
+.gabriel-owner-portfolio .gop-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.gabriel-owner-portfolio .gop-reveal-delay-1 { transition-delay: 0.08s; }
+.gabriel-owner-portfolio .gop-reveal-delay-2 { transition-delay: 0.16s; }
+.gabriel-owner-portfolio .gop-reveal-delay-3 { transition-delay: 0.24s; }
+.gabriel-owner-portfolio .gop-reveal-delay-4 { transition-delay: 0.32s; }
+.gabriel-owner-portfolio .gop-reveal-delay-5 { transition-delay: 0.4s; }
+.gabriel-owner-portfolio .gop-reveal-delay-6 { transition-delay: 0.48s; }
+
+@keyframes gop-orb-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(18px, -14px) scale(1.06);
+  }
+}
+
+@keyframes gop-tech-fall {
+  0% {
+    transform: translateY(-12vh) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.55;
+  }
+  92% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(108vh) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes gop-glyph-sway-a {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(14px);
+  }
+}
+
+@keyframes gop-glyph-sway-b {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes gop-sparkle-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.6);
+  }
+}
+
+.gabriel-owner-portfolio .gop-orb {
+  animation: gop-orb-drift 14s ease-in-out infinite;
+}
+
+.gabriel-owner-portfolio .gop-orb-b {
+  animation-duration: 18s;
+  animation-delay: -4s;
+}
+
+.gabriel-owner-portfolio .gop-orb-c {
+  animation-duration: 16s;
+  animation-delay: -7s;
+}
+
+.gabriel-owner-portfolio .gop-tech-glyph {
+  top: -8vh;
+  animation-name: gop-tech-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.gabriel-owner-portfolio .gop-glyph-drift-a {
+  animation-name: gop-tech-fall, gop-glyph-sway-a;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  animation-duration: inherit, 4.5s;
+}
+
+.gabriel-owner-portfolio .gop-glyph-drift-b {
+  animation-name: gop-tech-fall, gop-glyph-sway-b;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  animation-duration: inherit, 5.2s;
+}
+
+.gabriel-owner-portfolio .gop-sparkle {
+  animation: gop-sparkle-pulse 3.2s ease-in-out infinite;
 }
 
 @keyframes gop-fade-in-up {
@@ -102,10 +308,33 @@
 @keyframes gop-pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 20px hsl(200, 90%, 55%, 0.1);
+    box-shadow: 0 0 20px hsl(205, 65%, 58%, 0.08);
   }
   50% {
-    box-shadow: 0 0 40px hsl(200, 90%, 55%, 0.25);
+    box-shadow: 0 0 32px hsl(205, 65%, 58%, 0.16);
+  }
+}
+
+@keyframes gop-rain-fall {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes gop-cable-dash {
+  to {
+    stroke-dashoffset: -1000;
   }
 }
 
@@ -122,6 +351,49 @@
   animation: gop-pulse-glow 3s ease-in-out infinite;
 }
 
+.gabriel-owner-portfolio .gop-rain-drop {
+  animation-name: gop-rain-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.gabriel-owner-portfolio .gop-cable-pulse {
+  stroke-dasharray: 80 920;
+  stroke-dashoffset: 0;
+  animation: gop-cable-dash linear infinite;
+}
+
+.gabriel-owner-portfolio .gop-cable-pulse-a {
+  animation-duration: 7.5s;
+}
+
+.gabriel-owner-portfolio .gop-cable-pulse-b {
+  animation-duration: 9s;
+  animation-delay: -2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gabriel-owner-portfolio .gop-rain-drop,
+  .gabriel-owner-portfolio .gop-cable-pulse,
+  .gabriel-owner-portfolio .gop-orb,
+  .gabriel-owner-portfolio .gop-tech-glyph,
+  .gabriel-owner-portfolio .gop-sparkle,
+  .gabriel-owner-portfolio .gop-brand-shine {
+    animation: none !important;
+  }
+
+  .gabriel-owner-portfolio .gop-brand-shine::after {
+    animation: none !important;
+  }
+
+  .gabriel-owner-portfolio .gop-reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}
+
 /* ---------- Impressão (Ctrl+P) ---------- */
 @media print {
   @page {
@@ -135,14 +407,18 @@
     overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: hsl(220, 20%, 7%) !important;
+    background: hsl(228, 42%, 10%) !important;
   }
 
   .gabriel-owner-portfolio {
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    background-color: hsl(220, 20%, 7%) !important;
+    background-color: hsl(228, 42%, 10%) !important;
+  }
+
+  .gabriel-owner-portfolio .gop-backdrop {
+    display: none !important;
   }
 
   .gabriel-owner-portfolio div.min-h-screen {
@@ -167,13 +443,15 @@
     padding-top: 1rem !important;
   }
 
-  /* Animações deixam opacity:0 até correr — na impressão o conteúdo sumia depois do hero */
   .gabriel-owner-portfolio .animate-fade-in-up,
   .gabriel-owner-portfolio .animate-float,
-  .gabriel-owner-portfolio .animate-pulse-glow {
+  .gabriel-owner-portfolio .animate-pulse-glow,
+  .gabriel-owner-portfolio .gop-reveal {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
+    transition: none !important;
   }
 
   .gabriel-owner-portfolio,
@@ -187,16 +465,14 @@
     page-break-inside: avoid;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background-color: hsl(220, 18%, 12%) !important;
+    background-color: hsl(228, 35%, 14%) !important;
   }
 
-  /* Contacto: vários .glass — deixar partir para não empurrar o rodapé para página nova só com ele */
   .gabriel-owner-portfolio #contact .glass {
     break-inside: auto;
     page-break-inside: auto;
   }
 
-  /* Manter contacto + rodapé no mesmo fluxo (evita <footer> órfão numa página só) */
   .gabriel-owner-portfolio .gop-print-contact-footer {
     break-inside: avoid-page;
     page-break-inside: avoid;
@@ -211,7 +487,6 @@
     content: none !important;
   }
 
-  /* Hiperligações visíveis na impressão */
   .gabriel-owner-portfolio a[href] {
     text-decoration: underline !important;
     text-underline-offset: 2px;
@@ -220,6 +495,6 @@
 
   .gabriel-owner-portfolio a[href^='http'],
   .gabriel-owner-portfolio a[href^='mailto:'] {
-    color: hsl(200, 90%, 58%) !important;
+    color: hsl(262, 83%, 68%) !important;
   }
 }

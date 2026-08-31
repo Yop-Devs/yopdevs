@@ -24,6 +24,7 @@ import {
   type Language,
 } from '@/lib/landing-i18n/translations'
 import { Globe, Lock, Copy, Check, Mail } from 'lucide-react'
+import { TechBrandIcon } from '@/components/TechBrandIcon'
 
 const CONTACT_EMAIL = 'gabrielcarrarapessoal@gmail.com'
 
@@ -41,12 +42,33 @@ function emailComposeLinks(subject: string) {
 function BrandMailIcon({ name }: { name: 'gmail' | 'outlook' | 'hotmail' | 'mailto' }) {
   if (name === 'gmail') {
     return (
-      <svg viewBox="52 42 88 66" className="h-6 w-6" aria-hidden>
-        <path fill="#4285F4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6z" />
-        <path fill="#34A853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15z" />
-        <path fill="#FBBC04" d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2z" />
-        <path fill="#EA4335" d="M72 74v34h32V74l-16 12z" />
-        <path fill="#C5221F" d="M52 51v8l20 15 16-12 16 12 20-15v-8l-36 27z" />
+      <svg viewBox="0 0 192 192" className="h-6 w-6" aria-hidden>
+        <path fill="url(#gmail-2026-green)" d="M146 44h38v110c0 6.627-5.373 12-12 12h-20a6 6 0 0 1-6-6z" />
+        <path fill="#fc413d" d="M46 44H8v110c0 6.627 5.373 12 12 12h20a6 6 0 0 0 6-6z" />
+        <path
+          fill="url(#gmail-2026-warm)"
+          d="M39.226 30.456c-8.033-6.752-20.018-5.714-26.77 2.319-6.752 8.032-5.714 20.017 2.319 26.77l76.078 63.949a8 8 0 0 0 10.295 0l76.078-63.95c8.032-6.752 9.07-18.737 2.318-26.77-6.752-8.032-18.737-9.07-26.769-2.318L96 78.18z"
+        />
+        <defs>
+          <linearGradient id="gmail-2026-green" x1="165" x2="165" y1="44" y2="166" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#60d673" />
+            <stop offset=".17" stopColor="#42c868" />
+            <stop offset=".39" stopColor="#0ebc5f" />
+            <stop offset=".62" stopColor="#00a9bb" />
+            <stop offset=".86" stopColor="#3c90ff" />
+            <stop offset="1" stopColor="#3186ff" />
+          </linearGradient>
+          <linearGradient id="gmail-2026-warm" x1="8" x2="184" y1="46.13" y2="46.13" gradientUnits="userSpaceOnUse">
+            <stop offset=".08" stopColor="#ff63a0" />
+            <stop offset=".3" stopColor="#fc413d" />
+            <stop offset=".5" stopColor="#fc413d" />
+            <stop offset=".65" stopColor="#fc413d" />
+            <stop offset=".72" stopColor="#fc5c30" />
+            <stop offset=".86" stopColor="#feb10c" />
+            <stop offset=".91" stopColor="#fec700" />
+            <stop offset=".96" stopColor="#ffdb0f" />
+          </linearGradient>
+        </defs>
       </svg>
     )
   }
@@ -240,41 +262,6 @@ function BrandMark({ className = '' }: { className?: string }) {
         YOP Devs
       </span>
     </span>
-  )
-}
-
-function TechBrandIcon({
-  slug,
-  color,
-  local,
-  name,
-}: {
-  slug: string
-  color: string
-  local?: boolean
-  name: string
-}) {
-  if (local && slug === 'playwright') {
-    return (
-      <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" aria-hidden>
-        <path fill="#2EAD33" d="M12 2L2.5 7.5v9L12 22l9.5-5.5v-9L12 2z" opacity=".35" />
-        <path fill="#D65300" d="M7.2 8.2l4.8 2.8 4.8-2.8L12 5.4 7.2 8.2z" />
-        <path fill="#2EAD33" d="M6.5 9.3v5.4L11.2 17V11.6L6.5 9.3z" />
-        <path fill="#1785FE" d="M12.8 11.6V17l4.7-2.3V9.3l-4.7 2.3z" />
-      </svg>
-    )
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`https://cdn.simpleicons.org/${slug}/${color}`}
-      alt=""
-      width={26}
-      height={26}
-      className="h-[26px] w-[26px] object-contain"
-      loading="lazy"
-      title={name}
-    />
   )
 }
 

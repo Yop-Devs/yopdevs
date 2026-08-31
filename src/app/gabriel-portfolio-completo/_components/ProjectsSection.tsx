@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { cn } from '@/lib/utils'
 import { ExternalLink } from 'lucide-react'
 import { useState } from 'react'
+import PortfolioReveal from './PortfolioReveal'
 
 const projectLinks = {
   plify: 'https://plify360.com.br',
@@ -16,18 +17,16 @@ const projectLinks = {
 
 const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'demolay'] as const
 
-/** Query `v` só para invalidar cache do browser quando trocas o ficheiro */
 const projectImages: Record<(typeof projectKeys)[number], string> = {
   plify: '/projetos/plify/logo.png?v=3',
   westham: '/projetos/westham/logo.png?v=2',
   palha: '/projetos/palha/logo.png?v=2',
-  fenix: '/projetos/fenix.png',
+  fenix: '/projetos/fenix/logo.420a748b9c9c09dc115e.png',
   teuposto: '/projetos/teuposto/logo.png?v=2',
   demolay: '/projetos/demolay/logo.png?v=2',
 }
 
-/** Faixa do logo: mesma cor em todos os cards (contraste para logos claros/escuros) */
-const LOGO_STRIP_BG = 'bg-[hsl(222_24%_7%)]'
+const LOGO_STRIP_BG = 'bg-[hsl(222_24%_10%)]'
 
 const logoStripSize =
   'max-h-14 w-auto max-w-[min(100%,12rem)] object-contain object-center sm:max-h-16 sm:max-w-[min(100%,13rem)]'
@@ -57,46 +56,49 @@ function ProjectCard({ pKey, index }: { pKey: (typeof projectKeys)[number]; inde
   const src = projectImages[pKey]
   const [imgFailed, setImgFailed] = useState(false)
   const gradient = projectColors[index] ?? projectColors[0]
+
   return (
-    <div className="glass group overflow-hidden rounded-xl transition-all hover:border-[hsl(var(--primary)/0.35)] hover:shadow-glow">
-      <div
-        className={cn(
-          'relative flex min-h-[6rem] items-center justify-center overflow-hidden px-4 py-3 sm:min-h-[6.75rem] sm:px-5 sm:py-4',
-          LOGO_STRIP_BG
-        )}
-      >
-        {!imgFailed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt={project.name}
-            className={cn(
-              logoSizeClass[pKey],
-              'relative z-10 transition-transform duration-300 group-hover:scale-[1.03]'
-            )}
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <div className={`h-16 w-full max-w-[12rem] rounded-md bg-gradient-to-br ${gradient}`} aria-hidden />
-        )}
-      </div>
-      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
-      <div className="p-6">
-        <h3 className="mb-2 text-lg font-bold text-[hsl(var(--foreground))] transition-colors group-hover:text-[hsl(var(--primary))]">
-          {project.name}
-        </h3>
-        <p className="mb-4 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">{project.description}</p>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--primary))] hover:underline"
+    <PortfolioReveal variant={index % 2 === 0 ? 'up' : 'scale'} delay={((index % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6}>
+      <div className="glass group overflow-hidden rounded-xl transition-all hover:border-[hsl(var(--primary)/0.35)] hover:shadow-glow">
+        <div
+          className={cn(
+            'relative flex min-h-[6rem] items-center justify-center overflow-hidden px-4 py-3 sm:min-h-[6.75rem] sm:px-5 sm:py-4',
+            LOGO_STRIP_BG
+          )}
         >
-          {t.projects.visit}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+          {!imgFailed ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={src}
+              alt={project.name}
+              className={cn(
+                logoSizeClass[pKey],
+                'relative z-10 transition-transform duration-300 group-hover:scale-[1.03]'
+              )}
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div className={`h-16 w-full max-w-[12rem] rounded-md bg-gradient-to-br ${gradient}`} aria-hidden />
+          )}
+        </div>
+        <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+        <div className="p-6">
+          <h3 className="mb-2 text-lg font-bold text-[hsl(var(--foreground))] transition-colors group-hover:text-[hsl(var(--primary))]">
+            {project.name}
+          </h3>
+          <p className="mb-4 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">{project.description}</p>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--primary))] hover:underline"
+          >
+            {t.projects.visit}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
       </div>
-    </div>
+    </PortfolioReveal>
   )
 }
 
@@ -106,10 +108,14 @@ export default function ProjectsSection() {
   return (
     <section id="projects" className="py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="mb-2 text-center text-3xl font-bold lg:text-4xl">
-          <span className="text-gradient">{t.projects.title}</span>
-        </h2>
-        <p className="mx-auto mb-12 max-w-xl text-center text-[hsl(var(--muted-foreground))]">{t.projects.subtitle}</p>
+        <PortfolioReveal variant="down">
+          <h2 className="mb-2 text-center text-3xl font-bold lg:text-4xl">
+            <span className="text-gradient">{t.projects.title}</span>
+          </h2>
+        </PortfolioReveal>
+        <PortfolioReveal variant="blur" delay={1}>
+          <p className="mx-auto mb-12 max-w-xl text-center text-[hsl(var(--muted-foreground))]">{t.projects.subtitle}</p>
+        </PortfolioReveal>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projectKeys.map((key, i) => (

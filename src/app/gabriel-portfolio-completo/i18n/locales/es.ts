@@ -11,14 +11,14 @@ export const es = {
     greeting: 'Hola, soy',
     role: 'Desarrollador Full Stack & Especialista en Automatización',
     subtitle:
-      'Transformando ideas en soluciones digitales robustas. Apasionado por la tecnología, la automatización y la innovación — disponible para proyectos y oportunidades internacionales.',
+      'Transformando ideas en soluciones digitales robustas. Apasionado por la tecnología, la automatización y la innovación, disponible para proyectos y oportunidades internacionales.',
     cta: 'Ver mi trabajo',
     contact: 'Contáctame',
   },
   about: {
     title: 'Sobre Mí',
     description:
-      'Técnico en Informática graduado del Instituto Federal de Mato Grosso — Campus Pontes e Lacerda (2021). Con sólida experiencia en desarrollo web, automatización, integraciones con IA y gestión administrativa, construyo soluciones completas que generan resultados reales.',
+      'Técnico en Informática graduado del Instituto Federal de Mato Grosso, Campus Pontes e Lacerda (2021). Con sólida experiencia en desarrollo web, automatización, integraciones con IA y gestión administrativa, construyo soluciones completas que generan resultados reales.',
     highlight:
       'Actualmente busco expandir mi carrera internacionalmente, llevando mi experiencia técnica y administrativa a nuevos mercados y desafíos globales.',
     location: 'Ubicación',
@@ -53,7 +53,7 @@ export const es = {
       westham: {
         name: 'Westham Sport Club',
         description:
-          'Sitio y panel del club: noticias, partidos (FUT11, Fut7 y Futsal), proyectos, socios, tienda, jugadores y caja — todo gestionado en un admin completo.',
+          'Sitio y panel del club: noticias, partidos (FUT11, Fut7 y Futsal), proyectos, socios, tienda, jugadores y caja, todo gestionado en un admin completo.',
       },
       palha: {
         name: 'Palha Weddings',
@@ -71,7 +71,7 @@ export const es = {
           'Plataforma para dueños y gerentes de estaciones: análisis de combustibles, verificación metrológica, documentos con avisos de vencimiento, WhatsApp, Mercado Pago, liberaciones automáticas y página pública para que clientes sigan los RAQs.',
       },
       demolay: {
-        name: 'Capítulo 862 — Orden DeMolay',
+        name: 'Capítulo 862, Orden DeMolay',
         description:
           'Sistema completo del capítulo: sitio público, área de miembro, panel admin, usuarios, finanzas, actas, asistencia, candidaturas, noticias, calendario, sellos y sorteos con venta de números de rifa.',
       },
@@ -84,12 +84,12 @@ export const es = {
       fenix: {
         company: 'Fênix Consórcios e Investimentos',
         role: 'Director Administrativo & Técnico Senior',
-        period: '2024 — Presente',
+        period: '2024 - Presente',
         description:
           'Responsable del sistema web completo, automatizaciones y gestión administrativa. Procesos de liberación de crédito, análisis de documentos personales, historial de pagos, clasificación empresarial, contratos, atención al cliente, ventas (+$1M en cartas de crédito), inspección vehicular y liderazgo operativo.',
       },
       gazin: {
-        company: 'Gazin — Industria y Comercio de Electrodomésticos',
+        company: 'Gazin, Industria y Comercio de Electrodomésticos',
         role: 'Múltiples Cargos (Aprendiz → Gerente de Stock)',
         period: 'Anterior a 2024',
         description:
@@ -101,7 +101,7 @@ export const es = {
     title: 'Formación & Certificaciones',
     items: {
       ifmt: {
-        institution: 'Instituto Federal de Mato Grosso — Campus Pontes e Lacerda',
+        institution: 'Instituto Federal de Mato Grosso, Campus Pontes e Lacerda',
         course: 'Técnico en Informática (Integrado a la Secundaria)',
         year: '2021',
       },
@@ -126,7 +126,7 @@ export const es = {
   extras: {
     title: 'Actividades & Liderazgo',
     demolay: {
-      title: 'Orden DeMolay — Capítulo Caballeros del Guaporé nº 862',
+      title: 'Orden DeMolay, Capítulo Caballeros del Guaporé nº 862',
       description:
         'Organización de jóvenes enfocada en el desarrollo personal y profesional. Destaque nacional con campañas y méritos. Senior DeMolay y actual Presidente del Colegio de Seniors. Creador del sitio institucional y sistema de gestión del capítulo.',
     },

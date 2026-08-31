@@ -20,15 +20,19 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="glass fixed left-0 right-0 top-0 z-50 border-b border-[hsl(var(--border)/0.5)]">
+    <nav className="glass gop-navbar fixed left-0 right-0 top-0 z-50 border-b border-[hsl(var(--border)/0.35)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link
             href="/gabriel-portfolio-completo"
-            className="min-w-0 shrink text-left text-base font-bold sm:text-xl"
+            className="group relative min-w-0 shrink text-left"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="text-gradient block leading-tight">Portfolio Gabriel Carrara</span>
+            <span className="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-lg bg-sky-400/0 blur-md transition duration-500 group-hover:bg-sky-400/20" aria-hidden />
+            <span className="gop-brand-shine relative block text-base font-bold leading-tight sm:text-xl">
+              <span className="font-semibold tracking-wide">Portfolio</span>{' '}
+              <span className="tracking-tight">Gabriel Carrara</span>
+            </span>
           </Link>
 
           <div className="hidden items-center gap-6 md:flex">

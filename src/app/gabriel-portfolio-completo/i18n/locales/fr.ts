@@ -11,14 +11,14 @@ export const fr = {
     greeting: 'Bonjour, je suis',
     role: 'Développeur Full Stack & Spécialiste en Automatisation',
     subtitle:
-      "Transformer les idées en solutions numériques robustes. Passionné par la technologie, l'automatisation et l'innovation — disponible pour des projets et opportunités internationales.",
+      "Transformer les idées en solutions numériques robustes. Passionné par la technologie, l'automatisation et l'innovation, disponible pour des projets et opportunités internationales.",
     cta: 'Voir mon travail',
     contact: 'Me contacter',
   },
   about: {
     title: 'À Propos de Moi',
     description:
-      "Technicien en Informatique diplômé de l'Institut Fédéral du Mato Grosso — Campus Pontes e Lacerda (2021). Avec une solide expérience en développement web, automatisation, intégrations IA et gestion administrative, je construis des solutions complètes qui génèrent des résultats réels.",
+      "Technicien en Informatique diplômé de l'Institut Fédéral du Mato Grosso, Campus Pontes e Lacerda (2021). Avec une solide expérience en développement web, automatisation, intégrations IA et gestion administrative, je construis des solutions complètes qui génèrent des résultats réels.",
     highlight:
       "Je cherche actuellement à développer ma carrière à l'international, apportant mon expertise technique et administrative à de nouveaux marchés et défis mondiaux.",
     location: 'Localisation',
@@ -53,7 +53,7 @@ export const fr = {
       westham: {
         name: 'Westham Sport Club',
         description:
-          'Site et panneau du club : actualités, matchs (FUT11, Fut7 et Futsal), projets, membres, boutique, joueurs et caisse — tout géré dans un admin complet.',
+          'Site et panneau du club : actualités, matchs (FUT11, Fut7 et Futsal), projets, membres, boutique, joueurs et caisse, tout géré dans un admin complet.',
       },
       palha: {
         name: 'Palha Weddings',
@@ -71,7 +71,7 @@ export const fr = {
           "Plateforme pour propriétaires et gérants de stations : analyses de carburants, vérifications métrologiques, documents avec alertes d'échéance, WhatsApp, Mercado Pago, libérations automatiques et page publique pour suivre les RAQ.",
       },
       demolay: {
-        name: 'Chapitre 862 — Ordre DeMolay',
+        name: 'Chapitre 862, Ordre DeMolay',
         description:
           "Système complet du chapitre : site public, espace membre, panneau admin, utilisateurs, finances, procès-verbaux, présence, candidatures, actualités, calendrier, sceaux et tirages avec vente de numéros de tombola.",
       },
@@ -84,12 +84,12 @@ export const fr = {
       fenix: {
         company: 'Fênix Consórcios e Investimentos',
         role: 'Directeur Administratif & Technicien Senior',
-        period: '2024 — Présent',
+        period: '2024 - Présent',
         description:
           "Responsable du système web complet, des automatisations et de la gestion administrative. Processus de libération de crédit, analyse de documents, historique de paiements, classification d'entreprises, contrats, service client, ventes (+1M$ en lettres de crédit), inspection de véhicules et leadership opérationnel.",
       },
       gazin: {
-        company: "Gazin — Industrie et Commerce d'Électroménagers",
+        company: "Gazin, Industrie et Commerce d'Électroménagers",
         role: 'Multiples Postes (Apprenti → Responsable de Stock)',
         period: 'Avant 2024',
         description:
@@ -101,7 +101,7 @@ export const fr = {
     title: 'Formation & Certifications',
     items: {
       ifmt: {
-        institution: 'Institut Fédéral du Mato Grosso — Campus Pontes e Lacerda',
+        institution: 'Institut Fédéral du Mato Grosso, Campus Pontes e Lacerda',
         course: 'Technicien en Informatique (Intégré au Lycée)',
         year: '2021',
       },
@@ -126,7 +126,7 @@ export const fr = {
   extras: {
     title: 'Activités & Leadership',
     demolay: {
-      title: 'Ordre DeMolay — Chapitre Chevaliers du Guaporé nº 862',
+      title: 'Ordre DeMolay, Chapitre Chevaliers du Guaporé nº 862',
       description:
         "Organisation de jeunes axée sur le développement personnel et professionnel. Reconnaissance nationale avec des campagnes et mérites. Senior DeMolay et actuel Président du Collège des Seniors. Créateur du site institutionnel et du système de gestion du chapitre.",
     },
