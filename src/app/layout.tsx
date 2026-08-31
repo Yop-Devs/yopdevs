@@ -12,8 +12,12 @@ export const metadata = {
     'YOP Devs — empresa de desenvolvimento. Sites, sistemas web, apps e automações. Tecnologia que transforma ideias em sistemas.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/yop-icon-512.png',
-    apple: '/yop-icon-512.png',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '48x48' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
     title: 'YOP Devs | Empresa de Desenvolvimento',
@@ -24,7 +28,7 @@ export const metadata = {
 }
 
 export const viewport = {
-  themeColor: '#0a1740',
+  themeColor: '#7C3AED',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -37,8 +41,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/yop-icon-512.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/yop-icon-512.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script

@@ -51,29 +51,29 @@ export const es = {
           'SaaS para gestión de pymes con control de usuarios, propuestas comerciales, integración con WhatsApp, IA, control financiero, clientes, mapa mental, Google Login, agenda, firma de contratos e integración con Stripe.',
       },
       westham: {
-        name: 'West Ham FC',
+        name: 'Westham Sport Club',
         description:
-          'Panel para club de fútbol con noticias, eventos, marcadores, tienda integrada, sistema de login, panel administrativo, control financiero, socios, tarjetas de jugadores y flujo completo de gestión deportiva.',
+          'Sitio y panel del club: noticias, partidos (FUT11, Fut7 y Futsal), proyectos, socios, tienda, jugadores y caja — todo gestionado en un admin completo.',
       },
-      tryly: {
-        name: 'Tryly',
+      palha: {
+        name: 'Palha Weddings',
         description:
-          'Plataforma de evolución personal con rutas de misiones estilo Duolingo, integración con IA, Google Login y pago con Mercado Pago. Enfocada en ayudar usuarios a mejorar con desafíos diarios.',
+          'Sistema de álbumes para bodas, cumpleaños y eventos: contraseña, vídeos, descarga de medios, rejillas de exposición y página inicial 100% editable por el admin.',
       },
       fenix: {
         name: 'Fênix Gestora',
         description:
           'Sistema empresarial completo con simulaciones para clientes, panel de vendedores/directores, CRM, calendario integrado, automatización con Playwright, envío de facturas vía WhatsApp para +4mil clientes y control de millones en ventas.',
       },
-      yopdevs: {
-        name: 'YopDevs',
+      teuposto: {
+        name: 'Teu Posto',
         description:
-          'Red social comunitaria para empresarios, técnicos de TI y usuarios. Posts, comentarios, likes, notificaciones, Google Login, portafolio automático, marketplace de ideas y gestión de perfil.',
+          'Plataforma para dueños y gerentes de estaciones: análisis de combustibles, verificación metrológica, documentos con avisos de vencimiento, WhatsApp, Mercado Pago, liberaciones automáticas y página pública para que clientes sigan los RAQs.',
       },
       demolay: {
         name: 'Capítulo 862 — Orden DeMolay',
         description:
-          'Sitio para la Orden DeMolay con inscripciones, presentación de miembros e historia. Panel de miembros para actividades, invitaciones, gestión de actas, miembros y finanzas.',
+          'Sistema completo del capítulo: sitio público, área de miembro, panel admin, usuarios, finanzas, actas, asistencia, candidaturas, noticias, calendario, sellos y sorteos con venta de números de rifa.',
       },
     },
   },

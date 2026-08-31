@@ -7,23 +7,23 @@ import { useState } from 'react'
 
 const projectLinks = {
   plify: 'https://plify360.com.br',
-  westham: 'https://westham.com.br',
-  tryly: 'https://www.tryly.com.br',
+  westham: 'https://www.farrus.com.br/',
+  palha: 'https://palhaweddings.plify360.com.br/',
   fenix: 'https://www.fenixgestora.com.br',
-  yopdevs: 'https://www.yopdevs.com.br',
-  demolay: 'https://capitulo862.vercel.app',
+  teuposto: 'https://www.appteuposto.com.br/',
+  demolay: 'https://www.demolay862.com.br/',
 } as const
 
-const projectKeys = ['plify', 'westham', 'tryly', 'fenix', 'yopdevs', 'demolay'] as const
+const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'demolay'] as const
 
 /** Query `v` só para invalidar cache do browser quando trocas o ficheiro */
 const projectImages: Record<(typeof projectKeys)[number], string> = {
-  plify: '/projetos/plify.png?v=3',
-  westham: '/projetos/westham.webp?v=2',
-  tryly: '/projetos/tryly.png?v=20260412',
+  plify: '/projetos/plify/logo.png?v=3',
+  westham: '/projetos/westham/logo.png?v=2',
+  palha: '/projetos/palha/logo.png?v=2',
   fenix: '/projetos/fenix.png',
-  yopdevs: '/projetos/yopdevs.png',
-  demolay: '/projetos/capitulo.webp',
+  teuposto: '/projetos/teuposto/logo.png?v=2',
+  demolay: '/projetos/demolay/logo.png?v=2',
 }
 
 /** Faixa do logo: mesma cor em todos os cards (contraste para logos claros/escuros) */
@@ -35,9 +35,9 @@ const logoStripSize =
 const logoSizeClass: Record<(typeof projectKeys)[number], string> = {
   plify: logoStripSize,
   westham: logoStripSize,
-  tryly: logoStripSize,
+  palha: logoStripSize,
   fenix: logoStripSize,
-  yopdevs: logoStripSize,
+  teuposto: logoStripSize,
   demolay: logoStripSize,
 }
 

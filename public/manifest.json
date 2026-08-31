@@ -5,9 +5,15 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#05070d",
-  "theme_color": "#05070d",
+  "background_color": "#1E3A8A",
+  "theme_color": "#7C3AED",
   "icons": [
+    {
+      "src": "/favicon-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/yop-icon-512.png",
       "sizes": "192x192",
@@ -19,12 +25,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/yop-icon-512.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
     },
     {
       "src": "/yop-icon-512.png",

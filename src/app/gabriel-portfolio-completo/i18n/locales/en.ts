@@ -50,29 +50,29 @@ export const en = {
           'SaaS for small and medium business management with user control, commercial proposals, WhatsApp integration, AI, financial control, clients, mind mapping, Google Login, calendar, contract signing, and Stripe integration.',
       },
       westham: {
-        name: 'West Ham FC',
+        name: 'Westham Sport Club',
         description:
-          'Football club panel with news, events, scores, integrated store, login system, admin panel, financial control, members, player cards, and complete sports management workflow.',
+          'Club website and admin panel: news, matches (FUT11, Fut7 and Futsal), projects, members, store, players and cash — all managed in one complete admin.',
       },
-      tryly: {
-        name: 'Tryly',
+      palha: {
+        name: 'Palha Weddings',
         description:
-          'Personal evolution platform with Duolingo-style mission trails, AI integration, Google Login, and Mercado Pago payments. Focused on helping users improve through daily challenges.',
+          'Album system for weddings, birthdays and events: password protection, video playback, media download, gallery layouts and a fully admin-editable homepage.',
       },
       fenix: {
         name: 'Fênix Gestora',
         description:
           'Complete business system with client simulations, sales/director panel, CRM, integrated calendar, Playwright automation, WhatsApp billing for 4k+ clients, and control of millions in sales.',
       },
-      yopdevs: {
-        name: 'YopDevs',
+      teuposto: {
+        name: 'Teu Posto',
         description:
-          'Community social network for entrepreneurs, IT technicians, and users. Posts, comments, likes, notifications, Google Login, automatic portfolio, idea marketplace, and profile management.',
+          'Platform for gas station owners and managers: fuel analyses, metrological checks, documents with expiry alerts, WhatsApp, Mercado Pago, automatic releases and a public page for customers to follow RAQ records.',
       },
       demolay: {
         name: 'Chapter 862 — Order of DeMolay',
         description:
-          'Website for the Order of DeMolay with registrations, member showcase, and history. Member panel for activities, invitations, minutes management, member and financial control.',
+          'Complete chapter system: public site, member area, admin panel, users, finances, minutes, attendance, applications, news, calendar, seals and raffles with ticket number sales.',
       },
     },
   },

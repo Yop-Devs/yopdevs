@@ -379,3 +379,100 @@
   }
 }
 
+@keyframes yop-wa-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(37, 211, 102, 0.5),
+      0 12px 36px rgba(37, 211, 102, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 12px rgba(37, 211, 102, 0),
+      0 16px 44px rgba(37, 211, 102, 0.45);
+  }
+}
+@keyframes yop-wa-shine {
+  0% { transform: translateX(-130%) skewX(-16deg); }
+  55%, 100% { transform: translateX(220%) skewX(-16deg); }
+}
+.yop-wa-cta {
+  animation: yop-wa-pulse 2.4s ease-out infinite;
+}
+.yop-wa-shine {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 70%
+  );
+  animation: yop-wa-shine 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yop-wa-cta,
+  .yop-wa-shine {
+    animation: none;
+  }
+}
+
+@keyframes yop-process-flow {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+.yop-process-flow {
+  animation: yop-process-flow 3.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yop-process-flow {
+    animation: none;
+  }
+}
+
+@keyframes yop-rain-fall {
+  0% {
+    transform: translateY(-30vh);
+    opacity: 0;
+  }
+  12% { opacity: 1; }
+  88% { opacity: 0.85; }
+  100% {
+    transform: translateY(110vh);
+    opacity: 0;
+  }
+}
+.yop-rain-drop {
+  animation-name: yop-rain-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes yop-cable-dash {
+  to {
+    stroke-dashoffset: -420;
+  }
+}
+.yop-cable-pulse {
+  stroke-dasharray: 28 380;
+  stroke-dashoffset: 0;
+  opacity: 0.85;
+  animation: yop-cable-dash linear infinite;
+}
+.yop-cable-pulse-a { animation-duration: 7.5s; }
+.yop-cable-pulse-b { animation-duration: 9s; animation-delay: -2s; }
+.yop-cable-pulse-c { animation-duration: 8.2s; animation-delay: -4s; }
+.yop-cable-pulse-d { animation-duration: 10s; animation-delay: -1.5s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .yop-rain-drop,
+  .yop-cable-pulse {
+    animation: none !important;
+  }
+  .yop-rain-drop {
+    opacity: 0.25;
+    transform: none;
+  }
+  .yop-cable-pulse {
+    opacity: 0.35;
+    stroke-dasharray: none;
+  }
+}
+
