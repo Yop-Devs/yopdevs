@@ -1,4 +1,4 @@
--- Deixar SOMENTE yopdevs@gmail.com como ADMIN; todos os demais como MEMBER
+-- Deixar SOMENTE gabrielcarrarapessoal@gmail.com como ADMIN; todos os demais como MEMBER
 -- Rode no SQL Editor do Supabase (uma vez ou sempre que quiser resetar os admins).
 
 -- 1) Garantir que a coluna role existe
@@ -9,16 +9,16 @@ UPDATE profiles SET role = 'MEMBER';
 
 -- 3) Depois: o perfil do e-mail abaixo vira ADMIN
 UPDATE profiles
-SET role = 'ADMIN'
+SET role = 'ADMIN', full_name = 'GABRIEL CARRARA'
 WHERE id IN (
-  SELECT id FROM auth.users WHERE email = 'yopdevs@gmail.com'
+  SELECT id FROM auth.users WHERE lower(email) = 'gabrielcarrarapessoal@gmail.com'
 );
 
--- Se o perfil do yopdevs@gmail.com ainda não existir (novo usuário), crie:
--- INSERT INTO profiles (id, full_name, role)
--- SELECT id, COALESCE(raw_user_meta_data->>'full_name', email), 'ADMIN'
--- FROM auth.users WHERE email = 'yopdevs@gmail.com'
--- ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';
+-- Se o perfil ainda não existir (novo usuário), crie:
+INSERT INTO profiles (id, full_name, role)
+SELECT id, 'GABRIEL CARRARA', 'ADMIN'
+FROM auth.users WHERE lower(email) = 'gabrielcarrarapessoal@gmail.com'
+ON CONFLICT (id) DO UPDATE SET role = 'ADMIN', full_name = 'GABRIEL CARRARA';
 
 -- Para conferir quem é admin:
 -- SELECT p.id, p.full_name, p.role, u.email

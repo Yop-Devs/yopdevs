@@ -1,12 +1,12 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { isEmailAllowed } from '@/lib/allowed-emails'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Toaster } from '@/components/ui/sonner'
+import BrandMark from '@/components/BrandMark'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<{ full_name?: string | null; avatar_url?: string | null } | null>(null)
@@ -117,15 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="sidebar-top-safe pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 flex items-center justify-center relative bg-slate-950 border-b border-white/10 shrink-0">
           <Link href="/dashboard/portfolio" className="flex items-center justify-center w-full min-h-[4rem]">
-            <Image
-              src="/yop-logo.png?v=2"
-              alt="YOP DEVS"
-              width={280}
-              height={187}
-              className="h-14 sm:h-16 w-auto object-contain object-center"
-              priority
-              unoptimized
-            />
+            <BrandMark textClassName="text-2xl sm:text-[1.75rem] tracking-wide" />
           </Link>
           <button
             className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
@@ -200,14 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="/dashboard/portfolio"
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-14 z-0"
             >
-              <Image
-                src="/yop-logo.png?v=2"
-                alt="YOP DEVS"
-                width={140}
-                height={93}
-                className="h-9 w-auto max-w-[150px] object-contain object-center"
-                unoptimized
-              />
+              <BrandMark textClassName="text-xl tracking-wide" />
             </Link>
             <div className="relative z-10 flex items-center justify-center w-10 h-10 shrink-0 bg-slate-900 overflow-hidden border border-slate-700">
               {profile?.avatar_url ? (

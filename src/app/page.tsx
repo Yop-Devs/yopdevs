@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Space_Grotesk, JetBrains_Mono, Wallpoet } from 'next/font/google'
+import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
@@ -25,6 +25,7 @@ import {
 } from '@/lib/landing-i18n/translations'
 import { Globe, Lock, Copy, Check, Mail } from 'lucide-react'
 import { TechBrandIcon } from '@/components/TechBrandIcon'
+import BrandMark from '@/components/BrandMark'
 
 const CONTACT_EMAIL = 'gabrielcarrarapessoal@gmail.com'
 
@@ -246,24 +247,7 @@ const jetbrains = JetBrains_Mono({
   variable: '--font-yop-mono',
 })
 
-const wallpoet = Wallpoet({
-  weight: '400',
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-yop-brand',
-})
-
 type AuthMode = 'login' | 'reset'
-
-function BrandMark({ className = '' }: { className?: string }) {
-  return (
-    <span className={`yop-brand ${wallpoet.className} ${className}`} aria-label="YOP Devs">
-      <span className="yop-brand-text" aria-hidden>
-        YOP Devs
-      </span>
-    </span>
-  )
-}
 
 function ServiceIcon({ name, className = 'h-5 w-5 shrink-0 text-violet-200' }: { name: string; className?: string }) {
   const cls = className
