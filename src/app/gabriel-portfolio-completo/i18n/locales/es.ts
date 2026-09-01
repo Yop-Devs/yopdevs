@@ -70,6 +70,16 @@ export const es = {
         description:
           'Plataforma para dueños y gerentes de estaciones: análisis de combustibles, verificación metrológica, documentos con avisos de vencimiento, WhatsApp, Mercado Pago, liberaciones automáticas y página pública para que clientes sigan los RAQs.',
       },
+      meb: {
+        name: 'M&B Transportes',
+        description:
+          'Sistema de gestión de transporte: flota propia y de terceros, conductores, operacional, seguimiento de viajes, finanzas, gastos, cadastros, documentación de vehículos con avisos de vencimiento, cierre de pagos e generación de informes.',
+      },
+      toq: {
+        name: 'TOQ Tennis',
+        description:
+          'Red social de tenis que integra dueños de canchas, clubes, jugadores y profesores: gestión de canchas y reservas, difusión del club, tienda, comunidades, torneos, feed social, chat privado y de grupo, seguimiento de rendimiento, planes por perfil y liberación/pago automáticos.',
+      },
       demolay: {
         name: 'Capítulo 862, Orden DeMolay',
         description:

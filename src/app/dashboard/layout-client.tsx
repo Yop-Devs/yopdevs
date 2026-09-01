@@ -19,12 +19,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     async function checkAccess() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        router.push('/')
+        router.push('/admin/login')
         return
       }
       if (!isEmailAllowed(session.user.email)) {
         await supabase.auth.signOut()
-        router.push('/?error=unauthorized')
+        router.push('/admin/login?error=unauthorized')
         return
       }
 

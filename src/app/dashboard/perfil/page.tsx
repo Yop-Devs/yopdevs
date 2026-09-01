@@ -52,7 +52,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [profileRole, setProfileRole] = useState<string>('')
-  const [projectCount, setProjectCount] = useState(0)
+  const [portfolioProjectCount, setPortfolioProjectCount] = useState(0)
   const [formData, setFormData] = useState({
     full_name: '',
     title: '',
@@ -88,8 +88,11 @@ export default function ProfilePage() {
             looking_for: data.looking_for || '',
           })
         }
-        const { count } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', user.id)
-        setProjectCount(count ?? 0)
+        const { count } = await supabase
+          .from('portfolio_projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        setPortfolioProjectCount(count ?? 0)
       }
       setLoading(false)
     }
@@ -221,7 +224,7 @@ export default function ProfilePage() {
                   {AVAILABILITY_BADGES.find((b) => b.value === formData.availability_badge)?.label}
                 </p>
               )}
-              {projectCount >= 1 && (
+              {portfolioProjectCount >= 1 && (
                 <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold uppercase mt-2">
                   🏆 Primeiro Projeto Publicado
                 </span>

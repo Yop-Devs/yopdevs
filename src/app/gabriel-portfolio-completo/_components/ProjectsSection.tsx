@@ -12,10 +12,12 @@ const projectLinks = {
   palha: 'https://palhaweddings.plify360.com.br/',
   fenix: 'https://www.fenixgestora.com.br',
   teuposto: 'https://www.appteuposto.com.br/',
+  meb: 'https://www.mebtransporte.com.br/',
+  toq: 'https://www.toqtennis.com.br/',
   demolay: 'https://www.demolay862.com.br/',
 } as const
 
-const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'demolay'] as const
+const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'meb', 'toq', 'demolay'] as const
 
 const projectImages: Record<(typeof projectKeys)[number], string> = {
   plify: '/projetos/plify/logo.png?v=3',
@@ -23,6 +25,8 @@ const projectImages: Record<(typeof projectKeys)[number], string> = {
   palha: '/projetos/palha/logo.png?v=2',
   fenix: '/projetos/fenix/logo.420a748b9c9c09dc115e.png',
   teuposto: '/projetos/teuposto/logo.png?v=2',
+  meb: '/projetos/meb/logo.png?v=3',
+  toq: '/projetos/toq/logo.png?v=2',
   demolay: '/projetos/demolay/logo.png?v=2',
 }
 
@@ -37,6 +41,8 @@ const logoSizeClass: Record<(typeof projectKeys)[number], string> = {
   palha: logoStripSize,
   fenix: logoStripSize,
   teuposto: logoStripSize,
+  meb: logoStripSize,
+  toq: logoStripSize,
   demolay: logoStripSize,
 }
 
@@ -47,6 +53,8 @@ const projectColors = [
   'from-orange-500/30 to-amber-500/30',
   'from-rose-500/30 to-pink-500/30',
   'from-indigo-500/30 to-blue-500/30',
+  'from-sky-500/30 to-blue-500/30',
+  'from-amber-500/30 to-yellow-500/30',
 ]
 
 function ProjectCard({ pKey, index }: { pKey: (typeof projectKeys)[number]; index: number }) {

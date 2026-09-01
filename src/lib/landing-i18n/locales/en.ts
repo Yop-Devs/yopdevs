@@ -96,6 +96,10 @@ export const en: DeepStringify<typeof ptBr> = {
         'Business system with simulations, CRM, calendar, Playwright automation and WhatsApp invoices.',
       teuposto:
         'Platform for gas stations: analyses, documents, WhatsApp, Mercado Pago and a public page to follow RAQs.',
+      meb:
+        'Own and third-party fleet management: drivers, trips, finance, documentation with expiry alerts and reports.',
+      toq:
+        'Tennis social network with court management, clubs, communities, tournaments, lessons, chat and plans with automatic payments.',
       demolay:
         'Chapter system: public site, member area, admin, finance, minutes, attendance, news and raffles.',
     },

@@ -90,6 +90,10 @@ export const ptBr = {
         'Sistema empresarial com simulações, CRM, calendário, automação com Playwright e boletos via WhatsApp.',
       teuposto:
         'Plataforma para postos: análises, documentos, WhatsApp, Mercado Pago e página pública para acompanhar RAQs.',
+      meb:
+        'Gestão de frota própria e de terceiros: motoristas, viagens, financeiro, documentação com avisos de vencimento e relatórios.',
+      toq:
+        'Rede social de tênis com gestão de quadras, clubes, comunidades, torneios, aulas, chat e planos com pagamento automático.',
       demolay:
         'Sistema do capítulo: site público, área do membro, admin, finanças, atas, frequência, notícias e sorteios.',
     },

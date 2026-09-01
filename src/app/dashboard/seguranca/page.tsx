@@ -261,7 +261,7 @@ export default function SecurityPage() {
           <h2 className="text-base font-bold text-red-900">Zona de perigo</h2>
           <p className="mt-0.5 text-sm text-red-900/85">
             Elimina a tua conta de utilizador e o acesso à YOP Devs. O servidor remove o registo de autenticação; dados
-            ligados ao teu utilizador na base (perfil, portfólio, posts, amigos, agenda, etc.) são apagados em cascata
+            ligados ao teu utilizador na base (perfil e portfólio) são apagados em cascata
             conforme as regras da base de dados.
           </p>
         </div>

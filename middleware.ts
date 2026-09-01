@@ -1,8 +1,41 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAdminHost } from '@/lib/admin-host'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const host = request.headers.get('host')
+
+  // Subdomínio admin → área /admin (login e painel)
+  if (isAdminHost(host)) {
+    const isAsset =
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/favicon') ||
+      pathname.startsWith('/projetos') ||
+      pathname.startsWith('/brand') ||
+      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|txt|xml)$/)
+
+    if (!isAsset) {
+      if (pathname === '/' || pathname === '') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin/login'
+        return NextResponse.rewrite(url)
+      }
+
+      if (!pathname.startsWith('/admin') && !pathname.startsWith('/auth')) {
+        const url = request.nextUrl.clone()
+        url.pathname = `/admin${pathname}`
+        return NextResponse.rewrite(url)
+      }
+    }
+  }
+
   let response = NextResponse.next({ request: { headers: request.headers } })
+
+  const needsAuthRefresh =
+    pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+
+  if (!needsAuthRefresh) return response
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,15 +59,13 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Atualiza a sessão se existir em cookies (ex.: após OAuth/callback).
-  // Não redirecionamos aqui: o login com email/senha salva a sessão no localStorage,
-  // então o middleware não vê cookies. A proteção de /dashboard é feita no
-  // dashboard layout (client-side), que lê a sessão do localStorage.
+  // Só refresca cookies se existirem. A sessão email/senha fica no localStorage;
+  // a proteção real do painel é no layout client.
   await supabase.auth.getUser()
 
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
 }

@@ -52,3 +52,6 @@ next-env.d.ts
 public/projetos/prints/fenix/raw/
 *.bak
 
+# cache local de npm
+.npm-cache/
+

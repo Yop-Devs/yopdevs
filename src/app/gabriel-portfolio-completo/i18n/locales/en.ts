@@ -69,6 +69,16 @@ export const en = {
         description:
           'Platform for gas station owners and managers: fuel analyses, metrological checks, documents with expiry alerts, WhatsApp, Mercado Pago, automatic releases and a public page for customers to follow RAQ records.',
       },
+      meb: {
+        name: 'M&B Transportes',
+        description:
+          'Transport management system: own and third-party fleets, drivers, operations, trip tracking, finance, expenses, registrations, vehicle documentation with expiry alerts, payment closing and report generation.',
+      },
+      toq: {
+        name: 'TOQ Tennis',
+        description:
+          'Tennis social network connecting court owners, clubs, players and coaches: court management and bookings, club promotion, store, communities, tournaments, social feed, private and group chat, performance tracking, role-based plans and automatic unlock/payment flows.',
+      },
       demolay: {
         name: 'Chapter 862, Order of DeMolay',
         description:

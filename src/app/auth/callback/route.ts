@@ -35,11 +35,11 @@ export async function GET(request: Request) {
       const email = data.session?.user?.email
       if (!isEmailAllowed(email)) {
         await supabase.auth.signOut()
-        return NextResponse.redirect(`${origin}/?error=unauthorized`)
+        return NextResponse.redirect(`${origin}/admin/login?error=unauthorized`)
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
 
-  return NextResponse.redirect(`${origin}/?error=auth-code-error`)
+  return NextResponse.redirect(`${origin}/admin/login?error=auth-code-error`)
 }

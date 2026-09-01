@@ -23,7 +23,7 @@ import {
   languageLabels,
   type Language,
 } from '@/lib/landing-i18n/translations'
-import { Globe, Lock, Copy, Check, Mail } from 'lucide-react'
+import { Globe, Copy, Check, Mail } from 'lucide-react'
 import { TechBrandIcon } from '@/components/TechBrandIcon'
 import BrandMark from '@/components/BrandMark'
 
@@ -527,9 +527,9 @@ function LandingPageContent() {
       setMode('login')
       setMessage({ type: 'error', text: 'Falha na autenticação. Tente novamente.' })
     } else if (err === 'unauthorized') {
-      setShowModal(true)
-      setMode('login')
-      setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+      window.location.href = '/admin/login?error=unauthorized'
+    } else if (searchParams.get('login') === '1' || searchParams.get('admin') === '1') {
+      window.location.href = '/admin/login'
     }
   }, [searchParams])
 
@@ -618,12 +618,6 @@ function LandingPageContent() {
     }
   }
 
-  const openLogin = () => {
-    setMode('login')
-    setMessage(null)
-    setShowModal(true)
-  }
-
   return (
     <div
       className={`${spaceGrotesk.variable} ${jetbrains.variable} ${spaceGrotesk.className} relative min-h-screen text-white selection:bg-violet-400/30`}
@@ -652,15 +646,6 @@ function LandingPageContent() {
             <a href="#tecnologias" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white lg:inline">{t.nav.tech}</a>
             <a href="#contato" className="hidden px-3 py-2 text-sm text-white/75 transition hover:text-white sm:inline">{t.nav.contact}</a>
             <LandingLangSwitcher />
-            <button
-              type="button"
-              onClick={openLogin}
-              aria-label={t.nav.login}
-              title={t.nav.login}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <Lock className="h-4 w-4" aria-hidden />
-            </button>
           </nav>
         </header>
 
