@@ -626,7 +626,7 @@ function LandingPageContent() {
 
   return (
     <div
-      className={`${spaceGrotesk.variable} ${jetbrains.variable} ${wallpoet.variable} ${spaceGrotesk.className} relative min-h-screen text-white selection:bg-violet-400/30`}
+      className={`${spaceGrotesk.variable} ${jetbrains.variable} ${spaceGrotesk.className} relative min-h-screen text-white selection:bg-violet-400/30`}
       style={{
         background: 'linear-gradient(165deg, #071338 0%, #1b0f4d 38%, #0a1845 72%, #071338 100%)',
       }}
