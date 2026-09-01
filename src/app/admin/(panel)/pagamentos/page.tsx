@@ -81,24 +81,29 @@ export default function AdminPagamentosPage() {
       string,
       { id: string; full_name: string | null; person_name: string | null; company_name: string | null }[]
     > = {}
-    for (const row of (linksRes.data ?? []) as {
+    for (const row of (linksRes.data ?? []) as unknown as {
       system_id: string
-      client: {
-        id: string
-        full_name: string | null
-        person_name: string | null
-        company_name: string | null
-      } | null
+      client:
+        | { id: string; full_name: string | null; person_name: string | null; company_name: string | null }
+        | { id: string; full_name: string | null; person_name: string | null; company_name: string | null }[]
+        | null
     }[]) {
-      if (!row.client) continue
+      const client = Array.isArray(row.client) ? (row.client[0] ?? null) : row.client
+      if (!client) continue
       if (!clientsBySystem[row.system_id]) clientsBySystem[row.system_id] = []
-      clientsBySystem[row.system_id].push(row.client)
+      clientsBySystem[row.system_id].push(client)
     }
 
-    const list = ((data ?? []) as AdminPaymentWithSystem[]).map((payment) => ({
-      ...payment,
-      clients: clientsBySystem[payment.system_id] ?? [],
-    }))
+    const list: AdminPaymentWithSystem[] = ((data ?? []) as unknown as (AdminPaymentWithSystem & {
+      system: AdminPaymentWithSystem['system'] | NonNullable<AdminPaymentWithSystem['system']>[] | null
+    })[]).map((raw) => {
+      const system = Array.isArray(raw.system) ? (raw.system[0] ?? null) : raw.system
+      return {
+        ...raw,
+        system,
+        clients: clientsBySystem[raw.system_id] ?? [],
+      }
+    })
     setPayments(list)
 
     if (list.length) {

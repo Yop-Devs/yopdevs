@@ -47,7 +47,29 @@ export default function AdminDashboardPage() {
     }
 
     const systemList = (systemsRes.data ?? []) as DashboardSystem[]
-    const paymentList = (paymentsRes.data ?? []) as DashboardPayment[]
+    const paymentList: DashboardPayment[] = (paymentsRes.data ?? []).map((row) => {
+      const raw = row as {
+        id: string
+        system_id: string
+        is_quitado: boolean
+        has_operation_fee: boolean
+        operation_fee_period_days: number | null
+        operation_fee_amount: number | null
+        operation_next_due: string | null
+        system: DashboardSystem | DashboardSystem[] | null
+      }
+      const system = Array.isArray(raw.system) ? (raw.system[0] ?? null) : raw.system
+      return {
+        id: raw.id,
+        system_id: raw.system_id,
+        is_quitado: Boolean(raw.is_quitado),
+        has_operation_fee: Boolean(raw.has_operation_fee),
+        operation_fee_period_days: raw.operation_fee_period_days,
+        operation_fee_amount: raw.operation_fee_amount != null ? Number(raw.operation_fee_amount) : null,
+        operation_next_due: raw.operation_next_due,
+        system,
+      }
+    })
     setSystems(systemList)
     setPayments(paymentList)
 
