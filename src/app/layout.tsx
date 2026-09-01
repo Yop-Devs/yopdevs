@@ -1,6 +1,5 @@
 // src/app/layout.tsx
 import './globals.css'
-import InstallPrompt from '@/components/InstallPrompt'
 import { fredoka } from '@/components/Logo'
 
 export const metadata = {
@@ -61,7 +60,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased overflow-x-hidden">
         {children}
-        <InstallPrompt />
       </body>
     </html>
   )

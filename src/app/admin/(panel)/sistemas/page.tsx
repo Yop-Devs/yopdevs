@@ -9,22 +9,15 @@ import {
   AdminSystemFile,
   AdminSystemFileKind,
   daysUntil,
-  formatBrl,
   formatDateBr,
+  isHttpLink,
+  resolveSystemLogoUrl,
 } from '@/lib/admin-systems'
 
 type FormState = {
   name: string
   company_name: string
   link: string
-  is_quitado: boolean
-  has_monthly_fee: boolean
-  monthly_fee_amount: string
-  monthly_fee_due_day: string
-  monthly_next_due: string
-  is_paying_development: boolean
-  development_amount: string
-  development_paid_off_date: string
   domain_expires_at: string
   notes: string
 }
@@ -33,28 +26,8 @@ const emptyForm: FormState = {
   name: '',
   company_name: '',
   link: '',
-  is_quitado: false,
-  has_monthly_fee: false,
-  monthly_fee_amount: '',
-  monthly_fee_due_day: '',
-  monthly_next_due: '',
-  is_paying_development: false,
-  development_amount: '',
-  development_paid_off_date: '',
   domain_expires_at: '',
   notes: '',
-}
-
-function toNullableNumber(value: string): number | null {
-  const cleaned = value.replace(',', '.').trim()
-  if (!cleaned) return null
-  const n = Number(cleaned)
-  return Number.isFinite(n) ? n : null
-}
-
-function toNullableInt(value: string): number | null {
-  const n = Number.parseInt(value, 10)
-  return Number.isFinite(n) ? n : null
 }
 
 function reminderTone(days: number | null): string {
@@ -84,6 +57,7 @@ export default function AdminSistemasPage() {
   const [envFiles, setEnvFiles] = useState<FileList | null>(null)
   const [accessFiles, setAccessFiles] = useState<FileList | null>(null)
   const [query, setQuery] = useState('')
+  const [logoSrcById, setLogoSrcById] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -100,6 +74,20 @@ export default function AdminSistemasPage() {
 
     const list = (rows ?? []) as AdminSystem[]
     setSystems(list)
+
+    const logos: Record<string, string> = {}
+    await Promise.all(
+      list.map(async (system) => {
+        const url = await resolveSystemLogoUrl(system, async (path, expiresIn) => {
+          const { data, error: signError } = await supabase.storage
+            .from(ADMIN_SYSTEM_BUCKET)
+            .createSignedUrl(path, expiresIn)
+          return { signedUrl: data?.signedUrl, error: signError }
+        })
+        if (url) logos[system.id] = url
+      }),
+    )
+    setLogoSrcById(logos)
 
     if (list.length) {
       const ids = list.map((s) => s.id)
@@ -156,14 +144,6 @@ export default function AdminSistemasPage() {
       name: system.name,
       company_name: system.company_name,
       link: system.link ?? '',
-      is_quitado: system.is_quitado,
-      has_monthly_fee: system.has_monthly_fee,
-      monthly_fee_amount: system.monthly_fee_amount != null ? String(system.monthly_fee_amount) : '',
-      monthly_fee_due_day: system.monthly_fee_due_day != null ? String(system.monthly_fee_due_day) : '',
-      monthly_next_due: system.monthly_next_due ?? '',
-      is_paying_development: system.is_paying_development,
-      development_amount: system.development_amount != null ? String(system.development_amount) : '',
-      development_paid_off_date: system.development_paid_off_date ?? '',
       domain_expires_at: system.domain_expires_at ?? '',
       notes: system.notes ?? '',
     })
@@ -224,14 +204,6 @@ export default function AdminSistemasPage() {
         name: form.name.trim(),
         company_name: form.company_name.trim(),
         link: form.link.trim() || null,
-        is_quitado: form.is_quitado,
-        has_monthly_fee: form.has_monthly_fee,
-        monthly_fee_amount: toNullableNumber(form.monthly_fee_amount),
-        monthly_fee_due_day: toNullableInt(form.monthly_fee_due_day),
-        monthly_next_due: form.monthly_next_due || null,
-        is_paying_development: form.is_paying_development,
-        development_amount: toNullableNumber(form.development_amount),
-        development_paid_off_date: form.development_paid_off_date || null,
         domain_expires_at: form.domain_expires_at || null,
         notes: form.notes.trim() || null,
         updated_at: new Date().toISOString(),
@@ -250,17 +222,25 @@ export default function AdminSistemasPage() {
           .single()
         if (error) throw error
         systemId = data.id as string
+
+        const { error: payError } = await supabase.from('yop_admin_payments').insert({
+          system_id: systemId,
+          created_by: userId,
+        })
+        if (payError) throw payError
       }
 
       if (!systemId) throw new Error('Sistema sem ID')
 
       if (logoFile) {
         const logoPath = await uploadFile(systemId, logoFile, 'logo')
-        const { data: publicData } = supabase.storage.from(ADMIN_SYSTEM_BUCKET).getPublicUrl(logoPath)
-        // bucket is private — store path and create signed URLs when displaying
+        // Bucket privado: logo_url local/publica fica null; a UI gera URL assinada a partir de logo_path
         const { error: logoError } = await supabase
           .from('yop_admin_systems')
-          .update({ logo_path: logoPath, logo_url: publicData.publicUrl })
+          .update({
+            logo_path: logoPath,
+            logo_url: null,
+          })
           .eq('id', systemId)
         if (logoError) throw logoError
       }
@@ -279,7 +259,7 @@ export default function AdminSistemasPage() {
   }
 
   async function removeSystem(system: AdminSystem) {
-    if (!window.confirm(`Excluir "${system.company_name}" e todos os anexos?`)) return
+    if (!window.confirm(`Excluir "${system.company_name}" e todos os anexos/pagamentos?`)) return
     const files = filesBySystem[system.id] ?? []
     const paths = [...files.map((f) => f.file_path), system.logo_path].filter(Boolean) as string[]
     if (paths.length) {
@@ -315,25 +295,10 @@ export default function AdminSistemasPage() {
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
   }
 
-  async function downloadLogo(system: AdminSystem) {
-    if (!system.logo_path) return
-    const { data, error } = await supabase.storage.from(ADMIN_SYSTEM_BUCKET).createSignedUrl(system.logo_path, 60)
-    if (error || !data?.signedUrl) {
-      toast.error(error?.message ?? 'Logo indisponível.')
-      return
-    }
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
-  }
-
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Sistemas</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Cadastre sistemas, anexos (.env, acessos) e lembretes de pagamento / domínio.
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Sistemas</h2>
         <button
           type="button"
           onClick={openCreate}
@@ -361,123 +326,100 @@ export default function AdminSistemasPage() {
           Nenhum sistema cadastrado ainda.
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((system) => {
             const files = filesBySystem[system.id] ?? []
             const envCount = files.filter((f) => f.kind === 'env').length
             const accessCount = files.filter((f) => f.kind === 'access').length
-            const monthlyDays = daysUntil(system.monthly_next_due)
             const domainDays = daysUntil(system.domain_expires_at)
-            const devDays = daysUntil(system.development_paid_off_date)
+            const logoSrc = logoSrcById[system.id] ?? null
+            const hasLogo = Boolean(logoSrc)
 
             return (
-              <article key={system.id} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-bold text-slate-900">{system.company_name}</h3>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                        {system.name}
-                      </span>
-                      {system.is_quitado ? (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
-                          Quitado
-                        </span>
-                      ) : null}
-                      {system.has_monthly_fee ? (
-                        <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-semibold text-violet-800">
-                          Mensalidade
-                        </span>
-                      ) : null}
-                      {system.is_paying_development ? (
-                        <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800">
-                          Pagando desenvolvimento
-                        </span>
-                      ) : null}
-                    </div>
+              <article
+                key={system.id}
+                className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
+              >
+                <div className="flex items-center justify-center border-b border-slate-100 bg-slate-950 px-4 py-5">
+                  {hasLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoSrc}
+                      alt={`Logo ${system.company_name}`}
+                      className="h-14 w-auto max-w-[12rem] object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                        if (fallback) fallback.classList.remove('hidden')
+                      }}
+                    />
+                  ) : null}
+                  <span className={`text-sm font-bold uppercase tracking-wider text-white/70 ${hasLogo ? 'hidden' : ''}`}>
+                    {system.name}
+                  </span>
+                </div>
 
-                    {system.link ? (
+                <div className="flex flex-1 flex-col gap-3 p-4">
+                  <div>
+                    <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900">{system.company_name}</h3>
+                    <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{system.name}</p>
+                    {isHttpLink(system.link) ? (
                       <a
-                        href={system.link}
+                        href={system.link!}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-block truncate text-sm text-violet-700 hover:underline"
+                        className="mt-1.5 block truncate text-sm text-violet-700 hover:underline"
                       >
-                        {system.link}
+                        {system.link!.replace(/^https?:\/\//, '')}
                       </a>
+                    ) : system.link ? (
+                      <p className="mt-1.5 text-sm text-slate-500">{system.link}</p>
                     ) : null}
+                  </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <span className={`rounded-full px-2.5 py-1 font-medium ${reminderTone(monthlyDays)}`}>
-                        {reminderLabel(monthlyDays, 'Mensalidade')}
-                        {system.monthly_fee_amount != null ? ` · ${formatBrl(system.monthly_fee_amount)}` : ''}
-                      </span>
-                      <span className={`rounded-full px-2.5 py-1 font-medium ${reminderTone(domainDays)}`}>
-                        {reminderLabel(domainDays, 'Domínio')} · {formatDateBr(system.domain_expires_at)}
-                      </span>
-                      {system.is_paying_development ? (
-                        <span className={`rounded-full px-2.5 py-1 font-medium ${reminderTone(devDays)}`}>
-                          Dev {formatBrl(system.development_amount)} · quita {formatDateBr(system.development_paid_off_date)}
-                        </span>
-                      ) : null}
-                    </div>
+                  <span className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium ${reminderTone(domainDays)}`}>
+                    {reminderLabel(domainDays, 'Domínio')}
+                    {system.domain_expires_at ? ` · ${formatDateBr(system.domain_expires_at)}` : ''}
+                  </span>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                      {system.logo_url || system.logo_path ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={system.logo_url || undefined}
-                          alt={`Logo ${system.company_name}`}
-                          className="h-10 w-auto max-w-[8rem] rounded-md border border-slate-200 bg-slate-950 object-contain p-1"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : null}
-                      <span>Anexos .env: {envCount}</span>
-                      <span>Anexos acessos: {accessCount}</span>
-                      {system.monthly_fee_due_day ? <span>Dia mensalidade: {system.monthly_fee_due_day}</span> : null}
-                      {system.logo_path ? (
-                        <button type="button" onClick={() => downloadLogo(system)} className="font-semibold text-violet-700 hover:underline">
-                          Baixar logo (storage)
-                        </button>
-                      ) : null}
-                    </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    <span>.env: {envCount}</span>
+                    <span>Acessos: {accessCount}</span>
+                  </div>
 
-                    {files.length > 0 ? (
-                      <ul className="mt-3 space-y-1.5">
+                  {system.notes ? <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{system.notes}</p> : null}
+
+                  {files.length > 0 ? (
+                    <details className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                      <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                        Anexos ({files.length})
+                      </summary>
+                      <ul className="mt-2 space-y-1.5">
                         {files.map((file) => (
-                          <li
-                            key={file.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
-                          >
-                            <div className="min-w-0">
-                              <span className="mr-2 rounded bg-white px-1.5 py-0.5 font-semibold uppercase text-slate-500">
-                                {file.kind}
-                              </span>
-                              <span className="font-medium text-slate-800">{file.file_name}</span>
-                            </div>
-                            <div className="flex gap-2">
+                          <li key={file.id} className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="min-w-0 truncate font-medium text-slate-700">
+                              <span className="mr-1 uppercase text-slate-400">{file.kind}</span>
+                              {file.file_name}
+                            </span>
+                            <span className="flex shrink-0 gap-2">
                               <button type="button" onClick={() => downloadFile(file)} className="font-semibold text-violet-700 hover:underline">
                                 Baixar
                               </button>
                               <button type="button" onClick={() => removeFile(file)} className="font-semibold text-rose-700 hover:underline">
                                 Excluir
                               </button>
-                            </div>
+                            </span>
                           </li>
                         ))}
                       </ul>
-                    ) : null}
+                    </details>
+                  ) : null}
 
-                    {system.notes ? <p className="mt-3 text-sm text-slate-600">{system.notes}</p> : null}
-                  </div>
-
-                  <div className="flex shrink-0 gap-2">
+                  <div className="mt-auto flex gap-2 border-t border-slate-100 pt-3">
                     <button
                       type="button"
                       onClick={() => openEdit(system)}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
+                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
                     >
                       Editar
                     </button>
@@ -497,7 +439,11 @@ export default function AdminSistemasPage() {
       )}
 
       {editorOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4" role="presentation" onClick={() => !saving && setEditorOpen(false)}>
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4"
+          role="presentation"
+          onClick={() => !saving && setEditorOpen(false)}
+        >
           <div
             role="dialog"
             aria-modal="true"
@@ -529,69 +475,52 @@ export default function AdminSistemasPage() {
               </Field>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Logo">
-                  <input type="file" accept="image/*,.svg" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} className={fileClass} />
-                </Field>
-                <Field label="Anexar .env (1+)">
-                  <input type="file" multiple accept=".env,.txt,text/plain" onChange={(e) => setEnvFiles(e.target.files)} className={fileClass} />
-                </Field>
-                <Field label="Anexar acessos (.txt/.pdf)">
-                  <input type="file" multiple accept=".txt,.pdf,text/plain,application/pdf" onChange={(e) => setAccessFiles(e.target.files)} className={fileClass} />
-                </Field>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Pagamentos e domínio</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input type="checkbox" checked={form.is_quitado} onChange={(e) => setForm((f) => ({ ...f, is_quitado: e.target.checked }))} />
-                    Sistema quitado
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input type="checkbox" checked={form.has_monthly_fee} onChange={(e) => setForm((f) => ({ ...f, has_monthly_fee: e.target.checked }))} />
-                    Possui mensalidade
-                  </label>
-                  <Field label="Valor da mensalidade">
-                    <input value={form.monthly_fee_amount} onChange={(e) => setForm((f) => ({ ...f, monthly_fee_amount: e.target.value }))} className={inputClass} placeholder="0,00" />
-                  </Field>
-                  <Field label="Dia do pagamento (1–31)">
-                    <input value={form.monthly_fee_due_day} onChange={(e) => setForm((f) => ({ ...f, monthly_fee_due_day: e.target.value }))} className={inputClass} placeholder="10" />
-                  </Field>
-                  <Field label="Próximo pagamento da mensalidade">
-                    <input type="date" value={form.monthly_next_due} onChange={(e) => setForm((f) => ({ ...f, monthly_next_due: e.target.value }))} className={inputClass} />
-                  </Field>
-                  <Field label="Expiração do domínio">
-                    <input type="date" value={form.domain_expires_at} onChange={(e) => setForm((f) => ({ ...f, domain_expires_at: e.target.value }))} className={inputClass} />
-                  </Field>
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
-                    <input
-                      type="checkbox"
-                      checked={form.is_paying_development}
-                      onChange={(e) => setForm((f) => ({ ...f, is_paying_development: e.target.checked }))}
-                    />
-                    Ainda está pagando o desenvolvimento
-                  </label>
-                  <Field label="Valor do desenvolvimento">
-                    <input value={form.development_amount} onChange={(e) => setForm((f) => ({ ...f, development_amount: e.target.value }))} className={inputClass} placeholder="0,00" />
-                  </Field>
-                  <Field label="Data que quita o desenvolvimento">
-                    <input
-                      type="date"
-                      value={form.development_paid_off_date}
-                      onChange={(e) => setForm((f) => ({ ...f, development_paid_off_date: e.target.value }))}
-                      className={inputClass}
-                    />
-                  </Field>
+                <div className="block text-sm">
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Logo</span>
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp,.svg,.gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null
+                      setLogoFile(file)
+                      // Permite selecionar o mesmo arquivo de novo depois
+                      e.target.value = ''
+                    }}
+                    className={fileClass}
+                  />
+                  {editing && (editing.logo_path || logoSrcById[editing.id]) ? (
+                    <p className="mt-1 text-[11px] text-slate-500">Já tem logo. Escolha outra imagem para substituir.</p>
+                  ) : null}
+                  {logoFile ? <p className="mt-1 text-[11px] font-medium text-emerald-700">Selecionada: {logoFile.name}</p> : null}
+                </div>
+                <div className="block text-sm">
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar .env (1+)</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".env,.txt,text/plain"
+                    onChange={(e) => setEnvFiles(e.target.files)}
+                    className={fileClass}
+                  />
+                </div>
+                <div className="block text-sm">
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar acessos (.txt/.pdf)</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.pdf,text/plain,application/pdf"
+                    onChange={(e) => setAccessFiles(e.target.files)}
+                    className={fileClass}
+                  />
                 </div>
               </div>
 
+              <Field label="Expiração do domínio">
+                <input type="date" value={form.domain_expires_at} onChange={(e) => setForm((f) => ({ ...f, domain_expires_at: e.target.value }))} className={inputClass} />
+              </Field>
+
               <Field label="Observações">
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={3}
-                  className={inputClass}
-                />
+                <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} className={inputClass} />
               </Field>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -612,10 +541,10 @@ export default function AdminSistemasPage() {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="block text-sm">
+    <div className="block text-sm">
       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
       {children}
-    </label>
+    </div>
   )
 }
 
