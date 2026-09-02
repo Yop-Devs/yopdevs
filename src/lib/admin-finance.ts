@@ -9,6 +9,8 @@ export type FinanceEntry = {
   notes: string | null
   is_recurring: boolean
   recurrence_interval_days: number | null
+  /** Última data inclusa desta série (histórico preservado ao editar/excluir a partir de uma data). */
+  recurrence_ends_on: string | null
   created_at: string
   updated_at: string
 }
@@ -102,10 +104,18 @@ function parseIsoDate(iso: string): Date {
   return new Date(y, (m || 1) - 1, d || 1)
 }
 
-function addDaysIso(iso: string, days: number): string {
+export function addDaysIso(iso: string, days: number): string {
   const d = parseIsoDate(iso)
   d.setDate(d.getDate() + days)
   return toIsoDate(d)
+}
+
+export function dayBeforeIso(iso: string): string {
+  return addDaysIso(iso, -1)
+}
+
+export function isRecurringEntry(entry: Pick<FinanceEntry, 'is_recurring' | 'recurrence_interval_days'>): boolean {
+  return Boolean(entry.is_recurring && entry.recurrence_interval_days && entry.recurrence_interval_days > 0)
 }
 
 /** Horizonte padrão quando o filtro é “todo o período”. */
@@ -125,6 +135,7 @@ export function expandRecurringDates(
   intervalDays: number,
   from: string | null,
   to: string | null,
+  endsOn: string | null = null,
 ): string[] {
   if (!startIso || !Number.isFinite(intervalDays) || intervalDays <= 0) return []
 
@@ -133,18 +144,21 @@ export function expandRecurringDates(
       ? { from: from || startIso, to: to || addDaysIso(toIsoDate(new Date()), 365) }
       : defaultRecurrenceHorizon(startIso)
 
+  const hardEnd = endsOn && endsOn < horizon.to ? endsOn : horizon.to
+
   const dates: string[] = []
   let cursor = startIso
   let guard = 0
 
-  // Avança até entrar na janela
   while (cursor < horizon.from && guard < 10000) {
     cursor = addDaysIso(cursor, intervalDays)
     guard += 1
+    if (endsOn && cursor > endsOn) return dates
   }
 
-  while (cursor <= horizon.to && guard < 10000) {
-    dates.push(cursor)
+  while (cursor <= hardEnd && guard < 10000) {
+    if (endsOn && cursor > endsOn) break
+    if (cursor >= horizon.from) dates.push(cursor)
     cursor = addDaysIso(cursor, intervalDays)
     guard += 1
   }
@@ -160,12 +174,7 @@ export function expandFinanceEntries(
   const rows: FinanceOccurrence[] = []
 
   for (const entry of entries) {
-    const recurring =
-      entry.is_recurring &&
-      entry.recurrence_interval_days != null &&
-      entry.recurrence_interval_days > 0
-
-    if (!recurring) {
+    if (!isRecurringEntry(entry)) {
       if (isDateInPeriod(entry.entry_date, from, to)) {
         rows.push({
           key: entry.id,
@@ -177,7 +186,13 @@ export function expandFinanceEntries(
       continue
     }
 
-    const dates = expandRecurringDates(entry.entry_date, entry.recurrence_interval_days!, from, to)
+    const dates = expandRecurringDates(
+      entry.entry_date,
+      entry.recurrence_interval_days!,
+      from,
+      to,
+      entry.recurrence_ends_on,
+    )
     for (const date of dates) {
       rows.push({
         key: `${entry.id}:${date}`,

@@ -10,8 +10,10 @@ import {
   FinanceKind,
   FinancePeriodPreset,
   SystemFinanceItem,
+  dayBeforeIso,
   expandFinanceEntries,
   isDateInPeriod,
+  isRecurringEntry,
   periodBounds,
   toNumberAmount,
 } from '@/lib/admin-finance'
@@ -53,6 +55,8 @@ export default function AdminFinanceiroPage() {
   const [saving, setSaving] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<FinanceEntry | null>(null)
+  /** Data da ocorrência aberta para editar (a partir dela o futuro muda; o passado fica). */
+  const [editingFromDate, setEditingFromDate] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
 
   const [periodPreset, setPeriodPreset] = useState<FinancePeriodPreset>('this_month')
@@ -86,6 +90,7 @@ export default function AdminFinanceiroPage() {
       is_recurring: Boolean(e.is_recurring),
       recurrence_interval_days:
         e.recurrence_interval_days == null ? null : Number(e.recurrence_interval_days) || null,
+      recurrence_ends_on: e.recurrence_ends_on ?? null,
     }))
     setEntries(mappedEntries)
 
@@ -208,6 +213,7 @@ export default function AdminFinanceiroPage() {
 
   function openCreate(kind: FinanceKind = 'entrada') {
     setEditing(null)
+    setEditingFromDate(null)
     setForm({
       ...emptyForm,
       kind,
@@ -218,13 +224,15 @@ export default function AdminFinanceiroPage() {
     setEditorOpen(true)
   }
 
-  function openEdit(entry: FinanceEntry) {
+  function openEdit(entry: FinanceEntry, occurrenceDate?: string) {
+    const fromDate = occurrenceDate || entry.entry_date
     setEditing(entry)
+    setEditingFromDate(fromDate)
     setForm({
       kind: entry.kind,
       title: entry.title,
       amount: String(entry.amount),
-      entry_date: entry.entry_date,
+      entry_date: fromDate,
       notes: entry.notes ?? '',
       is_recurring: Boolean(entry.is_recurring),
       recurrence_interval_days: String(entry.recurrence_interval_days || 30),
@@ -249,7 +257,7 @@ export default function AdminFinanceiroPage() {
       return
     }
 
-    const wantsRecurring = form.kind === 'entrada' && form.is_recurring
+    const wantsRecurring = form.is_recurring
     const intervalDays = Number(form.recurrence_interval_days)
     if (wantsRecurring && (!Number.isFinite(intervalDays) || intervalDays < 1)) {
       toast.error('Informe o intervalo em dias (mínimo 1).')
@@ -262,31 +270,89 @@ export default function AdminFinanceiroPage() {
         data: { session },
       } = await supabase.auth.getSession()
       const userId = session?.user?.id ?? null
+      const nowIso = new Date().toISOString()
 
-      const payload = {
+      const basePayload = {
         kind: form.kind,
         title,
         amount,
-        entry_date: form.entry_date,
         notes: form.notes.trim() || null,
         is_recurring: wantsRecurring,
         recurrence_interval_days: wantsRecurring ? Math.floor(intervalDays) : null,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
       }
 
-      if (editing) {
-        const { error } = await supabase.from('yop_admin_finance_entries').update(payload).eq('id', editing.id)
-        if (error) throw error
-        toast.success(form.kind === 'entrada' ? 'Entrada atualizada.' : 'Saída atualizada.')
-      } else {
-        const { error } = await supabase
-          .from('yop_admin_finance_entries')
-          .insert({ ...payload, created_by: userId })
+      if (!editing) {
+        const { error } = await supabase.from('yop_admin_finance_entries').insert({
+          ...basePayload,
+          entry_date: form.entry_date,
+          recurrence_ends_on: null,
+          created_by: userId,
+        })
         if (error) throw error
         toast.success(form.kind === 'entrada' ? 'Entrada cadastrada.' : 'Saída cadastrada.')
+      } else {
+        const fromDate = editingFromDate || form.entry_date
+        const wasRecurring = isRecurringEntry(editing)
+
+        if (!wasRecurring) {
+          const { error } = await supabase
+            .from('yop_admin_finance_entries')
+            .update({
+              ...basePayload,
+              entry_date: form.entry_date,
+              recurrence_ends_on: null,
+            })
+            .eq('id', editing.id)
+          if (error) throw error
+          toast.success(form.kind === 'entrada' ? 'Entrada atualizada.' : 'Saída atualizada.')
+        } else if (fromDate <= editing.entry_date) {
+          // Edita a série desde o início deste segmento
+          const { error } = await supabase
+            .from('yop_admin_finance_entries')
+            .update({
+              ...basePayload,
+              entry_date: form.entry_date,
+              recurrence_ends_on: wantsRecurring ? editing.recurrence_ends_on : null,
+            })
+            .eq('id', editing.id)
+          if (error) throw error
+          toast.success(
+            wantsRecurring
+              ? 'Série atualizada a partir desta data.'
+              : 'Recorrência desativada. Fica só este lançamento.',
+          )
+        } else {
+          // Congela o passado e cria novo segmento a partir de fromDate
+          const endPast = dayBeforeIso(fromDate)
+          const { error: endError } = await supabase
+            .from('yop_admin_finance_entries')
+            .update({
+              recurrence_ends_on: endPast,
+              updated_at: nowIso,
+            })
+            .eq('id', editing.id)
+          if (endError) throw endError
+
+          const { error: insertError } = await supabase.from('yop_admin_finance_entries').insert({
+            ...basePayload,
+            entry_date: fromDate,
+            recurrence_ends_on: null,
+            created_by: userId,
+          })
+          if (insertError) throw insertError
+
+          toast.success(
+            wantsRecurring
+              ? 'Atualizado a partir desta data. Meses anteriores permanecem.'
+              : 'Recorrência encerrada a partir desta data. Histórico anterior preservado.',
+          )
+        }
       }
 
       setEditorOpen(false)
+      setEditing(null)
+      setEditingFromDate(null)
       await load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha ao salvar.')
@@ -295,19 +361,61 @@ export default function AdminFinanceiroPage() {
     }
   }
 
-  async function removeEntry(entry: FinanceEntry) {
+  async function removeOccurrence(entry: FinanceEntry, occurrenceDate: string) {
     const label = entry.kind === 'entrada' ? 'entrada' : 'saída'
-    const extra =
-      entry.is_recurring && entry.recurrence_interval_days
-        ? ` Esta é recorrente (a cada ${entry.recurrence_interval_days} dias) — todas as datas futuras saem da planilha.`
-        : ''
-    if (!window.confirm(`Excluir a ${label} "${entry.title}"?${extra}`)) return
-    const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
+    const dateLabel = formatDateBr(occurrenceDate)
+
+    if (!isRecurringEntry(entry)) {
+      if (!window.confirm(`Excluir a ${label} "${entry.title}"?`)) return
+      const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      toast.success('Registro excluído.')
+      await load()
+      return
+    }
+
+    if (occurrenceDate <= entry.entry_date) {
+      if (
+        !window.confirm(
+          `Excluir a ${label} "${entry.title}" a partir de ${dateLabel}? Isso remove esta data e as próximas desta série. Datas anteriores (se houver em outro período) permanecem.`,
+        )
+      ) {
+        return
+      }
+      const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      toast.success('Série removida a partir desta data.')
+      await load()
+      return
+    }
+
+    if (
+      !window.confirm(
+        `Excluir a ${label} "${entry.title}" a partir de ${dateLabel}? Os meses anteriores continuam como estavam; esta data e as próximas saem da planilha.`,
+      )
+    ) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('yop_admin_finance_entries')
+      .update({
+        recurrence_ends_on: dayBeforeIso(occurrenceDate),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', entry.id)
+
     if (error) {
       toast.error(error.message)
       return
     }
-    toast.success('Registro excluído.')
+    toast.success('Removido a partir desta data. Histórico anterior preservado.')
     await load()
   }
 
@@ -532,14 +640,14 @@ export default function AdminFinanceiroPage() {
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button
                       type="button"
-                      onClick={() => openEdit(row.entry)}
+                      onClick={() => openEdit(row.entry, row.date)}
                       className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline"
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeEntry(row.entry)}
+                      onClick={() => removeOccurrence(row.entry, row.date)}
                       className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline"
                     >
                       Excluir
@@ -563,7 +671,7 @@ export default function AdminFinanceiroPage() {
 
       <SheetBlock
         title="3. Despesas / saídas"
-        subtitle="Saídas manuais · data de pagamento"
+        subtitle="Saídas manuais · recorrentes aparecem em cada data do período"
         count={filteredSaidas.length}
         total={totals.saidasTotal}
         action={
@@ -589,7 +697,14 @@ export default function AdminFinanceiroPage() {
               {filteredSaidas.map((row, idx) => (
                 <tr key={row.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
                   <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{formatDateBr(row.date)}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-900">{row.entry.title}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-900">
+                    <span>{row.entry.title}</span>
+                    {row.entry.is_recurring && row.entry.recurrence_interval_days ? (
+                      <span className="ml-2 inline-block rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">
+                        A cada {row.entry.recurrence_interval_days}d
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="max-w-[16rem] truncate px-4 py-2.5 text-slate-500">{row.entry.notes || '—'}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-rose-800">
                     {formatBrl(row.entry.amount)}
@@ -597,14 +712,14 @@ export default function AdminFinanceiroPage() {
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button
                       type="button"
-                      onClick={() => openEdit(row.entry)}
+                      onClick={() => openEdit(row.entry, row.date)}
                       className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline"
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeEntry(row.entry)}
+                      onClick={() => removeOccurrence(row.entry, row.date)}
                       className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline"
                     >
                       Excluir
@@ -630,7 +745,12 @@ export default function AdminFinanceiroPage() {
         <div
           className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4"
           role="presentation"
-          onClick={() => !saving && setEditorOpen(false)}
+          onClick={() => {
+            if (saving) return
+            setEditorOpen(false)
+            setEditing(null)
+            setEditingFromDate(null)
+          }}
         >
           <div
             role="dialog"
@@ -650,7 +770,11 @@ export default function AdminFinanceiroPage() {
               </h3>
               <button
                 type="button"
-                onClick={() => setEditorOpen(false)}
+                onClick={() => {
+                  setEditorOpen(false)
+                  setEditing(null)
+                  setEditingFromDate(null)
+                }}
                 className="rounded-lg p-1 text-slate-400 hover:text-slate-700"
                 aria-label="Fechar"
               >
@@ -665,13 +789,7 @@ export default function AdminFinanceiroPage() {
                     <button
                       key={kind}
                       type="button"
-                      onClick={() =>
-                        setForm((f) => ({
-                          ...f,
-                          kind,
-                          is_recurring: kind === 'entrada' ? f.is_recurring : false,
-                        }))
-                      }
+                      onClick={() => setForm((f) => ({ ...f, kind }))}
                       className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                         form.kind === kind
                           ? kind === 'entrada'
@@ -684,6 +802,14 @@ export default function AdminFinanceiroPage() {
                     </button>
                   ))}
                 </div>
+              ) : null}
+
+              {editing && editingFromDate && isRecurringEntry(editing) ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Alterações valem <strong>a partir de {formatDateBr(editingFromDate)}</strong>. Datas
+                  anteriores desta série permanecem como estavam. Desmarcar recorrência encerra só o
+                  futuro.
+                </p>
               ) : null}
 
               <Field label="Descrição">
@@ -709,11 +835,15 @@ export default function AdminFinanceiroPage() {
                 </Field>
                 <Field
                   label={
-                    form.kind === 'entrada'
-                      ? form.is_recurring
-                        ? 'Primeira data de recebimento'
-                        : 'Data de recebimento'
-                      : 'Data de pagamento'
+                    form.is_recurring
+                      ? editing
+                        ? 'Válido a partir de'
+                        : form.kind === 'entrada'
+                          ? 'Primeira data de recebimento'
+                          : 'Primeira data de pagamento'
+                      : form.kind === 'entrada'
+                        ? 'Data de recebimento'
+                        : 'Data de pagamento'
                   }
                 >
                   <input
@@ -721,43 +851,50 @@ export default function AdminFinanceiroPage() {
                     type="date"
                     value={form.entry_date}
                     onChange={(e) => setForm((f) => ({ ...f, entry_date: e.target.value }))}
-                    className={inputClass}
+                    disabled={Boolean(
+                      editing &&
+                        editingFromDate &&
+                        isRecurringEntry(editing) &&
+                        editingFromDate > editing.entry_date,
+                    )}
+                    className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
                   />
                 </Field>
               </div>
 
-              {form.kind === 'entrada' ? (
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-800">
-                    <input
-                      type="checkbox"
-                      checked={form.is_recurring}
-                      onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                    />
-                    <span>
-                      <span className="font-semibold">Recebimento recorrente</span>
-                      <span className="mt-0.5 block text-xs text-slate-500">
-                        Repete o mesmo valor a cada X dias a partir da data acima.
-                      </span>
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={form.is_recurring}
+                    onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  />
+                  <span>
+                    <span className="font-semibold">
+                      {form.kind === 'entrada' ? 'Recebimento recorrente' : 'Despesa recorrente'}
                     </span>
-                  </label>
-                  {form.is_recurring ? (
-                    <Field label="Repetir a cada (dias)">
-                      <input
-                        required
-                        type="number"
-                        min={1}
-                        max={365}
-                        value={form.recurrence_interval_days}
-                        onChange={(e) => setForm((f) => ({ ...f, recurrence_interval_days: e.target.value }))}
-                        className={inputClass}
-                        placeholder="30"
-                      />
-                    </Field>
-                  ) : null}
-                </div>
-              ) : null}
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      Repete o mesmo valor a cada X dias. Os próximos períodos já entram na planilha
+                      automaticamente.
+                    </span>
+                  </span>
+                </label>
+                {form.is_recurring ? (
+                  <Field label="Repetir a cada (dias)">
+                    <input
+                      required
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={form.recurrence_interval_days}
+                      onChange={(e) => setForm((f) => ({ ...f, recurrence_interval_days: e.target.value }))}
+                      className={inputClass}
+                      placeholder="30"
+                    />
+                  </Field>
+                ) : null}
+              </div>
 
               <Field label="Observações">
                 <textarea
@@ -772,7 +909,11 @@ export default function AdminFinanceiroPage() {
                 <button
                   type="button"
                   disabled={saving}
-                  onClick={() => setEditorOpen(false)}
+                  onClick={() => {
+                    setEditorOpen(false)
+                    setEditing(null)
+                    setEditingFromDate(null)
+                  }}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
                 >
                   Cancelar
