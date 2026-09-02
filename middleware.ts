@@ -6,6 +6,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const host = request.headers.get('host')
 
+  // Painel legado removido — só existe /admin e o portfólio estático
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/admin/login'
+    return NextResponse.redirect(url)
+  }
+
   // Subdomínio admin → área /admin (login e painel)
   if (isAdminHost(host)) {
     const isAsset =
@@ -32,8 +39,7 @@ export async function middleware(request: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: request.headers } })
 
-  const needsAuthRefresh =
-    pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+  const needsAuthRefresh = pathname.startsWith('/admin')
 
   if (!needsAuthRefresh) return response
 

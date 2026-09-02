@@ -523,25 +523,13 @@ function LandingPageContent() {
   useEffect(() => {
     const err = searchParams.get('error')
     if (err === 'auth-code-error') {
-      setShowModal(true)
-      setMode('login')
-      setMessage({ type: 'error', text: 'Falha na autenticação. Tente novamente.' })
+      window.location.href = '/admin/login?error=auth-code-error'
     } else if (err === 'unauthorized') {
       window.location.href = '/admin/login?error=unauthorized'
     } else if (searchParams.get('login') === '1' || searchParams.get('admin') === '1') {
       window.location.href = '/admin/login'
     }
   }, [searchParams])
-
-  useEffect(() => {
-    async function redirectIfLoggedIn() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.email && isEmailAllowed(session.user.email)) {
-        window.location.href = '/dashboard/portfolio'
-      }
-    }
-    redirectIfLoggedIn()
-  }, [])
 
   useEffect(() => {
     const nodes = document.querySelectorAll('.yop-reveal')
@@ -611,7 +599,7 @@ function LandingPageContent() {
         return
       }
 
-      window.location.href = '/dashboard/portfolio'
+      window.location.href = '/admin/sistemas'
     } catch (err) {
       setMessage({ type: 'error', text: getAuthErrorMessage(err) })
       setLoading(false)
