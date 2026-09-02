@@ -20,15 +20,26 @@ function isStaticAsset(pathname: string): boolean {
   )
 }
 
+/** Nonce compatível com Edge Runtime (sem Buffer). */
+function createNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!)
+  }
+  return btoa(binary)
+}
+
 function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV === 'development'
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self'",
-    // Sem 'unsafe-inline': Next usa o nonce; strict-dynamic cobre scripts filhos confiáveis
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`,
+    // Sem 'unsafe-inline' em script-src (exigência Observatory / securityheaders)
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://cdn.simpleicons.org https://*.supabase.co",
     "font-src 'self' data:",
@@ -40,7 +51,7 @@ function buildCsp(nonce: string): string {
   ].join('; ')
 }
 
-function applyCsp(response: NextResponse, nonce: string, csp: string) {
+function applySecurityHeaders(response: NextResponse, nonce: string, csp: string) {
   response.headers.set('Content-Security-Policy', csp)
   response.headers.set('x-nonce', nonce)
   return response
@@ -84,10 +95,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const nonce = createNonce()
   const csp = buildCsp(nonce)
+
+  // Next precisa do CSP + nonce no *request* para injetar nonce nos scripts
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
 
   let response = NextResponse.next({
     request: { headers: requestHeaders },
@@ -110,13 +124,13 @@ export async function middleware(request: NextRequest) {
             request.cookies.set({ name, value, ...options })
             response = NextResponse.next({ request: { headers: requestHeaders } })
             response.cookies.set({ name, value, ...options })
-            applyCsp(response, nonce, csp)
+            applySecurityHeaders(response, nonce, csp)
           },
           remove(name: string, options: Record<string, unknown>) {
             request.cookies.set({ name, value: '', ...options })
             response = NextResponse.next({ request: { headers: requestHeaders } })
             response.cookies.set({ name, value: '', ...options })
-            applyCsp(response, nonce, csp)
+            applySecurityHeaders(response, nonce, csp)
           },
         },
       },
@@ -125,9 +139,17 @@ export async function middleware(request: NextRequest) {
     await supabase.auth.getUser()
   }
 
-  return applyCsp(response, nonce, csp)
+  return applySecurityHeaders(response, nonce, csp)
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  matcher: [
+    {
+      source: '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?)$).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
+  ],
 }

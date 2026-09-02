@@ -3,6 +3,9 @@ import Script from 'next/script'
 import './globals.css'
 import { fredoka } from '@/components/Logo'
 
+// CSP com nonce exige render dinâmico (Next não injeta nonce em páginas estáticas)
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: {
     default: 'YOP Devs | Empresa de Desenvolvimento',
