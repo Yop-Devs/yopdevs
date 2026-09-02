@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 import {
   ADMIN_ORIGIN,
   adminPaths,
-  adminPublicUrl,
   getRequestHost,
   isAdminHost,
   isAdminOnlyPath,
@@ -19,6 +18,32 @@ function isStaticAsset(pathname: string): boolean {
     pathname.startsWith('/brand') ||
     Boolean(pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|txt|xml|js|css|woff2?)$/))
   )
+}
+
+function buildCsp(nonce: string): string {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    // Sem 'unsafe-inline': Next usa o nonce; strict-dynamic cobre scripts filhos confiáveis
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://cdn.simpleicons.org https://*.supabase.co",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://viacep.com.br https://challenges.cloudflare.com",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "media-src 'self'",
+    "upgrade-insecure-requests",
+  ].join('; ')
+}
+
+function applyCsp(response: NextResponse, nonce: string, csp: string) {
+  response.headers.set('Content-Security-Policy', csp)
+  response.headers.set('x-nonce', nonce)
+  return response
 }
 
 export async function middleware(request: NextRequest) {
@@ -59,39 +84,48 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  let response = NextResponse.next({ request: { headers: request.headers } })
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const csp = buildCsp(nonce)
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+
+  let response = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
 
   const needsAuthRefresh =
     (onAdminHost && isAdminOnlyPath(pathname) && !isStaticAsset(pathname)) ||
     pathname.startsWith('/auth')
 
-  if (!needsAuthRefresh) return response
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: Record<string, unknown>) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: Record<string, unknown>) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
+  if (needsAuthRefresh) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(name: string, value: string, options: Record<string, unknown>) {
+            request.cookies.set({ name, value, ...options })
+            response = NextResponse.next({ request: { headers: requestHeaders } })
+            response.cookies.set({ name, value, ...options })
+            applyCsp(response, nonce, csp)
+          },
+          remove(name: string, options: Record<string, unknown>) {
+            request.cookies.set({ name, value: '', ...options })
+            response = NextResponse.next({ request: { headers: requestHeaders } })
+            response.cookies.set({ name, value: '', ...options })
+            applyCsp(response, nonce, csp)
+          },
         },
       },
-    }
-  )
+    )
 
-  await supabase.auth.getUser()
+    await supabase.auth.getUser()
+  }
 
-  return response
+  return applyCsp(response, nonce, csp)
 }
 
 export const config = {

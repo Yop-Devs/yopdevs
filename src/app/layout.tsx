@@ -1,4 +1,5 @@
-// src/app/layout.tsx
+import { headers } from 'next/headers'
+import Script from 'next/script'
 import './globals.css'
 import { fredoka } from '@/components/Logo'
 
@@ -35,7 +36,9 @@ export const viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
@@ -46,19 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-(function(){
-  var e=console.error,w=console.warn;
-  console.error=function(){ var a=arguments[0]; if(typeof a==='string'&&a.indexOf('_cf_bm')!==-1)return; e.apply(console,arguments); };
-  console.warn=function(){ var a=arguments[0]; if(typeof a==='string'&&(a.indexOf('pré-carregado')!==-1||a.indexOf('preload')!==-1)&&(a.indexOf('não foi usado')!==-1||a.indexOf('was not used')!==-1))return; w.apply(console,arguments); };
-})();
-            `.trim(),
-          }}
-        />
       </head>
       <body className="antialiased overflow-x-hidden">
+        <Script src="/console-filter.js" strategy="beforeInteractive" nonce={nonce} />
         {children}
       </body>
     </html>
