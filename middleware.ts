@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   ADMIN_ORIGIN,
+  adminPaths,
   adminPublicUrl,
   isAdminHost,
   isMainSiteHost,
@@ -33,6 +34,14 @@ export async function middleware(request: NextRequest) {
   if (!onAdminHost && isMainSiteHost(host) && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
     const publicPath = toAdminPublicPath(pathname)
     const target = new URL(publicPath, ADMIN_ORIGIN)
+    target.search = search
+    return NextResponse.redirect(target)
+  }
+
+  // Subdomínio admin: raiz → login (redirect explícito, evita servir landing estática)
+  if (onAdminHost && (pathname === '/' || pathname === '')) {
+    const target = request.nextUrl.clone()
+    target.pathname = adminPaths.login
     target.search = search
     return NextResponse.redirect(target)
   }

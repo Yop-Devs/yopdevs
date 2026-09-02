@@ -2,11 +2,7 @@
 export function isAdminHost(hostname: string | null | undefined): boolean {
   if (!hostname) return false
   const host = hostname.toLowerCase().split(':')[0]
-  return (
-    host === 'admin.yopdevs.com.br' ||
-    host === 'admin.localhost' ||
-    host.endsWith('.admin.localhost')
-  )
+  return host === 'admin.yopdevs.com.br' || host.startsWith('admin.')
 }
 
 export function isMainSiteHost(hostname: string | null | undefined): boolean {
