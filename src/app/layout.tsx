@@ -1,11 +1,6 @@
-import { headers } from 'next/headers'
-import { connection } from 'next/server'
 import Script from 'next/script'
 import './globals.css'
 import { fredoka } from '@/components/Logo'
-
-// CSP com nonce exige render dinâmico (Next não injeta nonce em páginas estáticas)
-export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: {
@@ -40,11 +35,7 @@ export const viewport = {
   viewportFit: 'cover',
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Garante request dinâmico para o nonce do proxy chegar aos scripts
-  await connection()
-  const nonce = (await headers()).get('x-nonce') ?? undefined
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
@@ -57,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="antialiased overflow-x-hidden">
-        <Script src="/console-filter.js" strategy="beforeInteractive" nonce={nonce} />
+        <Script src="/console-filter.js" strategy="beforeInteractive" />
         {children}
       </body>
     </html>
