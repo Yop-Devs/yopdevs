@@ -6,9 +6,13 @@ create table if not exists public.yop_admin_finance_entries (
   amount numeric not null check (amount > 0),
   entry_date date not null,
   notes text,
+  is_recurring boolean not null default false,
+  recurrence_interval_days integer,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint yop_admin_finance_entries_recurrence_days_check
+    check (recurrence_interval_days is null or recurrence_interval_days > 0)
 );
 
 create index if not exists yop_admin_finance_entries_kind_idx on public.yop_admin_finance_entries (kind);

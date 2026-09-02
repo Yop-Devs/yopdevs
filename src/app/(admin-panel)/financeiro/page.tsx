@@ -10,6 +10,7 @@ import {
   FinanceKind,
   FinancePeriodPreset,
   SystemFinanceItem,
+  expandFinanceEntries,
   isDateInPeriod,
   periodBounds,
   toNumberAmount,
@@ -23,6 +24,8 @@ type FormState = {
   amount: string
   entry_date: string
   notes: string
+  is_recurring: boolean
+  recurrence_interval_days: string
 }
 
 const emptyForm: FormState = {
@@ -31,6 +34,8 @@ const emptyForm: FormState = {
   amount: '',
   entry_date: new Date().toISOString().slice(0, 10),
   notes: '',
+  is_recurring: false,
+  recurrence_interval_days: '30',
 }
 
 const PERIOD_OPTIONS: { value: FinancePeriodPreset; label: string }[] = [
@@ -78,6 +83,9 @@ export default function AdminFinanceiroPage() {
     const mappedEntries: FinanceEntry[] = ((entriesRes.data ?? []) as FinanceEntry[]).map((e) => ({
       ...e,
       amount: toNumberAmount(e.amount),
+      is_recurring: Boolean(e.is_recurring),
+      recurrence_interval_days:
+        e.recurrence_interval_days == null ? null : Number(e.recurrence_interval_days) || null,
     }))
     setEntries(mappedEntries)
 
@@ -164,11 +172,20 @@ export default function AdminFinanceiroPage() {
   )
   const filteredPersonal = useMemo(
     () =>
-      entries.filter((e) => e.kind === 'entrada' && isDateInPeriod(e.entry_date, bounds.from, bounds.to)),
+      expandFinanceEntries(
+        entries.filter((e) => e.kind === 'entrada'),
+        bounds.from,
+        bounds.to,
+      ),
     [entries, bounds],
   )
   const filteredSaidas = useMemo(
-    () => entries.filter((e) => e.kind === 'saida' && isDateInPeriod(e.entry_date, bounds.from, bounds.to)),
+    () =>
+      expandFinanceEntries(
+        entries.filter((e) => e.kind === 'saida'),
+        bounds.from,
+        bounds.to,
+      ),
     [entries, bounds],
   )
 
@@ -176,8 +193,8 @@ export default function AdminFinanceiroPage() {
     const systemDev = filteredSystem.filter((i) => i.source === 'parcel').reduce((s, i) => s + i.amount, 0)
     const systemFees = filteredSystem.filter((i) => i.source === 'fee').reduce((s, i) => s + i.amount, 0)
     const systemTotal = systemDev + systemFees
-    const personalTotal = filteredPersonal.reduce((s, e) => s + e.amount, 0)
-    const saidasTotal = filteredSaidas.reduce((s, e) => s + e.amount, 0)
+    const personalTotal = filteredPersonal.reduce((s, row) => s + row.entry.amount, 0)
+    const saidasTotal = filteredSaidas.reduce((s, row) => s + row.entry.amount, 0)
     return {
       systemDev,
       systemFees,
@@ -191,7 +208,13 @@ export default function AdminFinanceiroPage() {
 
   function openCreate(kind: FinanceKind = 'entrada') {
     setEditing(null)
-    setForm({ ...emptyForm, kind, entry_date: new Date().toISOString().slice(0, 10) })
+    setForm({
+      ...emptyForm,
+      kind,
+      entry_date: new Date().toISOString().slice(0, 10),
+      is_recurring: false,
+      recurrence_interval_days: '30',
+    })
     setEditorOpen(true)
   }
 
@@ -203,6 +226,8 @@ export default function AdminFinanceiroPage() {
       amount: String(entry.amount),
       entry_date: entry.entry_date,
       notes: entry.notes ?? '',
+      is_recurring: Boolean(entry.is_recurring),
+      recurrence_interval_days: String(entry.recurrence_interval_days || 30),
     })
     setEditorOpen(true)
   }
@@ -224,6 +249,13 @@ export default function AdminFinanceiroPage() {
       return
     }
 
+    const wantsRecurring = form.kind === 'entrada' && form.is_recurring
+    const intervalDays = Number(form.recurrence_interval_days)
+    if (wantsRecurring && (!Number.isFinite(intervalDays) || intervalDays < 1)) {
+      toast.error('Informe o intervalo em dias (mínimo 1).')
+      return
+    }
+
     setSaving(true)
     try {
       const {
@@ -237,6 +269,8 @@ export default function AdminFinanceiroPage() {
         amount,
         entry_date: form.entry_date,
         notes: form.notes.trim() || null,
+        is_recurring: wantsRecurring,
+        recurrence_interval_days: wantsRecurring ? Math.floor(intervalDays) : null,
         updated_at: new Date().toISOString(),
       }
 
@@ -263,7 +297,11 @@ export default function AdminFinanceiroPage() {
 
   async function removeEntry(entry: FinanceEntry) {
     const label = entry.kind === 'entrada' ? 'entrada' : 'saída'
-    if (!window.confirm(`Excluir a ${label} "${entry.title}"?`)) return
+    const extra =
+      entry.is_recurring && entry.recurrence_interval_days
+        ? ` Esta é recorrente (a cada ${entry.recurrence_interval_days} dias) — todas as datas futuras saem da planilha.`
+        : ''
+    if (!window.confirm(`Excluir a ${label} "${entry.title}"?${extra}`)) return
     const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
     if (error) {
       toast.error(error.message)
@@ -453,7 +491,7 @@ export default function AdminFinanceiroPage() {
 
       <SheetBlock
         title="2. Recebimentos pessoais"
-        subtitle="Entradas manuais · data de recebimento"
+        subtitle="Entradas manuais · recorrentes aparecem em cada data do período"
         count={filteredPersonal.length}
         total={totals.personalTotal}
         action={
@@ -476,19 +514,34 @@ export default function AdminFinanceiroPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredPersonal.map((entry, idx) => (
-                <tr key={entry.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{formatDateBr(entry.entry_date)}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-900">{entry.title}</td>
-                  <td className="max-w-[16rem] truncate px-4 py-2.5 text-slate-500">{entry.notes || '—'}</td>
+              {filteredPersonal.map((row, idx) => (
+                <tr key={row.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{formatDateBr(row.date)}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-900">
+                    <span>{row.entry.title}</span>
+                    {row.entry.is_recurring && row.entry.recurrence_interval_days ? (
+                      <span className="ml-2 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                        A cada {row.entry.recurrence_interval_days}d
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="max-w-[16rem] truncate px-4 py-2.5 text-slate-500">{row.entry.notes || '—'}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-800">
-                    {formatBrl(entry.amount)}
+                    {formatBrl(row.entry.amount)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    <button type="button" onClick={() => openEdit(entry)} className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(row.entry)}
+                      className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline"
+                    >
                       Editar
                     </button>
-                    <button type="button" onClick={() => removeEntry(entry)} className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(row.entry)}
+                      className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline"
+                    >
                       Excluir
                     </button>
                   </td>
@@ -533,19 +586,27 @@ export default function AdminFinanceiroPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredSaidas.map((entry, idx) => (
-                <tr key={entry.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{formatDateBr(entry.entry_date)}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-900">{entry.title}</td>
-                  <td className="max-w-[16rem] truncate px-4 py-2.5 text-slate-500">{entry.notes || '—'}</td>
+              {filteredSaidas.map((row, idx) => (
+                <tr key={row.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{formatDateBr(row.date)}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-900">{row.entry.title}</td>
+                  <td className="max-w-[16rem] truncate px-4 py-2.5 text-slate-500">{row.entry.notes || '—'}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-rose-800">
-                    {formatBrl(entry.amount)}
+                    {formatBrl(row.entry.amount)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    <button type="button" onClick={() => openEdit(entry)} className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(row.entry)}
+                      className="mr-3 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:underline"
+                    >
                       Editar
                     </button>
-                    <button type="button" onClick={() => removeEntry(entry)} className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(row.entry)}
+                      className="text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:underline"
+                    >
                       Excluir
                     </button>
                   </td>
@@ -604,7 +665,13 @@ export default function AdminFinanceiroPage() {
                     <button
                       key={kind}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, kind }))}
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          kind,
+                          is_recurring: kind === 'entrada' ? f.is_recurring : false,
+                        }))
+                      }
                       className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                         form.kind === kind
                           ? kind === 'entrada'
@@ -640,7 +707,15 @@ export default function AdminFinanceiroPage() {
                     placeholder="0,00"
                   />
                 </Field>
-                <Field label={form.kind === 'entrada' ? 'Data de recebimento' : 'Data de pagamento'}>
+                <Field
+                  label={
+                    form.kind === 'entrada'
+                      ? form.is_recurring
+                        ? 'Primeira data de recebimento'
+                        : 'Data de recebimento'
+                      : 'Data de pagamento'
+                  }
+                >
                   <input
                     required
                     type="date"
@@ -650,6 +725,39 @@ export default function AdminFinanceiroPage() {
                   />
                 </Field>
               </div>
+
+              {form.kind === 'entrada' ? (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={form.is_recurring}
+                      onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.checked }))}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                    />
+                    <span>
+                      <span className="font-semibold">Recebimento recorrente</span>
+                      <span className="mt-0.5 block text-xs text-slate-500">
+                        Repete o mesmo valor a cada X dias a partir da data acima.
+                      </span>
+                    </span>
+                  </label>
+                  {form.is_recurring ? (
+                    <Field label="Repetir a cada (dias)">
+                      <input
+                        required
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={form.recurrence_interval_days}
+                        onChange={(e) => setForm((f) => ({ ...f, recurrence_interval_days: e.target.value }))}
+                        className={inputClass}
+                        placeholder="30"
+                      />
+                    </Field>
+                  ) : null}
+                </div>
+              ) : null}
 
               <Field label="Observações">
                 <textarea
