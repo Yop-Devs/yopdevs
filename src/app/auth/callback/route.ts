@@ -2,11 +2,12 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { isEmailAllowed } from '@/lib/allowed-emails'
+import { adminPaths, adminPublicUrl } from '@/lib/admin-host'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/admin/sistemas'
+  const next = searchParams.get('next') ?? adminPaths.sistemas
 
   if (code) {
     const cookieStore = await cookies()
@@ -35,11 +36,12 @@ export async function GET(request: Request) {
       const email = data.session?.user?.email
       if (!isEmailAllowed(email)) {
         await supabase.auth.signOut()
-        return NextResponse.redirect(`${origin}/admin/login?error=unauthorized`)
+        return NextResponse.redirect(adminPublicUrl(`${adminPaths.login}?error=unauthorized`))
       }
-      return NextResponse.redirect(`${origin}${next}`)
+      const cleanNext = next.startsWith('/admin') ? next.replace(/^\/admin/, '') || adminPaths.sistemas : next
+      return NextResponse.redirect(adminPublicUrl(cleanNext))
     }
   }
 
-  return NextResponse.redirect(`${origin}/admin/login?error=auth-code-error`)
+  return NextResponse.redirect(adminPublicUrl(`${adminPaths.login}?error=auth-code-error`))
 }

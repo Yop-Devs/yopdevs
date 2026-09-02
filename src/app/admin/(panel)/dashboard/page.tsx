@@ -14,6 +14,7 @@ import {
 } from '@/lib/admin-dashboard'
 import { formatBrl, formatDateBr } from '@/lib/admin-systems'
 import { periodLabel } from '@/lib/admin-payments'
+import { adminPaths } from '@/lib/admin-host'
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
@@ -211,7 +212,7 @@ export default function AdminDashboardPage() {
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
               Desenvolvimento a receber ({summary.pendingDev.length})
             </h3>
-            <Link href="/admin/pagamentos" className="text-xs font-semibold text-violet-700 hover:underline">
+            <Link href={adminPaths.pagamentos} className="text-xs font-semibold text-violet-700 hover:underline">
               Ver pagamentos
             </Link>
           </div>
@@ -246,7 +247,7 @@ export default function AdminDashboardPage() {
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
               Mensalidades de operação ({summary.withFee.length})
             </h3>
-            <Link href="/admin/pagamentos" className="text-xs font-semibold text-violet-700 hover:underline">
+            <Link href={adminPaths.pagamentos} className="text-xs font-semibold text-violet-700 hover:underline">
               Ver pagamentos
             </Link>
           </div>

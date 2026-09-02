@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isEmailAllowed } from '@/lib/allowed-emails'
+import { adminPaths, adminPublicUrl } from '@/lib/admin-host'
 import {
   FEATURED_PROJECTS,
   SERVICES,
@@ -523,11 +524,11 @@ function LandingPageContent() {
   useEffect(() => {
     const err = searchParams.get('error')
     if (err === 'auth-code-error') {
-      window.location.href = '/admin/login?error=auth-code-error'
+      window.location.href = adminPublicUrl(`${adminPaths.login}?error=auth-code-error`)
     } else if (err === 'unauthorized') {
-      window.location.href = '/admin/login?error=unauthorized'
+      window.location.href = adminPublicUrl(`${adminPaths.login}?error=unauthorized`)
     } else if (searchParams.get('login') === '1' || searchParams.get('admin') === '1') {
-      window.location.href = '/admin/login'
+      window.location.href = adminPublicUrl(adminPaths.login)
     }
   }, [searchParams])
 
@@ -599,7 +600,7 @@ function LandingPageContent() {
         return
       }
 
-      window.location.href = '/admin/sistemas'
+      window.location.href = adminPublicUrl(adminPaths.sistemas)
     } catch (err) {
       setMessage({ type: 'error', text: getAuthErrorMessage(err) })
       setLoading(false)

@@ -1,3 +1,4 @@
+import { adminPaths } from '@/lib/admin-host'
 import { daysUntil, formatBrl, formatDateBr } from '@/lib/admin-systems'
 import { periodLabel } from '@/lib/admin-payments'
 
@@ -88,7 +89,7 @@ export function buildDashboardAlerts(input: {
             ? `Vence hoje · ${formatDateBr(system.domain_expires_at)}`
             : `Vence em ${days} dia(s) · ${formatDateBr(system.domain_expires_at)}`,
       days,
-      href: '/admin/sistemas',
+      href: adminPaths.sistemas,
     })
   }
 
@@ -108,7 +109,7 @@ export function buildDashboardAlerts(input: {
             ? `Vence hoje · ${formatBrl(inst.amount)}`
             : `Em ${days} dia(s) · ${formatBrl(inst.amount)} · ${formatDateBr(inst.due_date)}`,
       days,
-      href: '/admin/pagamentos',
+      href: adminPaths.pagamentos,
     })
   }
 
@@ -129,7 +130,7 @@ export function buildDashboardAlerts(input: {
             ? `Vence hoje · ${formatBrl(payment.operation_fee_amount)}`
             : `Em ${days} dia(s) · ${formatBrl(payment.operation_fee_amount)} · ${formatDateBr(payment.operation_next_due)}`,
       days,
-      href: '/admin/pagamentos',
+      href: adminPaths.pagamentos,
     })
   }
 

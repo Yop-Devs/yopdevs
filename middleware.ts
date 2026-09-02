@@ -1,45 +1,66 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isAdminHost } from '@/lib/admin-host'
+import {
+  ADMIN_ORIGIN,
+  adminPublicUrl,
+  isAdminHost,
+  isMainSiteHost,
+  toAdminInternalPath,
+  toAdminPublicPath,
+} from '@/lib/admin-host'
+
+function isStaticAsset(pathname: string): boolean {
+  return (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/projetos') ||
+    pathname.startsWith('/brand') ||
+    Boolean(pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|txt|xml|js|css|woff2?)$/))
+  )
+}
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
   const host = request.headers.get('host')
+  const onAdminHost = isAdminHost(host)
 
-  // Painel legado removido — só existe /admin e o portfólio estático
+  // Painel legado → subdomínio admin
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/admin/login'
-    return NextResponse.redirect(url)
+    return NextResponse.redirect(adminPublicUrl('/login'))
   }
 
-  // Subdomínio admin → área /admin (login e painel)
-  if (isAdminHost(host)) {
-    const isAsset =
-      pathname.startsWith('/_next') ||
-      pathname.startsWith('/favicon') ||
-      pathname.startsWith('/projetos') ||
-      pathname.startsWith('/brand') ||
-      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|txt|xml)$/)
+  // Site principal: /admin/* não existe — só no subdomínio
+  if (!onAdminHost && isMainSiteHost(host) && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
+    const publicPath = toAdminPublicPath(pathname)
+    const target = new URL(publicPath, ADMIN_ORIGIN)
+    target.search = search
+    return NextResponse.redirect(target)
+  }
 
-    if (!isAsset) {
-      if (pathname === '/' || pathname === '') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/admin/login'
-        return NextResponse.rewrite(url)
-      }
+  // Subdomínio admin: URLs limpas → rewrite interno para /admin/*
+  if (onAdminHost && !isStaticAsset(pathname)) {
+    if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+      const publicPath = toAdminPublicPath(pathname)
+      const target = request.nextUrl.clone()
+      target.pathname = publicPath
+      target.search = search
+      return NextResponse.redirect(target)
+    }
 
-      if (!pathname.startsWith('/admin') && !pathname.startsWith('/auth')) {
-        const url = request.nextUrl.clone()
-        url.pathname = `/admin${pathname}`
-        return NextResponse.rewrite(url)
+    if (!pathname.startsWith('/auth')) {
+      const internal = toAdminInternalPath(pathname)
+      if (internal !== pathname) {
+        const rewriteUrl = request.nextUrl.clone()
+        rewriteUrl.pathname = internal
+        return NextResponse.rewrite(rewriteUrl)
       }
     }
   }
 
   let response = NextResponse.next({ request: { headers: request.headers } })
 
-  const needsAuthRefresh = pathname.startsWith('/admin')
+  const needsAuthRefresh =
+    pathname.startsWith('/admin') || (onAdminHost && !isStaticAsset(pathname) && !pathname.startsWith('/auth'))
 
   if (!needsAuthRefresh) return response
 
@@ -65,8 +86,6 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Só refresca cookies se existirem. A sessão email/senha fica no localStorage;
-  // a proteção real do painel é no layout client.
   await supabase.auth.getUser()
 
   return response

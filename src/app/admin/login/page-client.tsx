@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isEmailAllowed } from '@/lib/allowed-emails'
 import BrandMark from '@/components/BrandMark'
+import { adminPaths, MAIN_SITE_ORIGIN } from '@/lib/admin-host'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -16,7 +17,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
-  const [siteHome, setSiteHome] = useState('/')
+  const [siteHome, setSiteHome] = useState(MAIN_SITE_ORIGIN)
 
   useEffect(() => {
     const err = searchParams.get('error')
@@ -30,7 +31,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const host = window.location.hostname.toLowerCase()
     if (host.startsWith('admin.')) {
-      setSiteHome(host.includes('localhost') ? 'http://localhost:3000' : 'https://yopdevs.com.br')
+      setSiteHome(host.includes('localhost') ? 'http://localhost:3000' : MAIN_SITE_ORIGIN)
     }
   }, [])
 
@@ -40,7 +41,7 @@ export default function AdminLoginPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (cancelled) return
       if (session?.user?.email && isEmailAllowed(session.user.email)) {
-        router.replace('/admin/sistemas')
+        router.replace(adminPaths.sistemas)
         return
       }
       setChecking(false)
@@ -76,7 +77,7 @@ export default function AdminLoginPage() {
         }
         return
       }
-      router.replace('/admin/sistemas')
+      router.replace(adminPaths.sistemas)
     } finally {
       setLoading(false)
     }

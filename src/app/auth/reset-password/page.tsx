@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { adminPaths } from '@/lib/admin-host'
 import { useRouter } from 'next/navigation'
 export default function ResetPasswordPage() {
   const supabase = createClient()
@@ -25,7 +26,7 @@ export default function ResetPasswordPage() {
     } else {
       setMessage({ type: 'success', text: 'CHAVE ATUALIZADA. REDIRECIONANDO PARA O TERMINAL...' })
       setTimeout(() => {
-        router.push('/admin/sistemas')
+        router.push(adminPaths.sistemas)
       }, 2000)
     }
     setLoading(false)
