@@ -19,6 +19,7 @@ import {
 } from '@/lib/admin-finance'
 import { formatBrl, formatDateBr } from '@/lib/admin-systems'
 import { periodLabel } from '@/lib/admin-payments'
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
 
 type FormState = {
   kind: FinanceKind
@@ -62,6 +63,7 @@ export default function AdminFinanceiroPage() {
   const [periodPreset, setPeriodPreset] = useState<FinancePeriodPreset>('this_month')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -366,7 +368,13 @@ export default function AdminFinanceiroPage() {
     const dateLabel = formatDateBr(occurrenceDate)
 
     if (!isRecurringEntry(entry)) {
-      if (!window.confirm(`Excluir a ${label} "${entry.title}"?`)) return
+      const ok = await confirm({
+        title: `Excluir ${label}?`,
+        description: `"${entry.title}" será removida permanentemente.`,
+        confirmLabel: 'Excluir',
+        tone: 'danger',
+      })
+      if (!ok) return
       const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
       if (error) {
         toast.error(error.message)
@@ -378,13 +386,13 @@ export default function AdminFinanceiroPage() {
     }
 
     if (occurrenceDate <= entry.entry_date) {
-      if (
-        !window.confirm(
-          `Excluir a ${label} "${entry.title}" a partir de ${dateLabel}? Isso remove esta data e as próximas desta série. Datas anteriores (se houver em outro período) permanecem.`,
-        )
-      ) {
-        return
-      }
+      const ok = await confirm({
+        title: `Excluir ${label} a partir de ${dateLabel}?`,
+        description: `Remove esta data e as próximas desta série. Datas anteriores (se houver em outro período) permanecem.`,
+        confirmLabel: 'Excluir a partir daqui',
+        tone: 'danger',
+      })
+      if (!ok) return
       const { error } = await supabase.from('yop_admin_finance_entries').delete().eq('id', entry.id)
       if (error) {
         toast.error(error.message)
@@ -395,13 +403,14 @@ export default function AdminFinanceiroPage() {
       return
     }
 
-    if (
-      !window.confirm(
-        `Excluir a ${label} "${entry.title}" a partir de ${dateLabel}? Os meses anteriores continuam como estavam; esta data e as próximas saem da planilha.`,
-      )
-    ) {
-      return
-    }
+    const ok = await confirm({
+      title: `Excluir ${label} a partir de ${dateLabel}?`,
+      description:
+        'Os meses anteriores continuam como estavam; esta data e as próximas saem da planilha.',
+      confirmLabel: 'Excluir a partir daqui',
+      tone: 'danger',
+    })
+    if (!ok) return
 
     const { error } = await supabase
       .from('yop_admin_finance_entries')
@@ -429,6 +438,7 @@ export default function AdminFinanceiroPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-10">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Controle Financeiro</h2>

@@ -19,6 +19,7 @@ import {
   inferClientDocMode,
   onlyDigits,
 } from '@/lib/admin-clients'
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
 
 type FormState = {
   docMode: ClientDocMode
@@ -87,6 +88,7 @@ export default function AdminClientesPage() {
   const [editing, setEditing] = useState<AdminClient | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [query, setQuery] = useState('')
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const [docModalOpen, setDocModalOpen] = useState(false)
   const [docClient, setDocClient] = useState<AdminClient | null>(null)
@@ -315,7 +317,13 @@ export default function AdminClientesPage() {
 
   async function removeClient(client: AdminClient) {
     const label = clientDisplayName(client)
-    if (!window.confirm(`Excluir o cliente "${label}" e seus documentos?`)) return
+    const ok = await confirm({
+      title: 'Excluir cliente?',
+      description: `"${label}" e seus documentos serão removidos permanentemente.`,
+      confirmLabel: 'Excluir cliente',
+      tone: 'danger',
+    })
+    if (!ok) return
 
     const paths = (client.documents ?? []).map((d) => d.file_path).filter(Boolean)
     if (paths.length) {
@@ -456,7 +464,13 @@ export default function AdminClientesPage() {
   }
 
   async function removeDocument(doc: AdminClientDocument) {
-    if (!window.confirm(`Excluir o documento "${doc.title}"?`)) return
+    const ok = await confirm({
+      title: 'Excluir documento?',
+      description: `"${doc.title}" será removido permanentemente.`,
+      confirmLabel: 'Excluir documento',
+      tone: 'danger',
+    })
+    if (!ok) return
     await supabase.storage.from(ADMIN_CLIENT_DOCS_BUCKET).remove([doc.file_path])
     const { error } = await supabase.from('yop_admin_client_documents').delete().eq('id', doc.id)
     if (error) {
@@ -469,6 +483,7 @@ export default function AdminClientesPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Clientes</h2>
         <button

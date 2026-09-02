@@ -13,6 +13,7 @@ import {
   isHttpLink,
   resolveSystemLogoUrl,
 } from '@/lib/admin-systems'
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
 
 type FormState = {
   name: string
@@ -58,6 +59,7 @@ export default function AdminSistemasPage() {
   const [accessFiles, setAccessFiles] = useState<FileList | null>(null)
   const [query, setQuery] = useState('')
   const [logoSrcById, setLogoSrcById] = useState<Record<string, string>>({})
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -259,7 +261,13 @@ export default function AdminSistemasPage() {
   }
 
   async function removeSystem(system: AdminSystem) {
-    if (!window.confirm(`Excluir "${system.company_name}" e todos os anexos/pagamentos?`)) return
+    const ok = await confirm({
+      title: 'Excluir sistema?',
+      description: `"${system.company_name}" e todos os anexos/pagamentos vinculados serão removidos.`,
+      confirmLabel: 'Excluir sistema',
+      tone: 'danger',
+    })
+    if (!ok) return
     const files = filesBySystem[system.id] ?? []
     const paths = [...files.map((f) => f.file_path), system.logo_path].filter(Boolean) as string[]
     if (paths.length) {
@@ -275,7 +283,13 @@ export default function AdminSistemasPage() {
   }
 
   async function removeFile(file: AdminSystemFile) {
-    if (!window.confirm(`Excluir o arquivo "${file.file_name}"?`)) return
+    const ok = await confirm({
+      title: 'Excluir arquivo?',
+      description: `"${file.file_name}" será removido permanentemente.`,
+      confirmLabel: 'Excluir arquivo',
+      tone: 'danger',
+    })
+    if (!ok) return
     await supabase.storage.from(ADMIN_SYSTEM_BUCKET).remove([file.file_path])
     const { error } = await supabase.from('yop_admin_system_files').delete().eq('id', file.id)
     if (error) {
@@ -297,6 +311,7 @@ export default function AdminSistemasPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Sistemas</h2>
         <button

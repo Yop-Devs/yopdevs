@@ -21,6 +21,7 @@ import {
   toNumberAmount,
 } from '@/lib/admin-cobranca'
 import { formatBrl } from '@/lib/admin-systems'
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
 
 type StatusFilter = 'all' | BoletoStatus
 type MethodFilter = 'all' | ChargePaymentMethod
@@ -87,6 +88,7 @@ export default function AdminCobrancaPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [methodFilter, setMethodFilter] = useState<MethodFilter>('all')
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -261,7 +263,14 @@ export default function AdminCobrancaPage() {
   }
 
   async function cancelCharge(id: string) {
-    if (!window.confirm('Cancelar esta cobrança?')) return
+    const ok = await confirm({
+      title: 'Cancelar esta cobrança?',
+      description: 'Ela deixa de valer para o cliente. Cobranças já pagas não podem ser canceladas por aqui.',
+      confirmLabel: 'Sim, cancelar',
+      cancelLabel: 'Voltar',
+      tone: 'danger',
+    })
+    if (!ok) return
     setSyncing(true)
     try {
       const headers = await authHeaders()
@@ -301,6 +310,7 @@ export default function AdminCobrancaPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Cobrança</h2>
