@@ -1,3 +1,15 @@
+import type { NextRequest } from 'next/server'
+
+/** Host da requisição (Vercel/proxies podem usar x-forwarded-host). */
+export function getRequestHost(
+  request: Pick<NextRequest, 'headers'> | { headers: { get(name: string): string | null } }
+): string | null {
+  return (
+    request.headers.get('x-forwarded-host') ??
+    request.headers.get('host')
+  )
+}
+
 /** Hosts da área admin (subdomínio). */
 export function isAdminHost(hostname: string | null | undefined): boolean {
   if (!hostname) return false
@@ -35,17 +47,23 @@ export const adminPaths = {
 
 export type AdminPath = (typeof adminPaths)[keyof typeof adminPaths]
 
+export const adminOnlyPrefixes = [
+  adminPaths.login,
+  adminPaths.dashboard,
+  adminPaths.sistemas,
+  adminPaths.clientes,
+  adminPaths.pagamentos,
+] as const
+
+export function isAdminOnlyPath(pathname: string): boolean {
+  return adminOnlyPrefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
+
 export function adminPublicUrl(path: AdminPath | string, search = ''): string {
   const normalized = path.startsWith('/') ? path : `/${path}`
   return `${ADMIN_ORIGIN}${normalized}${search}`
-}
-
-/** Converte rota pública do subdomínio para rota interna do App Router. */
-export function toAdminInternalPath(pathname: string): string {
-  if (pathname === '/' || pathname === '/login') return '/admin/login'
-  if (pathname.startsWith('/admin')) return pathname
-  if (pathname.startsWith('/auth')) return pathname
-  return `/admin${pathname}`
 }
 
 /** Remove prefixo /admin para URL canônica no subdomínio. */

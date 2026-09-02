@@ -4,9 +4,10 @@ import {
   ADMIN_ORIGIN,
   adminPaths,
   adminPublicUrl,
+  getRequestHost,
   isAdminHost,
+  isAdminOnlyPath,
   isMainSiteHost,
-  toAdminInternalPath,
   toAdminPublicPath,
 } from '@/lib/admin-host'
 
@@ -22,23 +23,26 @@ function isStaticAsset(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
-  const host = request.headers.get('host')
+  const host = getRequestHost(request)
   const onAdminHost = isAdminHost(host)
 
-  // Painel legado → subdomínio admin
-  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
-    return NextResponse.redirect(adminPublicUrl('/login'))
+  // Site principal: rotas do admin só existem no subdomínio
+  if (!onAdminHost && isMainSiteHost(host)) {
+    if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+      const publicPath = toAdminPublicPath(pathname)
+      const target = new URL(publicPath, ADMIN_ORIGIN)
+      target.search = search
+      return NextResponse.redirect(target)
+    }
+
+    if (isAdminOnlyPath(pathname)) {
+      const target = new URL(pathname, ADMIN_ORIGIN)
+      target.search = search
+      return NextResponse.redirect(target)
+    }
   }
 
-  // Site principal: /admin/* não existe — só no subdomínio
-  if (!onAdminHost && isMainSiteHost(host) && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
-    const publicPath = toAdminPublicPath(pathname)
-    const target = new URL(publicPath, ADMIN_ORIGIN)
-    target.search = search
-    return NextResponse.redirect(target)
-  }
-
-  // Subdomínio admin: raiz → login (redirect explícito, evita servir landing estática)
+  // Subdomínio admin: raiz → login
   if (onAdminHost && (pathname === '/' || pathname === '')) {
     const target = request.nextUrl.clone()
     target.pathname = adminPaths.login
@@ -46,30 +50,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  // Subdomínio admin: URLs limpas → rewrite interno para /admin/*
-  if (onAdminHost && !isStaticAsset(pathname)) {
-    if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-      const publicPath = toAdminPublicPath(pathname)
-      const target = request.nextUrl.clone()
-      target.pathname = publicPath
-      target.search = search
-      return NextResponse.redirect(target)
-    }
-
-    if (!pathname.startsWith('/auth')) {
-      const internal = toAdminInternalPath(pathname)
-      if (internal !== pathname) {
-        const rewriteUrl = request.nextUrl.clone()
-        rewriteUrl.pathname = internal
-        return NextResponse.rewrite(rewriteUrl)
-      }
-    }
+  // Subdomínio: URLs antigas /admin/* → caminhos limpos
+  if (onAdminHost && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
+    const publicPath = toAdminPublicPath(pathname)
+    const target = request.nextUrl.clone()
+    target.pathname = publicPath
+    target.search = search
+    return NextResponse.redirect(target)
   }
 
   let response = NextResponse.next({ request: { headers: request.headers } })
 
   const needsAuthRefresh =
-    pathname.startsWith('/admin') || (onAdminHost && !isStaticAsset(pathname) && !pathname.startsWith('/auth'))
+    (onAdminHost && isAdminOnlyPath(pathname) && !isStaticAsset(pathname)) ||
+    pathname.startsWith('/auth')
 
   if (!needsAuthRefresh) return response
 

@@ -6,7 +6,7 @@ import LandingPage from '@/components/landing/LandingPage'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const host = (await headers()).get('host')
+  const host = (await headers()).get('x-forwarded-host') ?? (await headers()).get('host')
 
   if (isAdminHost(host)) {
     redirect(adminPaths.login)
