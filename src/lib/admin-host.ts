@@ -40,9 +40,11 @@ export const MAIN_SITE_ORIGIN =
 export const adminPaths = {
   login: '/login',
   dashboard: '/dashboard',
+  financeiro: '/financeiro',
   sistemas: '/sistemas',
   clientes: '/clientes',
   pagamentos: '/pagamentos',
+  cobranca: '/cobranca',
 } as const
 
 export type AdminPath = (typeof adminPaths)[keyof typeof adminPaths]
@@ -50,9 +52,11 @@ export type AdminPath = (typeof adminPaths)[keyof typeof adminPaths]
 export const adminOnlyPrefixes = [
   adminPaths.login,
   adminPaths.dashboard,
+  adminPaths.financeiro,
   adminPaths.sistemas,
   adminPaths.clientes,
   adminPaths.pagamentos,
+  adminPaths.cobranca,
 ] as const
 
 export function isAdminOnlyPath(pathname: string): boolean {
