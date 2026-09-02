@@ -1,6 +1,11 @@
+import { headers } from 'next/headers'
+import { connection } from 'next/server'
 import Script from 'next/script'
 import './globals.css'
 import { fredoka } from '@/components/Logo'
+import { CSP_NONCE } from '@/lib/csp'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: {
@@ -35,7 +40,10 @@ export const viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await connection()
+  const nonce = (await headers()).get('x-nonce') ?? CSP_NONCE
+
   return (
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
@@ -48,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="antialiased overflow-x-hidden">
-        <Script src="/console-filter.js" strategy="beforeInteractive" />
+        <Script src="/console-filter.js" strategy="beforeInteractive" nonce={nonce} />
         {children}
       </body>
     </html>

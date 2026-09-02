@@ -9,6 +9,7 @@ import {
   isMainSiteHost,
   toAdminPublicPath,
 } from '@/lib/admin-host'
+import { buildContentSecurityPolicy, CSP_NONCE } from '@/lib/csp'
 
 function isStaticAsset(pathname: string): boolean {
   return (
@@ -20,13 +21,12 @@ function isStaticAsset(pathname: string): boolean {
   )
 }
 
-/** Proxy Next 16: redirects de host + refresh de sessão. CSP fica no next.config.ts. */
+/** Injeta CSP+nonce no request para o Next carimbar scripts (header HTTP vem do next.config). */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const host = getRequestHost(request)
   const onAdminHost = isAdminHost(host)
 
-  // Site principal: rotas do admin só existem no subdomínio
   if (!onAdminHost && isMainSiteHost(host)) {
     if (pathname === '/admin' || pathname.startsWith('/admin/')) {
       const publicPath = toAdminPublicPath(pathname)
@@ -42,7 +42,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Subdomínio admin: raiz → login
   if (onAdminHost && (pathname === '/' || pathname === '')) {
     const target = request.nextUrl.clone()
     target.pathname = adminPaths.login
@@ -50,7 +49,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  // Subdomínio: URLs antigas /admin/* → caminhos limpos
   if (onAdminHost && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
     const publicPath = toAdminPublicPath(pathname)
     const target = request.nextUrl.clone()
@@ -59,8 +57,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
+  const csp = buildContentSecurityPolicy(CSP_NONCE)
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', CSP_NONCE)
+  requestHeaders.set('Content-Security-Policy', csp)
+
   let response = NextResponse.next({
-    request: { headers: new Headers(request.headers) },
+    request: { headers: requestHeaders },
   })
 
   const needsAuthRefresh =
@@ -78,16 +81,12 @@ export async function proxy(request: NextRequest) {
           },
           set(name: string, value: string, options: Record<string, unknown>) {
             request.cookies.set({ name, value, ...options })
-            response = NextResponse.next({
-              request: { headers: new Headers(request.headers) },
-            })
+            response = NextResponse.next({ request: { headers: requestHeaders } })
             response.cookies.set({ name, value, ...options })
           },
           remove(name: string, options: Record<string, unknown>) {
             request.cookies.set({ name, value: '', ...options })
-            response = NextResponse.next({
-              request: { headers: new Headers(request.headers) },
-            })
+            response = NextResponse.next({ request: { headers: requestHeaders } })
             response.cookies.set({ name, value: '', ...options })
           },
         },
