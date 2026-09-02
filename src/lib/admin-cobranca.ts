@@ -1,6 +1,8 @@
 import type { AdminClient } from '@/lib/admin-clients'
 import type { MpPaymentResponse } from '@/lib/mercadopago'
 
+export type ChargePaymentMethod = 'boleto' | 'credit_card'
+
 export type BoletoStatus =
   | 'pending'
   | 'approved'
@@ -16,12 +18,16 @@ export type AdminBoleto = {
   description: string
   amount: number
   status: BoletoStatus
+  payment_method: ChargePaymentMethod
   mp_payment_id: string | null
+  mp_preference_id: string | null
   mp_status: string | null
   mp_status_detail: string | null
   ticket_url: string | null
+  checkout_url: string | null
   barcode: string | null
   digitable_line: string | null
+  installments: number | null
   date_of_expiration: string | null
   paid_at: string | null
   payer_email: string | null
@@ -37,6 +43,11 @@ export type AdminBoleto = {
     AdminClient,
     'id' | 'person_name' | 'company_name' | 'full_name' | 'email' | 'cpf' | 'cnpj' | 'phone'
   > | null
+}
+
+export const PAYMENT_METHOD_LABEL: Record<ChargePaymentMethod, string> = {
+  boleto: 'Boleto',
+  credit_card: 'Cartão de crédito',
 }
 
 export const BOLETO_STATUS_LABEL: Record<BoletoStatus, string> = {

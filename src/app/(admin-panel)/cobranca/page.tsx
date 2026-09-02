@@ -15,28 +15,35 @@ import {
   BOLETO_STATUS_LABEL,
   BOLETO_STATUS_TONE,
   BoletoStatus,
+  ChargePaymentMethod,
+  PAYMENT_METHOD_LABEL,
   formatDateTimeBr,
   toNumberAmount,
 } from '@/lib/admin-cobranca'
 import { formatBrl } from '@/lib/admin-systems'
 
 type StatusFilter = 'all' | BoletoStatus
+type MethodFilter = 'all' | ChargePaymentMethod
 
 type FormState = {
+  payment_method: ChargePaymentMethod
   client_id: string
   amount: string
   description: string
   notes: string
   expiration_days: string
+  max_installments: string
   prefer_doc: 'auto' | 'cpf' | 'cnpj'
 }
 
 const emptyForm: FormState = {
+  payment_method: 'boleto',
   client_id: '',
   amount: '',
   description: '',
   notes: '',
   expiration_days: '3',
+  max_installments: '12',
   prefer_doc: 'auto',
 }
 
@@ -50,17 +57,26 @@ async function authHeaders(): Promise<HeadersInit> {
   }
 }
 
-function normalizeBoleto(raw: AdminBoleto & { client?: AdminBoleto['client'] | AdminBoleto['client'][] }): AdminBoleto {
+function normalizeCharge(
+  raw: AdminBoleto & { client?: AdminBoleto['client'] | AdminBoleto['client'][] },
+): AdminBoleto {
   const client = Array.isArray(raw.client) ? (raw.client[0] ?? null) : raw.client
   return {
     ...raw,
     amount: toNumberAmount(raw.amount),
+    payment_method: raw.payment_method === 'credit_card' ? 'credit_card' : 'boleto',
+    installments: raw.installments != null ? Number(raw.installments) : null,
     client,
   }
 }
 
+function payLink(b: AdminBoleto): string | null {
+  if (b.payment_method === 'credit_card') return b.checkout_url || null
+  return b.ticket_url || null
+}
+
 export default function AdminCobrancaPage() {
-  const [boletos, setBoletos] = useState<AdminBoleto[]>([])
+  const [charges, setCharges] = useState<AdminBoleto[]>([])
   const [clients, setClients] = useState<AdminClient[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -70,25 +86,23 @@ export default function AdminCobrancaPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [methodFilter, setMethodFilter] = useState<MethodFilter>('all')
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [boletosRes, clientsRes] = await Promise.all([
+    const [chargesRes, clientsRes] = await Promise.all([
       supabase
         .from('yop_admin_boletos')
         .select(
           '*, client:yop_admin_clients(id, person_name, company_name, full_name, email, cpf, cnpj, phone)',
         )
         .order('created_at', { ascending: false }),
-      supabase
-        .from('yop_admin_clients')
-        .select('*')
-        .order('full_name', { ascending: true }),
+      supabase.from('yop_admin_clients').select('*').order('full_name', { ascending: true }),
     ])
 
-    if (boletosRes.error) toast.error(boletosRes.error.message)
+    if (chargesRes.error) toast.error(chargesRes.error.message)
     else {
-      setBoletos(((boletosRes.data ?? []) as unknown as AdminBoleto[]).map((row) => normalizeBoleto(row)))
+      setCharges(((chargesRes.data ?? []) as unknown as AdminBoleto[]).map((row) => normalizeCharge(row)))
     }
 
     if (clientsRes.error) toast.error(clientsRes.error.message)
@@ -108,15 +122,19 @@ export default function AdminCobrancaPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return boletos.filter((b) => {
+    return charges.filter((b) => {
       if (statusFilter !== 'all' && b.status !== statusFilter) return false
+      if (methodFilter !== 'all' && b.payment_method !== methodFilter) return false
       if (!q) return true
       const hay = [
         b.description,
         b.payer_name,
         b.payer_email,
         b.mp_payment_id,
+        b.mp_preference_id,
         b.digitable_line,
+        b.checkout_url,
+        PAYMENT_METHOD_LABEL[b.payment_method],
         clientDisplayName(b.client ?? { person_name: b.payer_name, company_name: null, full_name: null }),
       ]
         .filter(Boolean)
@@ -124,26 +142,34 @@ export default function AdminCobrancaPage() {
         .toLowerCase()
       return hay.includes(q)
     })
-  }, [boletos, query, statusFilter])
+  }, [charges, query, statusFilter, methodFilter])
 
   const summary = useMemo(() => {
-    const pending = boletos.filter((b) => b.status === 'pending')
-    const approved = boletos.filter((b) => b.status === 'approved')
-    const expired = boletos.filter((b) => b.status === 'expired')
-    const cancelled = boletos.filter((b) => b.status === 'cancelled')
+    const pending = charges.filter((b) => b.status === 'pending')
+    const approved = charges.filter((b) => b.status === 'approved')
+    const expired = charges.filter((b) => b.status === 'expired')
+    const cancelled = charges.filter((b) => b.status === 'cancelled')
+    const cards = charges.filter((b) => b.payment_method === 'credit_card')
+    const boletos = charges.filter((b) => b.payment_method === 'boleto')
     return {
-      total: boletos.length,
+      total: charges.length,
       pendingCount: pending.length,
       pendingAmount: pending.reduce((s, b) => s + b.amount, 0),
       paidCount: approved.length,
       paidAmount: approved.reduce((s, b) => s + b.amount, 0),
       expiredCount: expired.length,
       cancelledCount: cancelled.length,
+      cardCount: cards.length,
+      boletoCount: boletos.length,
     }
-  }, [boletos])
+  }, [charges])
 
-  function openCreate() {
-    setForm(emptyForm)
+  function openCreate(method: ChargePaymentMethod = 'boleto') {
+    setForm({
+      ...emptyForm,
+      payment_method: method,
+      expiration_days: method === 'credit_card' ? '7' : '3',
+    })
     setEditorOpen(true)
   }
 
@@ -156,19 +182,25 @@ export default function AdminCobrancaPage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
+          payment_method: form.payment_method,
           client_id: form.client_id,
           amount: form.amount,
           description: form.description,
           notes: form.notes || null,
-          expiration_days: Number(form.expiration_days) || 3,
+          expiration_days: Number(form.expiration_days) || (form.payment_method === 'credit_card' ? 7 : 3),
+          max_installments: Number(form.max_installments) || 12,
           prefer_doc: form.prefer_doc === 'auto' ? undefined : form.prefer_doc,
         }),
       })
       const json = (await res.json()) as { error?: string; boleto?: AdminBoleto }
-      if (!res.ok) throw new Error(json.error || 'Falha ao emitir boleto.')
-      toast.success('Boleto emitido no Mercado Pago.')
+      if (!res.ok) throw new Error(json.error || 'Falha ao criar cobrança.')
+      toast.success(
+        form.payment_method === 'credit_card'
+          ? 'Link de cartão gerado. Envie ao cliente.'
+          : 'Boleto emitido no Mercado Pago.',
+      )
       setEditorOpen(false)
-      if (json.boleto) setDetail(normalizeBoleto(json.boleto as AdminBoleto))
+      if (json.boleto) setDetail(normalizeCharge(json.boleto as AdminBoleto))
       await load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao emitir.')
@@ -192,6 +224,14 @@ export default function AdminCobrancaPage() {
       if (first && !first.ok) throw new Error(first.error || 'Falha ao sincronizar.')
       toast.success('Status atualizado.')
       await load()
+      const { data } = await supabase
+        .from('yop_admin_boletos')
+        .select(
+          '*, client:yop_admin_clients(id, person_name, company_name, full_name, email, cpf, cnpj, phone)',
+        )
+        .eq('id', id)
+        .maybeSingle()
+      if (data) setDetail(normalizeCharge(data as unknown as AdminBoleto))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao sincronizar.')
     } finally {
@@ -208,10 +248,7 @@ export default function AdminCobrancaPage() {
         headers,
         body: JSON.stringify({ all_pending: true }),
       })
-      const json = (await res.json()) as {
-        error?: string
-        results?: { ok: boolean }[]
-      }
+      const json = (await res.json()) as { error?: string; results?: { ok: boolean }[] }
       if (!res.ok) throw new Error(json.error || 'Falha ao sincronizar.')
       const ok = (json.results ?? []).filter((r) => r.ok).length
       toast.success(`Sincronizados: ${ok}/${json.results?.length ?? 0}`)
@@ -223,8 +260,8 @@ export default function AdminCobrancaPage() {
     }
   }
 
-  async function cancelBoleto(id: string) {
-    if (!window.confirm('Cancelar este boleto no Mercado Pago?')) return
+  async function cancelCharge(id: string) {
+    if (!window.confirm('Cancelar esta cobrança?')) return
     setSyncing(true)
     try {
       const headers = await authHeaders()
@@ -235,7 +272,7 @@ export default function AdminCobrancaPage() {
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) throw new Error(json.error || 'Falha ao cancelar.')
-      toast.success('Boleto cancelado.')
+      toast.success('Cobrança cancelada.')
       setDetail(null)
       await load()
     } catch (err) {
@@ -260,13 +297,15 @@ export default function AdminCobrancaPage() {
     onlyDigits(selectedClient.cpf ?? '').length === 11 &&
     onlyDigits(selectedClient.cnpj ?? '').length === 14
 
+  const isCard = form.payment_method === 'credit_card'
+
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Cobrança</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Emissão e acompanhamento de boletos via Mercado Pago.
+            Boleto e cartão de crédito via Mercado Pago — emissão, link e acompanhamento.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -280,19 +319,26 @@ export default function AdminCobrancaPage() {
           </button>
           <button
             type="button"
-            onClick={openCreate}
-            className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            onClick={() => openCreate('boleto')}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >
             Emitir boleto
+          </button>
+          <button
+            type="button"
+            onClick={() => openCreate('credit_card')}
+            className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Link cartão
           </button>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Aguardando" value={formatBrl(summary.pendingAmount)} hint={`${summary.pendingCount} boleto(s)`} />
-        <SummaryCard label="Pagos" value={formatBrl(summary.paidAmount)} hint={`${summary.paidCount} boleto(s)`} />
-        <SummaryCard label="Vencidos" value={String(summary.expiredCount)} hint="aguardando baixa/expiração" />
-        <SummaryCard label="Emitidos" value={String(summary.total)} hint={`${summary.cancelledCount} cancelado(s)`} />
+        <SummaryCard label="Aguardando" value={formatBrl(summary.pendingAmount)} hint={`${summary.pendingCount} cobrança(s)`} />
+        <SummaryCard label="Pagos" value={formatBrl(summary.paidAmount)} hint={`${summary.paidCount} cobrança(s)`} />
+        <SummaryCard label="Cartão" value={String(summary.cardCount)} hint={`${summary.boletoCount} boleto(s)`} />
+        <SummaryCard label="Emitidos" value={String(summary.total)} hint={`${summary.cancelledCount} cancelado(s) · ${summary.expiredCount} vencido(s)`} />
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -302,6 +348,15 @@ export default function AdminCobrancaPage() {
           placeholder="Buscar por cliente, descrição, ID..."
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-500 sm:max-w-sm"
         />
+        <select
+          value={methodFilter}
+          onChange={(e) => setMethodFilter(e.target.value as MethodFilter)}
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-500"
+        >
+          <option value="all">Todos os meios</option>
+          <option value="boleto">Boleto</option>
+          <option value="credit_card">Cartão</option>
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -320,7 +375,7 @@ export default function AdminCobrancaPage() {
         {loading ? (
           <p className="p-8 text-center text-sm text-slate-500">Carregando cobranças...</p>
         ) : filtered.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-500">Nenhum boleto encontrado.</p>
+          <p className="p-8 text-center text-sm text-slate-500">Nenhuma cobrança encontrada.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -328,6 +383,7 @@ export default function AdminCobrancaPage() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
                   <th className="px-4 py-3 font-semibold">Descrição</th>
+                  <th className="px-4 py-3 font-semibold">Meio</th>
                   <th className="px-4 py-3 font-semibold">Valor</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold">Vencimento</th>
@@ -335,47 +391,64 @@ export default function AdminCobrancaPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((b) => (
-                  <tr key={b.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900">
-                        {clientDisplayName(
-                          b.client ?? { person_name: b.payer_name, company_name: null, full_name: null },
-                        )}
-                      </p>
-                      <p className="text-xs text-slate-500">{b.payer_email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{b.description}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{formatBrl(b.amount)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${BOLETO_STATUS_TONE[b.status]}`}>
-                        {BOLETO_STATUS_LABEL[b.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{formatDateTimeBr(b.date_of_expiration)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setDetail(b)}
-                          className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline"
+                {filtered.map((b) => {
+                  const link = payLink(b)
+                  return (
+                    <tr key={b.id} className="border-b border-slate-100 last:border-0">
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-900">
+                          {clientDisplayName(
+                            b.client ?? { person_name: b.payer_name, company_name: null, full_name: null },
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">{b.payer_email}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{b.description}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            b.payment_method === 'credit_card'
+                              ? 'bg-sky-100 text-sky-900'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
                         >
-                          Detalhes
-                        </button>
-                        {b.ticket_url && (
-                          <a
-                            href={b.ticket_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-semibold text-sky-700 underline-offset-2 hover:underline"
+                          {PAYMENT_METHOD_LABEL[b.payment_method]}
+                          {b.installments && b.installments > 1 ? ` · ${b.installments}x` : ''}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-900">{formatBrl(b.amount)}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${BOLETO_STATUS_TONE[b.status]}`}
+                        >
+                          {BOLETO_STATUS_LABEL[b.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{formatDateTimeBr(b.date_of_expiration)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDetail(b)}
+                            className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline"
                           >
-                            Abrir boleto
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                            Detalhes
+                          </button>
+                          {link && (
+                            <a
+                              href={link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-sky-700 underline-offset-2 hover:underline"
+                            >
+                              {b.payment_method === 'credit_card' ? 'Abrir link' : 'Abrir boleto'}
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -388,10 +461,37 @@ export default function AdminCobrancaPage() {
             onSubmit={onSubmit}
             className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
           >
-            <h3 className="text-lg font-bold text-slate-900">Emitir boleto</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              {isCard ? 'Criar link de cartão' : 'Emitir boleto'}
+            </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Os dados do pagador (documento e endereço) vêm do cadastro do cliente.
+              {isCard
+                ? 'Gera um link do Mercado Pago. O cliente abre, escolhe cartão e parcela. Os juros do parcelamento ficam com ele — não saem do seu líquido.'
+                : 'Os dados do pagador (documento e endereço) vêm do cadastro do cliente.'}
             </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {(['boleto', 'credit_card'] as ChargePaymentMethod[]).map((method) => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      payment_method: method,
+                      expiration_days: method === 'credit_card' ? '7' : '3',
+                    }))
+                  }
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                    form.payment_method === method
+                      ? 'border-slate-900 bg-slate-950 text-white'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                >
+                  {PAYMENT_METHOD_LABEL[method]}
+                </button>
+              ))}
+            </div>
 
             <div className="mt-4 space-y-3">
               <label className="block text-sm">
@@ -419,17 +519,20 @@ export default function AdminCobrancaPage() {
                     {selectedClient.cpf ? `CPF ${formatCpf(selectedClient.cpf)}` : '—'}
                     {selectedClient.cnpj ? ` · CNPJ ${formatCnpj(selectedClient.cnpj)}` : ''}
                   </p>
-                  <p>
-                    {[selectedClient.street, selectedClient.address_number, selectedClient.city, selectedClient.state]
-                      .filter(Boolean)
-                      .join(', ') || 'Endereço incompleto'}
-                  </p>
+                  <p>E-mail: {selectedClient.email || '—'}</p>
+                  {!isCard && (
+                    <p>
+                      {[selectedClient.street, selectedClient.address_number, selectedClient.city, selectedClient.state]
+                        .filter(Boolean)
+                        .join(', ') || 'Endereço incompleto (obrigatório no boleto)'}
+                    </p>
+                  )}
                 </div>
               )}
 
               {clientHasBothDocs && (
                 <label className="block text-sm">
-                  <span className="mb-1 block font-semibold text-slate-700">Documento no boleto</span>
+                  <span className="mb-1 block font-semibold text-slate-700">Documento na cobrança</span>
                   <select
                     value={form.prefer_doc}
                     onChange={(e) =>
@@ -456,7 +559,9 @@ export default function AdminCobrancaPage() {
               </label>
 
               <label className="block text-sm">
-                <span className="mb-1 block font-semibold text-slate-700">Descrição</span>
+                <span className="mb-1 block font-semibold text-slate-700">
+                  {isCard ? 'Descrição do produto / serviço' : 'Descrição'}
+                </span>
                 <input
                   required
                   value={form.description}
@@ -466,17 +571,55 @@ export default function AdminCobrancaPage() {
                 />
               </label>
 
-              <label className="block text-sm">
-                <span className="mb-1 block font-semibold text-slate-700">Vencimento (dias)</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={form.expiration_days}
-                  onChange={(e) => setForm((f) => ({ ...f, expiration_days: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-500"
-                />
-              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm">
+                  <span className="mb-1 block font-semibold text-slate-700">Validade do link (dias)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={form.expiration_days}
+                    onChange={(e) => setForm((f) => ({ ...f, expiration_days: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-500"
+                  />
+                </label>
+                {isCard ? (
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-semibold text-slate-700">Máx. parcelas</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={18}
+                      value={form.max_installments}
+                      onChange={(e) => setForm((f) => ({ ...f, max_installments: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-500"
+                    />
+                  </label>
+                ) : null}
+              </div>
+
+              {isCard ? (
+                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950">
+                  <p className="font-semibold">Juros no cliente (parcelado comprador)</p>
+                  <p>
+                    O valor que você cadastrar aqui é o que deve entrar pra você (antes da taxa normal do MP). Se o
+                    cliente parcelar, o Mercado Pago calcula e soma os juros na parcela dele.
+                  </p>
+                  <p>
+                    No painel do MP procure por <strong>“Taxas e parcelas”</strong>, <strong>“Custos”</strong> ou{' '}
+                    <strong>“Oferecer parcelas sem acréscimo”</strong> (às vezes em Seu negócio → Configurações). Deixe{' '}
+                    <strong>desligado</strong> o parcelado vendedor / sem acréscimos. Se não achar e no checkout o total
+                    do cliente sobe ao parcelar, já está no modo certo.
+                  </p>
+                </div>
+              ) : null}
+
+              {isCard ? (
+                <p className="text-xs text-slate-500">
+                  Máximo de parcelas: o cliente escolhe 1x até esse limite. Quanto mais parcelas, mais juros ele vê no
+                  checkout (não você).
+                </p>
+              ) : null}
 
               <label className="block text-sm">
                 <span className="mb-1 block font-semibold text-slate-700">Observações internas</span>
@@ -502,7 +645,7 @@ export default function AdminCobrancaPage() {
                 disabled={saving}
                 className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {saving ? 'Emitindo...' : 'Emitir no Mercado Pago'}
+                {saving ? 'Gerando...' : isCard ? 'Gerar link' : 'Emitir boleto'}
               </button>
             </div>
           </form>
@@ -515,11 +658,22 @@ export default function AdminCobrancaPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Detalhes da cobrança</h3>
-                <span
-                  className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${BOLETO_STATUS_TONE[detail.status]}`}
-                >
-                  {BOLETO_STATUS_LABEL[detail.status]}
-                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${BOLETO_STATUS_TONE[detail.status]}`}
+                  >
+                    {BOLETO_STATUS_LABEL[detail.status]}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      detail.payment_method === 'credit_card'
+                        ? 'bg-sky-100 text-sky-900'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {PAYMENT_METHOD_LABEL[detail.payment_method]}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -543,15 +697,52 @@ export default function AdminCobrancaPage() {
               />
               <DetailRow label="Valor" value={formatBrl(detail.amount)} />
               <DetailRow label="Descrição" value={detail.description} />
+              <DetailRow
+                label="Parcelas"
+                value={
+                  detail.installments && detail.installments > 1
+                    ? `${detail.installments}x`
+                    : detail.payment_method === 'credit_card'
+                      ? 'À vista ou ainda não pago'
+                      : '—'
+                }
+              />
               <DetailRow label="Vencimento" value={formatDateTimeBr(detail.date_of_expiration)} />
               <DetailRow label="Pago em" value={formatDateTimeBr(detail.paid_at)} />
-              <DetailRow label="Documento" value={detail.payer_doc_type && detail.payer_doc_number ? `${detail.payer_doc_type} ${detail.payer_doc_number}` : '—'} />
+              <DetailRow
+                label="Documento"
+                value={
+                  detail.payer_doc_type && detail.payer_doc_number
+                    ? `${detail.payer_doc_type} ${detail.payer_doc_number}`
+                    : '—'
+                }
+              />
               <DetailRow label="E-mail" value={detail.payer_email || '—'} />
-              <DetailRow label="ID Mercado Pago" value={detail.mp_payment_id || '—'} />
-              <DetailRow label="Status MP" value={[detail.mp_status, detail.mp_status_detail].filter(Boolean).join(' — ') || '—'} />
+              <DetailRow label="ID pagamento" value={detail.mp_payment_id || '—'} />
+              {detail.mp_preference_id && (
+                <DetailRow label="ID preferência" value={detail.mp_preference_id} />
+              )}
+              <DetailRow
+                label="Status MP"
+                value={[detail.mp_status, detail.mp_status_detail].filter(Boolean).join(' — ') || '—'}
+              />
               <DetailRow label="Criado em" value={formatDateTimeBr(detail.created_at)} />
               {detail.notes && <DetailRow label="Notas" value={detail.notes} />}
             </dl>
+
+            {detail.payment_method === 'credit_card' && detail.checkout_url && (
+              <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">Link de pagamento</p>
+                <p className="mt-1 break-all font-mono text-xs text-slate-800">{detail.checkout_url}</p>
+                <button
+                  type="button"
+                  onClick={() => copyText('Link', detail.checkout_url)}
+                  className="mt-2 text-xs font-semibold text-sky-700 hover:underline"
+                >
+                  Copiar link
+                </button>
+              </div>
+            )}
 
             {detail.digitable_line && (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -568,14 +759,14 @@ export default function AdminCobrancaPage() {
             )}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              {detail.ticket_url && (
+              {payLink(detail) && (
                 <a
-                  href={detail.ticket_url}
+                  href={payLink(detail)!}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"
                 >
-                  Abrir boleto
+                  {detail.payment_method === 'credit_card' ? 'Abrir link' : 'Abrir boleto'}
                 </a>
               )}
               <button
@@ -590,10 +781,10 @@ export default function AdminCobrancaPage() {
                 <button
                   type="button"
                   disabled={syncing}
-                  onClick={() => cancelBoleto(detail.id)}
+                  onClick={() => cancelCharge(detail.id)}
                   className="rounded-xl border border-rose-300 px-4 py-2.5 text-sm font-semibold text-rose-700 disabled:opacity-50"
                 >
-                  Cancelar boleto
+                  Cancelar
                 </button>
               )}
             </div>

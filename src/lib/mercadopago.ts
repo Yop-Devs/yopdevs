@@ -16,6 +16,9 @@ export type MpPaymentResponse = {
   external_reference?: string | null
   date_of_expiration?: string | null
   date_approved?: string | null
+  installments?: number | null
+  payment_method_id?: string | null
+  payment_type_id?: string | null
   transaction_details?: {
     external_resource_url?: string | null
     payment_method_reference_id?: string | null
@@ -28,6 +31,17 @@ export type MpPaymentResponse = {
     } | null
   } | null
   barcode?: { content?: string | null } | null
+}
+
+export type MpPreferenceResponse = {
+  id?: string
+  init_point?: string
+  sandbox_init_point?: string
+  external_reference?: string
+  date_of_expiration?: string | null
+  message?: string
+  error?: string
+  cause?: { description?: string; code?: string }[]
 }
 
 function accessToken(): string {
@@ -67,10 +81,10 @@ export function resolvePayerDocument(
 
   let useCnpj = false
   if (prefer === 'cnpj') {
-    if (!hasCnpj) throw new Error('Cliente sem CNPJ válido para emitir boleto.')
+    if (!hasCnpj) throw new Error('Cliente sem CNPJ válido para a cobrança.')
     useCnpj = true
   } else if (prefer === 'cpf') {
-    if (!hasCpf) throw new Error('Cliente sem CPF válido para emitir boleto.')
+    if (!hasCpf) throw new Error('Cliente sem CPF válido para a cobrança.')
     useCnpj = false
   } else if (hasCpf && hasCnpj) {
     useCnpj = Boolean(client.company_name) && !client.person_name
@@ -79,7 +93,7 @@ export function resolvePayerDocument(
   } else if (hasCpf) {
     useCnpj = false
   } else {
-    throw new Error('Cliente sem CPF/CNPJ válido para emitir boleto.')
+    throw new Error('Cliente sem CPF/CNPJ válido para a cobrança.')
   }
 
   if (useCnpj) {
@@ -126,6 +140,17 @@ export function assertClientReadyForBoleto(
   if (!client.state?.trim() || client.state.trim().length !== 2) {
     throw new Error('Cliente sem UF válida (2 letras).')
   }
+  resolvePayerDocument(client, prefer)
+}
+
+export function assertClientReadyForCard(
+  client: Pick<
+    AdminClient,
+    'email' | 'cpf' | 'cnpj' | 'person_name' | 'company_name' | 'full_name'
+  >,
+  prefer?: PayerDocChoice,
+) {
+  if (!client.email?.trim()) throw new Error('Cliente sem e-mail cadastrado.')
   resolvePayerDocument(client, prefer)
 }
 
@@ -194,6 +219,91 @@ export async function createMpBoletoPayment(input: {
   return json
 }
 
+/** Checkout Pro: gera link para o cliente pagar com cartão (parcelas conforme o cartão). */
+export async function createMpCardCheckoutPreference(input: {
+  amount: number
+  description: string
+  externalReference: string
+  dateOfExpirationIso: string
+  client: AdminClient
+  preferDoc?: PayerDocChoice
+  maxInstallments?: number
+}): Promise<MpPreferenceResponse> {
+  const doc = resolvePayerDocument(input.client, input.preferDoc)
+  const names = splitPayerName(doc.name)
+  const notificationUrl = webhookNotificationUrl()
+  const siteOrigin =
+    process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() ||
+    process.env.NEXT_PUBLIC_ADMIN_ORIGIN?.trim() ||
+    'https://yopdevs.com.br'
+  const backBase = siteOrigin.replace(/\/$/, '')
+
+  const body: Record<string, unknown> = {
+    items: [
+      {
+        id: input.externalReference.slice(0, 36),
+        title: input.description.slice(0, 256),
+        description: input.description.slice(0, 256),
+        quantity: 1,
+        currency_id: 'BRL',
+        unit_price: Number(input.amount.toFixed(2)),
+      },
+    ],
+    payer: {
+      email: input.client.email!.trim(),
+      name: names.first_name,
+      surname: names.last_name,
+      identification: {
+        type: doc.type,
+        number: doc.number,
+      },
+    },
+    external_reference: input.externalReference,
+    statement_descriptor: 'YOP DEVS',
+    // Juros de parcelamento: modelo "parcelado comprador" (conta MP).
+    // Não ativar "parcelamento sem acréscimos / parcelado vendedor" no painel do MP,
+    // senão o custo sai do valor líquido do vendedor.
+    metadata: {
+      yop_financing: 'buyer',
+      yop_charge_type: 'credit_card_link',
+    },
+    expires: true,
+    expiration_date_to: input.dateOfExpirationIso,
+    back_urls: {
+      success: `${backBase}/`,
+      pending: `${backBase}/`,
+      failure: `${backBase}/`,
+    },
+    auto_return: 'approved',
+    payment_methods: {
+      // Foco em cartão; boleto tem fluxo próprio no admin
+      excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+      // Máximo de parcelas; juros/CET vêm do MP no modelo parcelado comprador
+      installments: input.maxInstallments ?? 12,
+    },
+  }
+
+  if (notificationUrl) {
+    body.notification_url = notificationUrl
+  }
+
+  const res = await fetch(`${MP_API}/checkout/preferences`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  const json = (await res.json()) as MpPreferenceResponse
+  if (!res.ok) {
+    const cause = json.cause?.map((c) => c.description || c.code).filter(Boolean).join('; ')
+    throw new Error(cause || json.message || json.error || `Mercado Pago HTTP ${res.status}`)
+  }
+  return json
+}
+
 export async function getMpPayment(paymentId: string): Promise<MpPaymentResponse> {
   const res = await fetch(`${MP_API}/v1/payments/${paymentId}`, {
     headers: {
@@ -206,6 +316,32 @@ export async function getMpPayment(paymentId: string): Promise<MpPaymentResponse
     throw new Error(json.message || `Falha ao consultar pagamento ${paymentId}`)
   }
   return json
+}
+
+/** Busca pagamentos ligados a uma cobrança (cartão via preference). */
+export async function findLatestMpPaymentByExternalReference(
+  externalReference: string,
+): Promise<MpPaymentResponse | null> {
+  const url = new URL(`${MP_API}/v1/payments/search`)
+  url.searchParams.set('external_reference', externalReference)
+  url.searchParams.set('sort', 'date_created')
+  url.searchParams.set('criteria', 'desc')
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken()}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  const json = (await res.json()) as {
+    results?: MpPaymentResponse[]
+    message?: string
+  }
+  if (!res.ok) {
+    throw new Error(json.message || 'Falha ao buscar pagamentos no Mercado Pago.')
+  }
+  const results = json.results ?? []
+  return results[0] ?? null
 }
 
 export async function cancelMpPayment(paymentId: string): Promise<MpPaymentResponse> {
@@ -234,6 +370,7 @@ export function boletoPatchFromMpPayment(payment: MpPaymentResponse): {
   digitable_line: string | null
   date_of_expiration: string | null
   paid_at: string | null
+  installments: number | null
   updated_at: string
 } {
   const fields = pickBoletoFieldsFromMpPayment(payment)
@@ -247,6 +384,10 @@ export function boletoPatchFromMpPayment(payment: MpPaymentResponse): {
     digitable_line: fields.digitable_line,
     date_of_expiration: payment.date_of_expiration ?? null,
     paid_at: status === 'approved' ? payment.date_approved ?? new Date().toISOString() : null,
+    installments:
+      payment.installments != null && Number(payment.installments) > 0
+        ? Number(payment.installments)
+        : null,
     updated_at: new Date().toISOString(),
   }
 }

@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/admin-api-auth'
-import { boletoPatchFromMpPayment, getMpPayment } from '@/lib/mercadopago'
+import {
+  boletoPatchFromMpPayment,
+  findLatestMpPaymentByExternalReference,
+  getMpPayment,
+} from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
-/** Sincroniza status de um boleto (ou todos pendentes) com o Mercado Pago. */
+/** Sincroniza status de uma cobrança (ou todas pendentes) com o Mercado Pago. */
 export async function POST(request: Request) {
   const auth = await requireAdminUser(request)
   if ('error' in auth) {
@@ -27,13 +31,10 @@ export async function POST(request: Request) {
   if (body.all_pending === true) {
     const { data, error } = await auth.supabase
       .from('yop_admin_boletos')
-      .select('id, mp_payment_id')
+      .select('id')
       .in('status', ['pending', 'expired'])
-      .not('mp_payment_id', 'is', null)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    for (const row of data ?? []) {
-      if (row.mp_payment_id) ids.push(row.id)
-    }
+    for (const row of data ?? []) ids.push(row.id)
   } else if (typeof body.id === 'string' && body.id) {
     ids.push(body.id)
   } else {
@@ -45,19 +46,54 @@ export async function POST(request: Request) {
   for (const id of ids) {
     const { data: boleto, error } = await auth.supabase
       .from('yop_admin_boletos')
-      .select('id, mp_payment_id')
+      .select('id, mp_payment_id, external_reference, payment_method, date_of_expiration')
       .eq('id', id)
       .maybeSingle()
 
-    if (error || !boleto?.mp_payment_id) {
-      results.push({ id, ok: false, error: error?.message || 'Boleto sem pagamento MP.' })
+    if (error || !boleto) {
+      results.push({ id, ok: false, error: error?.message || 'Cobrança não encontrada.' })
       continue
     }
 
     try {
-      const payment = await getMpPayment(boleto.mp_payment_id)
+      let payment = null as Awaited<ReturnType<typeof getMpPayment>> | null
+
+      if (boleto.mp_payment_id) {
+        payment = await getMpPayment(boleto.mp_payment_id)
+      } else if (boleto.external_reference) {
+        payment = await findLatestMpPaymentByExternalReference(boleto.external_reference)
+      }
+
+      if (!payment) {
+        // Ainda sem pagamento (ex.: link de cartão não usado) — marca vencido se passou a validade
+        if (boleto.date_of_expiration) {
+          const exp = new Date(boleto.date_of_expiration).getTime()
+          if (Number.isFinite(exp) && exp < Date.now()) {
+            const { error: upError } = await auth.supabase
+              .from('yop_admin_boletos')
+              .update({
+                status: 'expired',
+                mp_status: 'expired',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', id)
+            if (upError) results.push({ id, ok: false, error: upError.message })
+            else results.push({ id, ok: true })
+            continue
+          }
+        }
+        results.push({ id, ok: true })
+        continue
+      }
+
       const patch = boletoPatchFromMpPayment(payment)
-      const { error: upError } = await auth.supabase.from('yop_admin_boletos').update(patch).eq('id', id)
+      const { error: upError } = await auth.supabase
+        .from('yop_admin_boletos')
+        .update({
+          ...patch,
+          mp_payment_id: payment.id != null ? String(payment.id) : boleto.mp_payment_id,
+        })
+        .eq('id', id)
 
       if (upError) results.push({ id, ok: false, error: upError.message })
       else results.push({ id, ok: true })
