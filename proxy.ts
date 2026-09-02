@@ -20,14 +20,9 @@ function isStaticAsset(pathname: string): boolean {
   )
 }
 
-/** Nonce compatível com Edge Runtime (sem Buffer). */
+/** Nonce por request (proxy roda em Node.js no Next 16). */
 function createNonce(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!)
-  }
-  return btoa(binary)
+  return Buffer.from(crypto.randomUUID()).toString('base64')
 }
 
 function buildCsp(nonce: string): string {
@@ -38,7 +33,7 @@ function buildCsp(nonce: string): string {
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self'",
-    // Sem 'unsafe-inline' em script-src (exigência Observatory / securityheaders)
+    // Sem 'unsafe-inline' em script-src (Observatory)
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://cdn.simpleicons.org https://*.supabase.co",
@@ -57,10 +52,17 @@ function applySecurityHeaders(response: NextResponse, nonce: string, csp: string
   return response
 }
 
-export async function middleware(request: NextRequest) {
+function redirectWithCsp(url: URL, nonce: string, csp: string) {
+  return applySecurityHeaders(NextResponse.redirect(url), nonce, csp)
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const host = getRequestHost(request)
   const onAdminHost = isAdminHost(host)
+
+  const nonce = createNonce()
+  const csp = buildCsp(nonce)
 
   // Site principal: rotas do admin só existem no subdomínio
   if (!onAdminHost && isMainSiteHost(host)) {
@@ -68,13 +70,13 @@ export async function middleware(request: NextRequest) {
       const publicPath = toAdminPublicPath(pathname)
       const target = new URL(publicPath, ADMIN_ORIGIN)
       target.search = search
-      return NextResponse.redirect(target)
+      return redirectWithCsp(target, nonce, csp)
     }
 
     if (isAdminOnlyPath(pathname)) {
       const target = new URL(pathname, ADMIN_ORIGIN)
       target.search = search
-      return NextResponse.redirect(target)
+      return redirectWithCsp(target, nonce, csp)
     }
   }
 
@@ -83,7 +85,7 @@ export async function middleware(request: NextRequest) {
     const target = request.nextUrl.clone()
     target.pathname = adminPaths.login
     target.search = search
-    return NextResponse.redirect(target)
+    return redirectWithCsp(target, nonce, csp)
   }
 
   // Subdomínio: URLs antigas /admin/* → caminhos limpos
@@ -92,11 +94,8 @@ export async function middleware(request: NextRequest) {
     const target = request.nextUrl.clone()
     target.pathname = publicPath
     target.search = search
-    return NextResponse.redirect(target)
+    return redirectWithCsp(target, nonce, csp)
   }
-
-  const nonce = createNonce()
-  const csp = buildCsp(nonce)
 
   // Next precisa do CSP + nonce no *request* para injetar nonce nos scripts
   const requestHeaders = new Headers(request.headers)
@@ -144,6 +143,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     {
       source: '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?)$).*)',
       missing: [

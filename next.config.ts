@@ -4,7 +4,7 @@ import withPWA from "next-pwa";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pwaRuntimeCache = require("./pwa-runtime-cache.js") as Array<unknown>;
 
-/** Headers estáticos. CSP dinâmica (com nonce) fica no middleware. */
+/** Headers estáticos. CSP dinâmica (com nonce) fica no proxy.ts (Next 16). */
 const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
