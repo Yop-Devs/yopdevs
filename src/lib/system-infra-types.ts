@@ -17,6 +17,9 @@ export type SystemIntegrationRow = {
   has_cloudflare: boolean
   has_supabase: boolean
   has_resend: boolean
+  track_cloudflare: boolean
+  track_supabase: boolean
+  track_resend: boolean
   cf_account_id: string | null
   cf_api_token: string | null
   cf_r2_bucket: string | null
@@ -59,6 +62,9 @@ export type SystemIntegrationPublic = {
   has_cloudflare: boolean
   has_supabase: boolean
   has_resend: boolean
+  track_cloudflare: boolean
+  track_supabase: boolean
+  track_resend: boolean
   cf_account_id: string | null
   cf_r2_bucket: string | null
   cf_storage_limit_bytes: number
@@ -179,6 +185,7 @@ export function computeStorageRunway(
 }
 
 function missingCloudflare(row: SystemIntegrationRow): string[] {
+  if (!isTracked(row.track_cloudflare, false)) return []
   const m: string[] = []
   if (!row.cf_account_id) m.push('CF_ACCOUNT_ID / CLOUDFLARE_ACCOUNT_ID')
   if (!row.cf_api_token) m.push('CF_API_TOKEN / CLOUDFLARE_API_TOKEN')
@@ -187,6 +194,7 @@ function missingCloudflare(row: SystemIntegrationRow): string[] {
 }
 
 function missingSupabase(row: SystemIntegrationRow): string[] {
+  if (!isTracked(row.track_supabase, true)) return []
   const m: string[] = []
   if (!row.sb_url) m.push('NEXT_PUBLIC_SUPABASE_URL')
   if (!row.sb_service_role_key) m.push('SUPABASE_SERVICE_ROLE_KEY')
@@ -195,7 +203,14 @@ function missingSupabase(row: SystemIntegrationRow): string[] {
 }
 
 function missingResend(row: SystemIntegrationRow): string[] {
+  if (!isTracked(row.track_resend, false)) return []
   return row.resend_api_key ? [] : ['RESEND_API_KEY']
+}
+
+/** track_* pode faltar até a migration; defaults: CF/Resend off, Supabase on. */
+export function isTracked(value: boolean | null | undefined, defaultOn: boolean): boolean {
+  if (value == null) return defaultOn
+  return Boolean(value)
 }
 
 export function toPublicIntegration(
@@ -203,12 +218,18 @@ export function toPublicIntegration(
   snapshots: UsageSnapshotPublic[] = [],
 ): SystemIntegrationPublic {
   const snaps = [...snapshots].sort((a, b) => a.day.localeCompare(b.day))
+  const track_cloudflare = isTracked(row.track_cloudflare, false)
+  const track_supabase = isTracked(row.track_supabase, true)
+  const track_resend = isTracked(row.track_resend, false)
 
   return {
     system_id: row.system_id,
     has_cloudflare: row.has_cloudflare,
     has_supabase: row.has_supabase,
     has_resend: row.has_resend,
+    track_cloudflare,
+    track_supabase,
+    track_resend,
     cf_account_id: row.cf_account_id,
     cf_r2_bucket: row.cf_r2_bucket,
     cf_storage_limit_bytes: Number(row.cf_storage_limit_bytes),
@@ -240,9 +261,9 @@ export function toPublicIntegration(
       resend_api_key: Boolean(row.resend_api_key),
     },
     missing: {
-      cloudflare: missingCloudflare(row),
-      supabase: missingSupabase(row),
-      resend: missingResend(row),
+      cloudflare: missingCloudflare({ ...row, track_cloudflare }),
+      supabase: missingSupabase({ ...row, track_supabase }),
+      resend: missingResend({ ...row, track_resend }),
     },
     runway: {
       cloudflare: computeStorageRunway(

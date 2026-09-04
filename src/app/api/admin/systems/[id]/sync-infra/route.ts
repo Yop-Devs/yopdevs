@@ -102,9 +102,15 @@ export async function POST(request: Request, ctx: Ctx) {
 
   try {
     if (action === 'import') {
-      const { flags } = await importEnvForSystem(yop, systemId)
-      const integration = await getPublicIntegration(yop, systemId)
-      return NextResponse.json({ ok: true, flags, integration })
+      const { flags, report } = await importEnvForSystem(yop, systemId)
+      // Após importar, mede uso automaticamente
+      let integration = await getPublicIntegration(yop, systemId)
+      try {
+        integration = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
+      } catch {
+        // mantém integração importada mesmo se medição falhar
+      }
+      return NextResponse.json({ ok: true, flags, report, integration })
     }
 
     if (action === 'credentials') {
@@ -117,6 +123,9 @@ export async function POST(request: Request, ctx: Ctx) {
         sb_service_role_key: asOptionalString(body.sb_service_role_key),
         sb_access_token: asOptionalString(body.sb_access_token),
         resend_api_key: asOptionalString(body.resend_api_key),
+        track_cloudflare: typeof body.track_cloudflare === 'boolean' ? body.track_cloudflare : undefined,
+        track_supabase: typeof body.track_supabase === 'boolean' ? body.track_supabase : undefined,
+        track_resend: typeof body.track_resend === 'boolean' ? body.track_resend : undefined,
         clear_cf_api_token: body.clear_cf_api_token === true,
         clear_sb_service_role_key: body.clear_sb_service_role_key === true,
         clear_sb_access_token: body.clear_sb_access_token === true,
@@ -134,7 +143,7 @@ export async function POST(request: Request, ctx: Ctx) {
     }
 
     if (action === 'limits') {
-      const patch: Record<string, number | string> = {
+      const patch: Record<string, number | string | boolean | null> = {
         updated_at: new Date().toISOString(),
       }
 
@@ -149,6 +158,15 @@ export async function POST(request: Request, ctx: Ctx) {
       if (daily != null) patch.resend_daily_limit = daily
       const monthly = parsePositiveInt(body.resend_monthly_limit)
       if (monthly != null) patch.resend_monthly_limit = monthly
+
+      if (typeof body.track_cloudflare === 'boolean') patch.track_cloudflare = body.track_cloudflare
+      if (typeof body.track_supabase === 'boolean') patch.track_supabase = body.track_supabase
+      if (typeof body.track_resend === 'boolean') patch.track_resend = body.track_resend
+
+      // Limpa erros de provedores desligados
+      if (body.track_cloudflare === false || body.track_supabase === false || body.track_resend === false) {
+        patch.last_error = null
+      }
 
       const { data, error } = await yop
         .from('yop_admin_system_integrations')

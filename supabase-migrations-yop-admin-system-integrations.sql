@@ -8,6 +8,9 @@ create table if not exists public.yop_admin_system_integrations (
   has_cloudflare boolean not null default false,
   has_supabase boolean not null default false,
   has_resend boolean not null default false,
+  track_cloudflare boolean not null default false,
+  track_supabase boolean not null default true,
+  track_resend boolean not null default false,
 
   -- Cloudflare R2
   cf_account_id text,

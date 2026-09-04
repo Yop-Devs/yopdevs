@@ -408,18 +408,42 @@ export default function AdminSistemasPage() {
       const json = (await res.json()) as {
         integration?: SystemIntegrationPublic
         error?: string
+        report?: {
+          keyCount: number
+          keyNames: string[]
+          matched: Record<string, boolean>
+          hints: string[]
+          flags?: { has_supabase?: boolean; has_cloudflare?: boolean; has_resend?: boolean }
+        }
       }
       if (!res.ok) throw new Error(json.error || 'Falha na operação de infra.')
       if (json.integration) applyIntegration(json.integration)
-      toast.success(
-        action === 'import'
-          ? 'Credenciais importadas do .env.'
-          : action === 'limits'
+
+      if (action === 'import' && json.report) {
+        const m = json.report.matched
+        const found = [
+          m.sb_url ? 'URL' : null,
+          m.sb_anon_key ? 'anon' : null,
+          m.sb_service_role_key ? 'service_role' : null,
+          m.cf_api_token ? 'Cloudflare' : null,
+          m.resend_api_key ? 'Resend' : null,
+        ].filter(Boolean)
+        const hint = json.report.hints[0]
+        toast.success(
+          found.length
+            ? `.env lido (${json.report.keyCount} chaves). Detectado: ${found.join(', ')}.`
+            : `.env lido (${json.report.keyCount} chaves), mas nenhuma credencial reconhecida.`,
+        )
+        if (hint) toast.message(hint)
+      } else {
+        toast.success(
+          action === 'limits'
             ? 'Limites atualizados.'
             : action === 'credentials'
               ? 'Chaves salvas e infra sincronizada.'
               : 'Infra sincronizada.',
-      )
+        )
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha na operação de infra.')
     } finally {
@@ -824,6 +848,9 @@ function InfraPanel({
   const [sbServiceKey, setSbServiceKey] = useState('')
   const [sbAccessToken, setSbAccessToken] = useState('')
   const [resendKey, setResendKey] = useState('')
+  const [trackCf, setTrackCf] = useState(false)
+  const [trackSb, setTrackSb] = useState(true)
+  const [trackResend, setTrackResend] = useState(false)
 
   useEffect(() => {
     setCfAccountId(integ?.cf_account_id ?? '')
@@ -833,7 +860,19 @@ function InfraPanel({
     setSbServiceKey('')
     setSbAccessToken('')
     setResendKey('')
-  }, [integ?.system_id, integ?.updated_at, integ?.cf_account_id, integ?.cf_r2_bucket, integ?.sb_url])
+    setTrackCf(integ?.track_cloudflare ?? false)
+    setTrackSb(integ?.track_supabase ?? true)
+    setTrackResend(integ?.track_resend ?? false)
+  }, [
+    integ?.system_id,
+    integ?.updated_at,
+    integ?.cf_account_id,
+    integ?.cf_r2_bucket,
+    integ?.sb_url,
+    integ?.track_cloudflare,
+    integ?.track_supabase,
+    integ?.track_resend,
+  ])
 
   const hasErr = Boolean(integ?.last_error)
   const cfPct = usagePct(integ?.cf_storage_used_bytes, integ?.cf_storage_limit_bytes)
@@ -842,9 +881,13 @@ function InfraPanel({
   const resPct = usagePct(integ?.resend_sent_today, integ?.resend_daily_limit)
   const resMonthPct = usagePct(integ?.resend_sent_month, integ?.resend_monthly_limit)
 
-  const showCf = Boolean(integ?.has_cloudflare || (integ && integ.missing.cloudflare.length < 3))
-  const showSb = Boolean(integ?.has_supabase || integ?.sb_project_ref || (integ && integ.secrets.sb_service_role_key))
-  const showResend = Boolean(integ?.has_resend || integ?.secrets.resend_api_key)
+  const trackingCf = integ?.track_cloudflare ?? trackCf
+  const trackingSb = integ?.track_supabase ?? trackSb
+  const trackingResend = integ?.track_resend ?? trackResend
+
+  const showCf = trackingCf
+  const showSb = trackingSb
+  const showResend = trackingResend
 
   function submitCredentials() {
     onSaveCredentials({
@@ -855,33 +898,54 @@ function InfraPanel({
       sb_service_role_key: sbServiceKey,
       sb_access_token: sbAccessToken,
       resend_api_key: resendKey,
+      track_cloudflare: trackCf,
+      track_supabase: trackSb,
+      track_resend: trackResend,
     })
   }
 
   return (
     <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
       <div className="flex flex-wrap gap-1.5">
-        <span
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-            providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare)),
-          )}`}
-        >
-          Cloudflare
-        </span>
-        <span
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-            providerState(Boolean(integ?.has_supabase), sbStorPct ?? sbDbPct, hasErr && Boolean(integ?.has_supabase)),
-          )}`}
-        >
-          Supabase
-        </span>
-        <span
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-            providerState(Boolean(integ?.has_resend), resPct ?? resMonthPct, hasErr && Boolean(integ?.has_resend)),
-          )}`}
-        >
-          Resend
-        </span>
+        {trackingCf ? (
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+              providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare)),
+            )}`}
+          >
+            Cloudflare
+          </span>
+        ) : (
+          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+            CF off
+          </span>
+        )}
+        {trackingSb ? (
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+              providerState(Boolean(integ?.has_supabase), sbStorPct ?? sbDbPct, hasErr && Boolean(integ?.has_supabase)),
+            )}`}
+          >
+            Supabase
+          </span>
+        ) : (
+          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+            SB off
+          </span>
+        )}
+        {trackingResend ? (
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+              providerState(Boolean(integ?.has_resend), resPct ?? resMonthPct, hasErr && Boolean(integ?.has_resend)),
+            )}`}
+          >
+            Resend
+          </span>
+        ) : (
+          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+            Resend off
+          </span>
+        )}
         {!integ && envCount === 0 ? (
           <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
             sem .env
@@ -935,10 +999,13 @@ function InfraPanel({
         </>
       ) : null}
 
-      {integ && !integ.has_cloudflare && integ.missing.cloudflare.length ? (
+      {integ && trackingCf && !integ.has_cloudflare && integ.missing.cloudflare.length ? (
         <p className="text-[10px] text-amber-800">CF incompleto: {integ.missing.cloudflare.join(' · ')}</p>
       ) : null}
-      {integ && integ.has_supabase && integ.missing.supabase.includes('SUPABASE_ACCESS_TOKEN (para tamanho do DB)') ? (
+      {integ &&
+      trackingSb &&
+      integ.has_supabase &&
+      integ.missing.supabase.includes('SUPABASE_ACCESS_TOKEN (para tamanho do DB)') ? (
         <p className="text-[10px] text-amber-800">
           DB: cole o SUPABASE_ACCESS_TOKEN abaixo (PAT do dashboard)
         </p>
@@ -960,88 +1027,114 @@ function InfraPanel({
         </summary>
         <div className="mt-2 space-y-2">
           <p className="text-[10px] leading-snug text-slate-500">
-            Use quando não houver `.env`. Secrets salvos ficam no servidor; deixe em branco para manter o valor atual.
+            Marque só o que o sistema usa. Desmarcado = sem avisos e sem sync desse provedor.
           </p>
+          <div className="flex flex-wrap gap-3 text-[11px] font-semibold text-slate-700">
+            <label className="inline-flex items-center gap-1.5">
+              <input type="checkbox" checked={trackCf} onChange={(e) => setTrackCf(e.target.checked)} />
+              Usa Cloudflare
+            </label>
+            <label className="inline-flex items-center gap-1.5">
+              <input type="checkbox" checked={trackSb} onChange={(e) => setTrackSb(e.target.checked)} />
+              Usa Supabase
+            </label>
+            <label className="inline-flex items-center gap-1.5">
+              <input type="checkbox" checked={trackResend} onChange={(e) => setTrackResend(e.target.checked)} />
+              Usa Resend
+            </label>
+          </div>
 
-          <p className="font-bold uppercase tracking-wide text-slate-500">Cloudflare R2</p>
-          <label className="block space-y-0.5">
-            <span>Account ID</span>
-            <input
-              value={cfAccountId}
-              onChange={(e) => setCfAccountId(e.target.value)}
-              placeholder="abc123..."
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="off"
-            />
-          </label>
-          <label className="block space-y-0.5">
-            <span>API Token {integ?.secrets.cf_api_token ? '(salvo ••••)' : ''}</span>
-            <input
-              type="password"
-              value={cfApiToken}
-              onChange={(e) => setCfApiToken(e.target.value)}
-              placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token Cloudflare'}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="new-password"
-            />
-          </label>
-          <label className="block space-y-0.5">
-            <span>R2 Bucket</span>
-            <input
-              value={cfBucket}
-              onChange={(e) => setCfBucket(e.target.value)}
-              placeholder="meu-bucket"
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="off"
-            />
-          </label>
+          {trackCf ? (
+            <>
+              <p className="font-bold uppercase tracking-wide text-slate-500">Cloudflare R2</p>
+              <label className="block space-y-0.5">
+                <span>Account ID</span>
+                <input
+                  value={cfAccountId}
+                  onChange={(e) => setCfAccountId(e.target.value)}
+                  placeholder="abc123..."
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block space-y-0.5">
+                <span>API Token {integ?.secrets.cf_api_token ? '(salvo ••••)' : ''}</span>
+                <input
+                  type="password"
+                  value={cfApiToken}
+                  onChange={(e) => setCfApiToken(e.target.value)}
+                  placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token Cloudflare'}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className="block space-y-0.5">
+                <span>R2 Bucket</span>
+                <input
+                  value={cfBucket}
+                  onChange={(e) => setCfBucket(e.target.value)}
+                  placeholder="meu-bucket"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="off"
+                />
+              </label>
+            </>
+          ) : null}
 
-          <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Supabase</p>
-          <label className="block space-y-0.5">
-            <span>Project URL</span>
-            <input
-              value={sbUrl}
-              onChange={(e) => setSbUrl(e.target.value)}
-              placeholder="https://xxxx.supabase.co"
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="off"
-            />
-          </label>
-          <label className="block space-y-0.5">
-            <span>Service Role Key {integ?.secrets.sb_service_role_key ? '(salvo ••••)' : ''}</span>
-            <input
-              type="password"
-              value={sbServiceKey}
-              onChange={(e) => setSbServiceKey(e.target.value)}
-              placeholder={integ?.secrets.sb_service_role_key ? '••••••••' : 'eyJ...'}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="new-password"
-            />
-          </label>
-          <label className="block space-y-0.5">
-            <span>Access Token / PAT {integ?.secrets.sb_access_token ? '(salvo ••••)' : ''} — DB</span>
-            <input
-              type="password"
-              value={sbAccessToken}
-              onChange={(e) => setSbAccessToken(e.target.value)}
-              placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="new-password"
-            />
-          </label>
+          {trackSb ? (
+            <>
+              <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Supabase</p>
+              <label className="block space-y-0.5">
+                <span>Project URL</span>
+                <input
+                  value={sbUrl}
+                  onChange={(e) => setSbUrl(e.target.value)}
+                  placeholder="https://xxxx.supabase.co"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block space-y-0.5">
+                <span>Service Role Key {integ?.secrets.sb_service_role_key ? '(salvo ••••)' : ''}</span>
+                <input
+                  type="password"
+                  value={sbServiceKey}
+                  onChange={(e) => setSbServiceKey(e.target.value)}
+                  placeholder={integ?.secrets.sb_service_role_key ? '••••••••' : 'eyJ...'}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className="block space-y-0.5">
+                <span>Access Token / PAT {integ?.secrets.sb_access_token ? '(salvo ••••)' : ''} — DB</span>
+                <input
+                  type="password"
+                  value={sbAccessToken}
+                  onChange={(e) => setSbAccessToken(e.target.value)}
+                  placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="new-password"
+                />
+              </label>
+            </>
+          ) : null}
 
-          <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Resend</p>
-          <label className="block space-y-0.5">
-            <span>API Key {integ?.secrets.resend_api_key ? '(salvo ••••)' : ''}</span>
-            <input
-              type="password"
-              value={resendKey}
-              onChange={(e) => setResendKey(e.target.value)}
-              placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-              autoComplete="new-password"
-            />
-          </label>
+          {trackResend ? (
+            <>
+              <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Resend</p>
+              <label className="block space-y-0.5">
+                <span>API Key {integ?.secrets.resend_api_key ? '(salvo ••••)' : ''}</span>
+                <input
+                  type="password"
+                  value={resendKey}
+                  onChange={(e) => setResendKey(e.target.value)}
+                  placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  autoComplete="new-password"
+                />
+              </label>
+            </>
+          ) : null}
 
           <button
             type="button"
@@ -1049,7 +1142,7 @@ function InfraPanel({
             onClick={submitCredentials}
             className="w-full rounded-lg bg-emerald-700 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60"
           >
-            {busy ? 'Salvando...' : 'Salvar chaves e sincronizar'}
+            {busy ? 'Salvando...' : 'Salvar e sincronizar'}
           </button>
         </div>
       </details>
