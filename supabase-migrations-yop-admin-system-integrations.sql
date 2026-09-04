@@ -34,6 +34,8 @@ create table if not exists public.yop_admin_system_integrations (
   resend_daily_limit integer not null default 100,
   resend_sent_today integer not null default 0,
   resend_day date,
+  resend_monthly_limit integer not null default 3000,
+  resend_sent_month integer not null default 0,
   resend_synced_at timestamptz,
 
   env_parsed_at timestamptz,

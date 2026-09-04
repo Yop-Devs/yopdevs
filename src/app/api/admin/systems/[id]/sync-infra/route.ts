@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole, requireAdminUser } from '@/lib/admin-api-auth'
 import {
+  getPublicIntegration,
   importEnvForSystem,
+  saveManualCredentials,
   syncInfraForSystem,
-  toPublicIntegration,
-  type SystemIntegrationRow,
 } from '@/lib/system-infra-sync'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +17,31 @@ async function getSystemId(ctx: Ctx): Promise<string> {
   return id
 }
 
+function parsePositiveInt(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return Math.floor(v)
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v.replace(',', '.'))
+    if (Number.isFinite(n) && n > 0) return Math.floor(n)
+  }
+  return null
+}
+
+function parseGbToBytes(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return Math.round(v * 1024 ** 3)
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v.replace(',', '.'))
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 1024 ** 3)
+  }
+  return null
+}
+
+function asOptionalString(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined
+  if (v === null) return null
+  if (typeof v === 'string') return v
+  return undefined
+}
+
 /** Retorna integração pública (sem secrets). */
 export async function GET(request: Request, ctx: Ctx) {
   const auth = await requireAdminUser(request)
@@ -27,25 +52,23 @@ export async function GET(request: Request, ctx: Ctx) {
   const systemId = await getSystemId(ctx)
   const yop = getSupabaseServiceRole() ?? auth.supabase
 
-  const { data, error } = await yop
-    .from('yop_admin_system_integrations')
-    .select('*')
-    .eq('system_id', systemId)
-    .maybeSingle()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!data) return NextResponse.json({ integration: null })
-
-  return NextResponse.json({
-    integration: toPublicIntegration(data as SystemIntegrationRow),
-  })
+  try {
+    const integration = await getPublicIntegration(yop, systemId)
+    return NextResponse.json({ integration })
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Falha ao carregar integração.' },
+      { status: 500 },
+    )
+  }
 }
 
 /**
  * body.action:
- * - import: só parse do .env
- * - sync: importa .env (se houver) + mede uso
- * - limits: atualiza limites editáveis (GB / e-mails/dia)
+ * - import: parse do .env
+ * - credentials: salva chaves digitadas no painel
+ * - sync: mede uso (usa .env se houver; senão credenciais salvas)
+ * - limits: atualiza limites editáveis
  */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireAdminUser(request)
@@ -62,13 +85,7 @@ export async function POST(request: Request, ctx: Ctx) {
     )
   }
 
-  let body: {
-    action?: unknown
-    cf_storage_limit_gb?: unknown
-    sb_db_limit_gb?: unknown
-    sb_storage_limit_gb?: unknown
-    resend_daily_limit?: unknown
-  }
+  let body: Record<string, unknown>
   try {
     body = await request.json()
   } catch {
@@ -76,24 +93,44 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   const action =
-    body.action === 'import' || body.action === 'limits' || body.action === 'sync'
+    body.action === 'import' ||
+    body.action === 'limits' ||
+    body.action === 'credentials' ||
+    body.action === 'sync'
       ? body.action
       : 'sync'
 
   try {
     if (action === 'import') {
       const { flags } = await importEnvForSystem(yop, systemId)
-      const { data, error } = await yop
-        .from('yop_admin_system_integrations')
-        .select('*')
-        .eq('system_id', systemId)
-        .single()
-      if (error) throw new Error(error.message)
-      return NextResponse.json({
-        ok: true,
-        flags,
-        integration: toPublicIntegration(data as SystemIntegrationRow),
+      const integration = await getPublicIntegration(yop, systemId)
+      return NextResponse.json({ ok: true, flags, integration })
+    }
+
+    if (action === 'credentials') {
+      const integration = await saveManualCredentials(yop, systemId, {
+        cf_account_id: asOptionalString(body.cf_account_id),
+        cf_api_token: asOptionalString(body.cf_api_token),
+        cf_r2_bucket: asOptionalString(body.cf_r2_bucket),
+        sb_url: asOptionalString(body.sb_url),
+        sb_anon_key: asOptionalString(body.sb_anon_key),
+        sb_service_role_key: asOptionalString(body.sb_service_role_key),
+        sb_access_token: asOptionalString(body.sb_access_token),
+        resend_api_key: asOptionalString(body.resend_api_key),
+        clear_cf_api_token: body.clear_cf_api_token === true,
+        clear_sb_service_role_key: body.clear_sb_service_role_key === true,
+        clear_sb_access_token: body.clear_sb_access_token === true,
+        clear_sb_anon_key: body.clear_sb_anon_key === true,
+        clear_resend_api_key: body.clear_resend_api_key === true,
       })
+
+      const shouldSync = body.sync_after !== false
+      if (shouldSync) {
+        const synced = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
+        return NextResponse.json({ ok: true, integration: synced })
+      }
+
+      return NextResponse.json({ ok: true, integration })
     }
 
     if (action === 'limits') {
@@ -101,48 +138,35 @@ export async function POST(request: Request, ctx: Ctx) {
         updated_at: new Date().toISOString(),
       }
 
-      const gb = (v: unknown) => {
-        if (typeof v === 'number' && Number.isFinite(v) && v > 0) return Math.round(v * 1024 ** 3)
-        if (typeof v === 'string' && v.trim()) {
-          const n = Number(v.replace(',', '.'))
-          if (Number.isFinite(n) && n > 0) return Math.round(n * 1024 ** 3)
-        }
-        return null
-      }
-
-      const cf = gb(body.cf_storage_limit_gb)
+      const cf = parseGbToBytes(body.cf_storage_limit_gb)
       if (cf != null) patch.cf_storage_limit_bytes = cf
-      const sbDb = gb(body.sb_db_limit_gb)
+      const sbDb = parseGbToBytes(body.sb_db_limit_gb)
       if (sbDb != null) patch.sb_db_limit_bytes = sbDb
-      const sbStor = gb(body.sb_storage_limit_gb)
+      const sbStor = parseGbToBytes(body.sb_storage_limit_gb)
       if (sbStor != null) patch.sb_storage_limit_bytes = sbStor
 
-      if (typeof body.resend_daily_limit === 'number' && body.resend_daily_limit > 0) {
-        patch.resend_daily_limit = Math.floor(body.resend_daily_limit)
-      } else if (typeof body.resend_daily_limit === 'string' && body.resend_daily_limit.trim()) {
-        const n = Number(body.resend_daily_limit)
-        if (Number.isFinite(n) && n > 0) patch.resend_daily_limit = Math.floor(n)
-      }
+      const daily = parsePositiveInt(body.resend_daily_limit)
+      if (daily != null) patch.resend_daily_limit = daily
+      const monthly = parsePositiveInt(body.resend_monthly_limit)
+      if (monthly != null) patch.resend_monthly_limit = monthly
 
       const { data, error } = await yop
         .from('yop_admin_system_integrations')
         .update(patch)
         .eq('system_id', systemId)
-        .select('*')
+        .select('system_id')
         .maybeSingle()
 
       if (error) throw new Error(error.message)
       if (!data) {
         return NextResponse.json(
-          { error: 'Integração ainda não existe. Importe o .env primeiro.' },
+          { error: 'Integração ainda não existe. Salve as chaves ou importe o .env primeiro.' },
           { status: 404 },
         )
       }
 
-      return NextResponse.json({
-        ok: true,
-        integration: toPublicIntegration(data as SystemIntegrationRow),
-      })
+      const integration = await getPublicIntegration(yop, systemId)
+      return NextResponse.json({ ok: true, integration })
     }
 
     const integration = await syncInfraForSystem(yop, systemId, { importEnvFirst: true })

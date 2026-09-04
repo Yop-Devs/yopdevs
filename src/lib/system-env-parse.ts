@@ -16,14 +16,38 @@ export type ParsedSystemEnv = {
 }
 
 const ALIASES: Record<keyof Omit<ParsedSystemEnv, 'sb_project_ref'>, string[]> = {
-  cf_account_id: ['CF_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID', 'R2_ACCOUNT_ID'],
-  cf_api_token: ['CF_API_TOKEN', 'CLOUDFLARE_API_TOKEN', 'R2_API_TOKEN', 'CF_R2_TOKEN'],
-  cf_r2_bucket: ['CF_R2_BUCKET', 'R2_BUCKET', 'CLOUDFLARE_R2_BUCKET', 'R2_BUCKET_NAME'],
-  sb_url: ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'],
-  sb_anon_key: ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'],
-  sb_service_role_key: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY'],
-  sb_access_token: ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_PAT', 'SUPABASE_MANAGEMENT_TOKEN'],
-  resend_api_key: ['RESEND_API_KEY'],
+  cf_account_id: ['CF_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID', 'R2_ACCOUNT_ID', 'ACCOUNT_ID'],
+  cf_api_token: [
+    'CF_API_TOKEN',
+    'CLOUDFLARE_API_TOKEN',
+    'R2_API_TOKEN',
+    'CF_R2_TOKEN',
+    'CLOUDFLARE_TOKEN',
+    'CF_TOKEN',
+  ],
+  cf_r2_bucket: [
+    'CF_R2_BUCKET',
+    'R2_BUCKET',
+    'CLOUDFLARE_R2_BUCKET',
+    'R2_BUCKET_NAME',
+    'S3_BUCKET',
+    'BUCKET_NAME',
+  ],
+  sb_url: ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL', 'PUBLIC_SUPABASE_URL'],
+  sb_anon_key: [
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_KEY',
+    'SUPABASE_KEY',
+  ],
+  sb_service_role_key: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_SERVICE_ROLE'],
+  sb_access_token: [
+    'SUPABASE_ACCESS_TOKEN',
+    'SUPABASE_PAT',
+    'SUPABASE_MANAGEMENT_TOKEN',
+    'SUPABASE_TOKEN',
+  ],
+  resend_api_key: ['RESEND_API_KEY', 'RESEND_KEY'],
 }
 
 function stripQuotes(value: string): string {

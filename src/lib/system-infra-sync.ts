@@ -1,13 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ADMIN_SYSTEM_BUCKET } from '@/lib/admin-systems'
 import { todayIsoInCuiaba } from '@/lib/finance-daily-alerts'
-import { flagsFromParsedEnv, parseSystemEnv, type ParsedSystemEnv } from '@/lib/system-env-parse'
+import { flagsFromParsedEnv, parseSystemEnv, projectRefFromSupabaseUrl, type ParsedSystemEnv } from '@/lib/system-env-parse'
 import {
   formatBytes,
   toPublicIntegration,
   usagePct,
   type SystemIntegrationPublic,
   type SystemIntegrationRow,
+  type UsageSnapshotPublic,
 } from '@/lib/system-infra-types'
 import { sendTelegramAlert } from '@/lib/telegram'
 
@@ -72,14 +73,185 @@ export async function importEnvForSystem(
   return { parsed, flags }
 }
 
+export type ManualCredentialsInput = {
+  cf_account_id?: string | null
+  cf_api_token?: string | null
+  cf_r2_bucket?: string | null
+  sb_url?: string | null
+  sb_anon_key?: string | null
+  sb_service_role_key?: string | null
+  sb_access_token?: string | null
+  resend_api_key?: string | null
+  clear_cf_api_token?: boolean
+  clear_sb_service_role_key?: boolean
+  clear_sb_access_token?: boolean
+  clear_sb_anon_key?: boolean
+  clear_resend_api_key?: boolean
+}
+
+function cleanText(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.trim()
+  if (!t || t === '••••' || t.startsWith('••••')) return null
+  return t
+}
+
+/** Salva credenciais digitadas no painel (sem .env). Campos vazios / •••• mantêm o valor atual. */
+export async function saveManualCredentials(
+  yop: SupabaseClient,
+  systemId: string,
+  input: ManualCredentialsInput,
+): Promise<SystemIntegrationPublic> {
+  const { data: existing } = await yop
+    .from('yop_admin_system_integrations')
+    .select('*')
+    .eq('system_id', systemId)
+    .maybeSingle()
+
+  const prev = (existing ?? null) as SystemIntegrationRow | null
+  const now = new Date().toISOString()
+
+  const cf_account_id = cleanText(input.cf_account_id) ?? prev?.cf_account_id ?? null
+  const cf_r2_bucket = cleanText(input.cf_r2_bucket) ?? prev?.cf_r2_bucket ?? null
+  const cf_api_token = input.clear_cf_api_token
+    ? null
+    : cleanText(input.cf_api_token) ?? prev?.cf_api_token ?? null
+
+  const sb_url = cleanText(input.sb_url) ?? prev?.sb_url ?? null
+  const sb_anon_key = input.clear_sb_anon_key
+    ? null
+    : cleanText(input.sb_anon_key) ?? prev?.sb_anon_key ?? null
+  const sb_service_role_key = input.clear_sb_service_role_key
+    ? null
+    : cleanText(input.sb_service_role_key) ?? prev?.sb_service_role_key ?? null
+  const sb_access_token = input.clear_sb_access_token
+    ? null
+    : cleanText(input.sb_access_token) ?? prev?.sb_access_token ?? null
+  const sb_project_ref = projectRefFromSupabaseUrl(sb_url) ?? prev?.sb_project_ref ?? null
+
+  const resend_api_key = input.clear_resend_api_key
+    ? null
+    : cleanText(input.resend_api_key) ?? prev?.resend_api_key ?? null
+
+  const flags = flagsFromParsedEnv({
+    cf_account_id,
+    cf_api_token,
+    cf_r2_bucket,
+    sb_url,
+    sb_anon_key,
+    sb_service_role_key,
+    sb_project_ref,
+    sb_access_token,
+    resend_api_key,
+  })
+
+  const payload = {
+    system_id: systemId,
+    ...flags,
+    cf_account_id,
+    cf_api_token,
+    cf_r2_bucket,
+    sb_url,
+    sb_anon_key,
+    sb_service_role_key,
+    sb_project_ref,
+    sb_access_token,
+    resend_api_key,
+    last_error: null,
+    updated_at: now,
+    resend_daily_limit: prev?.resend_daily_limit ?? 100,
+    resend_monthly_limit: prev?.resend_monthly_limit ?? 3000,
+  }
+
+  const { error } = await yop.from('yop_admin_system_integrations').upsert(payload, { onConflict: 'system_id' })
+  if (error) throw new Error(error.message)
+
+  const pub = await getPublicIntegration(yop, systemId)
+  if (!pub) throw new Error('Falha ao salvar credenciais.')
+  return pub
+}
+
+async function loadSnapshots(
+  yop: SupabaseClient,
+  systemId: string,
+  days = 45,
+): Promise<UsageSnapshotPublic[]> {
+  const since = new Date()
+  since.setUTCDate(since.getUTCDate() - days)
+  const sinceIso = since.toISOString().slice(0, 10)
+
+  const { data, error } = await yop
+    .from('yop_admin_system_usage_snapshots')
+    .select('day, cf_storage_used_bytes, sb_storage_used_bytes, sb_db_used_bytes, resend_sent_today')
+    .eq('system_id', systemId)
+    .gte('day', sinceIso)
+    .order('day', { ascending: true })
+
+  if (error) {
+    // Tabela ainda não criada
+    console.warn('[usage-snapshots]', error.message)
+    return []
+  }
+
+  return (data ?? []).map((row) => ({
+    day: String(row.day),
+    cf_storage_used_bytes: row.cf_storage_used_bytes != null ? Number(row.cf_storage_used_bytes) : null,
+    sb_storage_used_bytes: row.sb_storage_used_bytes != null ? Number(row.sb_storage_used_bytes) : null,
+    sb_db_used_bytes: row.sb_db_used_bytes != null ? Number(row.sb_db_used_bytes) : null,
+    resend_sent_today: row.resend_sent_today != null ? Number(row.resend_sent_today) : null,
+  }))
+}
+
+async function saveSnapshot(
+  yop: SupabaseClient,
+  systemId: string,
+  day: string,
+  snapshot: {
+    cf_storage_used_bytes: number | null
+    sb_storage_used_bytes: number | null
+    sb_db_used_bytes: number | null
+    resend_sent_today: number | null
+  },
+) {
+  const { error } = await yop.from('yop_admin_system_usage_snapshots').upsert(
+    {
+      system_id: systemId,
+      day,
+      ...snapshot,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: 'system_id,day' },
+  )
+  if (error) console.warn('[usage-snapshots upsert]', error.message)
+}
+
+/** Preferência: endpoint /usage (rápido e preciso). Fallback: listagem de objetos. */
 async function measureR2Usage(input: {
   accountId: string
   apiToken: string
   bucket: string
 }): Promise<number> {
+  const usageUrl = `https://api.cloudflare.com/client/v4/accounts/${input.accountId}/r2/buckets/${encodeURIComponent(input.bucket)}/usage`
+  const usageRes = await fetch(usageUrl, {
+    headers: { Authorization: `Bearer ${input.apiToken}` },
+  })
+  const usageJson = (await usageRes.json()) as {
+    success?: boolean
+    errors?: { message?: string }[]
+    result?: { payloadSize?: string | number; metadataSize?: string | number }
+  }
+
+  if (usageRes.ok && usageJson.success !== false && usageJson.result) {
+    const payload = Number(usageJson.result.payloadSize ?? 0)
+    const meta = Number(usageJson.result.metadataSize ?? 0)
+    if (Number.isFinite(payload)) return payload + (Number.isFinite(meta) ? meta : 0)
+  }
+
+  // Fallback: listar objetos
   let cursor: string | undefined
   let total = 0
   let guard = 0
+  const listErrors: string[] = []
 
   do {
     const url = new URL(
@@ -98,8 +270,12 @@ async function measureR2Usage(input: {
     }
 
     if (!res.ok || json.success === false) {
-      const msg = json.errors?.[0]?.message || `Cloudflare R2 HTTP ${res.status}`
-      throw new Error(msg)
+      const msg =
+        json.errors?.[0]?.message ||
+        usageJson.errors?.[0]?.message ||
+        `Cloudflare R2 HTTP ${res.status}`
+      listErrors.push(msg)
+      break
     }
 
     for (const obj of json.result?.objects ?? []) {
@@ -109,6 +285,10 @@ async function measureR2Usage(input: {
     cursor = json.result?.truncated ? json.result?.cursors?.after : undefined
     guard += 1
   } while (cursor && guard < 50)
+
+  if (listErrors.length && total === 0) {
+    throw new Error(listErrors[0])
+  }
 
   return total
 }
@@ -122,15 +302,22 @@ async function sumStorageBucket(
   let offset = 0
   const limit = 100
   let guard = 0
-  while (guard < 50) {
-    const { data, error } = await client.storage.from(bucket).list(prefix, { limit, offset })
+  while (guard < 80) {
+    const { data, error } = await client.storage.from(bucket).list(prefix, {
+      limit,
+      offset,
+      sortBy: { column: 'name', order: 'asc' },
+    })
     if (error) throw new Error(error.message)
     if (!data?.length) break
     for (const item of data) {
-      if (item.id == null && item.name) {
+      // Pastas: sem id; arquivos: com id
+      const isFolder = item.id == null
+      if (isFolder && item.name) {
         total += await sumStorageBucket(client, bucket, prefix ? `${prefix}/${item.name}` : item.name)
       } else {
-        total += Number(item.metadata?.size ?? 0)
+        const size = Number((item.metadata as { size?: number } | null)?.size ?? 0)
+        if (Number.isFinite(size)) total += size
       }
     }
     if (data.length < limit) break
@@ -145,6 +332,7 @@ async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): P
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // 1) Tenta schema storage.objects (mais preciso)
   const storageClient = createClient(serviceUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
     db: { schema: 'storage' },
@@ -166,7 +354,7 @@ async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): P
     usedObjectsTable = true
     if (!rows?.length) break
 
-    for (const row of rows as { metadata?: { size?: number } | null }[]) {
+    for (const row of rows as { metadata?: { size?: number | string } | null }[]) {
       const size = Number(row.metadata?.size ?? 0)
       if (Number.isFinite(size)) total += size
     }
@@ -176,14 +364,14 @@ async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): P
     guard += 1
   }
 
-  if (!usedObjectsTable) {
-    const { data: buckets, error: bErr } = await client.storage.listBuckets()
-    if (bErr) throw new Error(bErr.message)
-    for (const bucket of buckets ?? []) {
-      total += await sumStorageBucket(client, bucket.name)
-    }
-  }
+  if (usedObjectsTable) return total
 
+  // 2) Fallback: listBuckets + list recursivo
+  const { data: buckets, error: bErr } = await client.storage.listBuckets()
+  if (bErr) throw new Error(bErr.message)
+  for (const bucket of buckets ?? []) {
+    total += await sumStorageBucket(client, bucket.name)
+  }
   return total
 }
 
@@ -193,43 +381,133 @@ async function measureSupabaseDbBytes(
 ): Promise<number | null> {
   if (!projectRef || !accessToken) return null
 
-  const usageRes = await fetch(`https://api.supabase.com/v1/projects/${projectRef}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: 'select pg_database_size(current_database())::bigint as size;',
+      read_only: true,
+    }),
   })
-  if (!usageRes.ok) {
-    const text = await usageRes.text().catch(() => '')
-    throw new Error(`Supabase Management API: ${usageRes.status} ${text.slice(0, 200)}`)
+
+  const text = await res.text().catch(() => '')
+  if (!res.ok) {
+    throw new Error(`Supabase DB query: ${res.status} ${text.slice(0, 180)}`)
   }
 
-  // Sem campo de tamanho estável em todos os planos
-  return null
+  try {
+    const json = JSON.parse(text) as
+      | { size?: number | string }[]
+      | { data?: { size?: number | string }[] }
+      | { result?: { size?: number | string }[] }
+
+    const rows = Array.isArray(json)
+      ? json
+      : Array.isArray((json as { data?: unknown[] }).data)
+        ? (json as { data: { size?: number | string }[] }).data
+        : Array.isArray((json as { result?: unknown[] }).result)
+          ? (json as { result: { size?: number | string }[] }).result
+          : []
+
+    const size = Number(rows[0]?.size)
+    if (Number.isFinite(size)) return size
+  } catch {
+    // ignore parse
+  }
+
+  throw new Error('Supabase DB: resposta sem tamanho reconhecível')
 }
 
-async function measureResendSentToday(apiKey: string, dayIso: string): Promise<number> {
-  const start = new Date(`${dayIso}T00:00:00-04:00`)
-  const end = new Date(`${dayIso}T23:59:59.999-04:00`)
+async function measureResendUsage(
+  apiKey: string,
+  dayIso: string,
+): Promise<{ today: number; month: number }> {
+  const startDay = new Date(`${dayIso}T00:00:00-04:00`)
+  const endDay = new Date(`${dayIso}T23:59:59.999-04:00`)
+  const monthStart = new Date(startDay)
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
 
-  const res = await fetch('https://api.resend.com/emails?limit=100', {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  })
+  let today = 0
+  let month = 0
+  let after: string | undefined
+  let guard = 0
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    if (res.status === 401 || res.status === 403) {
-      throw new Error(`Resend auth: ${text.slice(0, 200) || res.status}`)
+  // Pagina até ~1000 e-mails recentes (suficiente para cotas free)
+  do {
+    const url = new URL('https://api.resend.com/emails')
+    url.searchParams.set('limit', '100')
+    if (after) url.searchParams.set('after', after)
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Resend auth: ${text.slice(0, 200) || res.status}`)
+      }
+      // Listagem pode ser restrita — não zera sync
+      console.warn('[resend]', res.status, text.slice(0, 200))
+      break
     }
-    console.warn('[resend]', res.status, text.slice(0, 200))
-    return 0
-  }
 
-  const json = (await res.json()) as { data?: { created_at?: string }[] }
-  let count = 0
-  for (const item of json.data ?? []) {
-    if (!item.created_at) continue
-    const t = new Date(item.created_at).getTime()
-    if (t >= start.getTime() && t <= end.getTime()) count += 1
+    const json = (await res.json()) as {
+      data?: { id?: string; created_at?: string }[]
+      has_more?: boolean
+    }
+    const batch = json.data ?? []
+    if (!batch.length) break
+
+    for (const item of batch) {
+      if (!item.created_at) continue
+      const t = new Date(item.created_at).getTime()
+      if (t >= startDay.getTime() && t <= endDay.getTime()) today += 1
+      if (t >= monthStart.getTime() && t <= endDay.getTime()) month += 1
+    }
+
+    const oldest = batch[batch.length - 1]
+    // Se o mais antigo já é antes do mês, para
+    if (oldest?.created_at && new Date(oldest.created_at).getTime() < monthStart.getTime()) break
+
+    after = oldest?.id
+    guard += 1
+    if (!json.has_more && batch.length < 100) break
+  } while (after && guard < 10)
+
+  return { today, month }
+}
+
+function monthSentFromSnapshots(snapshots: UsageSnapshotPublic[], dayIso: string, todayCount: number): number {
+  const monthPrefix = dayIso.slice(0, 7) // YYYY-MM
+  let sum = 0
+  for (const s of snapshots) {
+    if (!s.day.startsWith(monthPrefix)) continue
+    if (s.day === dayIso) continue
+    sum += Number(s.resend_sent_today ?? 0)
   }
-  return count
+  return sum + todayCount
+}
+
+export async function getPublicIntegration(
+  yop: SupabaseClient,
+  systemId: string,
+): Promise<SystemIntegrationPublic | null> {
+  const { data, error } = await yop
+    .from('yop_admin_system_integrations')
+    .select('*')
+    .eq('system_id', systemId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) return null
+
+  const snapshots = await loadSnapshots(yop, systemId)
+  return toPublicIntegration(data as SystemIntegrationRow, snapshots)
 }
 
 export async function syncInfraForSystem(
@@ -239,9 +517,13 @@ export async function syncInfraForSystem(
 ): Promise<SystemIntegrationPublic> {
   const errors: string[] = []
 
+  // Só tenta .env se pedido e se existir arquivo anexado
   if (options?.importEnvFirst !== false) {
     try {
-      await importEnvForSystem(yop, systemId)
+      const downloaded = await downloadLatestEnv(yop, systemId)
+      if (downloaded) {
+        await importEnvForSystem(yop, systemId)
+      }
     } catch (err) {
       const { data: existing } = await yop
         .from('yop_admin_system_integrations')
@@ -269,50 +551,75 @@ export async function syncInfraForSystem(
   const now = new Date().toISOString()
   const today = todayIsoInCuiaba()
 
-  if (integ.has_cloudflare && integ.cf_account_id && integ.cf_api_token && integ.cf_r2_bucket) {
+  // Cloudflare — mesmo sem flag, tenta se tiver as 3 chaves
+  const canCf = Boolean(integ.cf_account_id && integ.cf_api_token && integ.cf_r2_bucket)
+  if (canCf) {
     try {
       const used = await measureR2Usage({
-        accountId: integ.cf_account_id,
-        apiToken: integ.cf_api_token,
-        bucket: integ.cf_r2_bucket,
+        accountId: integ.cf_account_id!,
+        apiToken: integ.cf_api_token!,
+        bucket: integ.cf_r2_bucket!,
       })
       patch.cf_storage_used_bytes = used
       patch.cf_synced_at = now
+      patch.has_cloudflare = true
     } catch (err) {
       errors.push(`Cloudflare: ${err instanceof Error ? err.message : 'erro'}`)
     }
+  } else if (integ.has_cloudflare || integ.cf_account_id || integ.cf_r2_bucket) {
+    const miss = [
+      !integ.cf_account_id ? 'account id' : null,
+      !integ.cf_api_token ? 'API token' : null,
+      !integ.cf_r2_bucket ? 'bucket' : null,
+    ].filter(Boolean)
+    errors.push(`Cloudflare: faltam no .env (${miss.join(', ')})`)
   }
 
-  if (integ.has_supabase && integ.sb_url && integ.sb_service_role_key) {
+  const canSbStorage = Boolean(integ.sb_url && integ.sb_service_role_key)
+  if (canSbStorage) {
     try {
-      const used = await measureSupabaseStorage(integ.sb_url, integ.sb_service_role_key)
+      const used = await measureSupabaseStorage(integ.sb_url!, integ.sb_service_role_key!)
       patch.sb_storage_used_bytes = used
       patch.sb_synced_at = now
+      patch.has_supabase = true
     } catch (err) {
       errors.push(`Supabase storage: ${err instanceof Error ? err.message : 'erro'}`)
     }
+  } else if (integ.has_supabase || integ.sb_url) {
+    errors.push('Supabase storage: falta SUPABASE_SERVICE_ROLE_KEY no .env')
+  }
 
+  if (integ.sb_project_ref && integ.sb_access_token) {
     try {
       const dbUsed = await measureSupabaseDbBytes(integ.sb_project_ref, integ.sb_access_token)
       if (dbUsed != null) {
         patch.sb_db_used_bytes = dbUsed
         patch.sb_synced_at = now
-      } else if (!integ.sb_access_token) {
-        errors.push('Supabase DB: adicione SUPABASE_ACCESS_TOKEN no .env para medir tamanho do banco')
-      } else {
-        errors.push('Supabase DB: tamanho não disponível via Management API neste plano')
+        patch.has_supabase = true
       }
     } catch (err) {
       errors.push(`Supabase DB: ${err instanceof Error ? err.message : 'erro'}`)
     }
+  } else if (integ.has_supabase || integ.sb_url) {
+    errors.push('Supabase DB: adicione SUPABASE_ACCESS_TOKEN (PAT) no .env para medir o banco')
   }
 
-  if (integ.has_resend && integ.resend_api_key) {
+  let resendToday: number | null = null
+  if (integ.resend_api_key) {
     try {
-      const sent = await measureResendSentToday(integ.resend_api_key, today)
-      patch.resend_sent_today = sent
+      const usage = await measureResendUsage(integ.resend_api_key, today)
+      resendToday = usage.today
+      patch.resend_sent_today = usage.today
       patch.resend_day = today
       patch.resend_synced_at = now
+      patch.has_resend = true
+
+      const snaps = await loadSnapshots(yop, systemId)
+      // Prefere soma de snapshots do mês + hoje; usa API month como piso
+      const fromSnaps = monthSentFromSnapshots(snaps, today, usage.today)
+      patch.resend_sent_month = Math.max(fromSnaps, usage.month)
+      if (!integ.resend_monthly_limit) patch.resend_monthly_limit = 3000
+      if (!integ.resend_daily_limit) patch.resend_daily_limit = 100
     } catch (err) {
       if (integ.resend_day !== today) {
         patch.resend_sent_today = 0
@@ -332,7 +639,17 @@ export async function syncInfraForSystem(
     .single()
 
   if (upError) throw new Error(upError.message)
-  return toPublicIntegration(updated as SystemIntegrationRow)
+
+  const finalRow = updated as SystemIntegrationRow
+  await saveSnapshot(yop, systemId, today, {
+    cf_storage_used_bytes: finalRow.cf_storage_used_bytes,
+    sb_storage_used_bytes: finalRow.sb_storage_used_bytes,
+    sb_db_used_bytes: finalRow.sb_db_used_bytes,
+    resend_sent_today: resendToday ?? finalRow.resend_sent_today,
+  })
+
+  const snapshots = await loadSnapshots(yop, systemId)
+  return toPublicIntegration(finalRow, snapshots)
 }
 
 export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
@@ -378,6 +695,13 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
       if (pub.has_resend && resPct != null && resPct >= 80) {
         alerts.push(
           `✉️ Resend · ${label}\nE-mails hoje: ${pub.resend_sent_today} / ${pub.resend_daily_limit} (${resPct}%)`,
+        )
+      }
+
+      const resMonthPct = usagePct(pub.resend_sent_month, pub.resend_monthly_limit)
+      if (pub.has_resend && resMonthPct != null && resMonthPct >= 80) {
+        alerts.push(
+          `✉️ Resend mês · ${label}\nE-mails no mês: ${pub.resend_sent_month} / ${pub.resend_monthly_limit} (${resMonthPct}%)`,
         )
       }
     } catch (err) {
