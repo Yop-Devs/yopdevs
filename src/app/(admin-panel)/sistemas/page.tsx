@@ -13,7 +13,26 @@ import {
   isHttpLink,
   resolveSystemLogoUrl,
 } from '@/lib/admin-systems'
+import {
+  formatBytes,
+  usagePct,
+  type SystemIntegrationPublic,
+} from '@/lib/system-infra-types'
 import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
+
+async function authHeaders(): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+}
+
+function bytesToGb(bytes: number): string {
+  return (bytes / 1024 ** 3).toFixed(bytes >= 1024 ** 3 ? 0 : 1)
+}
 
 type FormState = {
   name: string
@@ -59,6 +78,13 @@ export default function AdminSistemasPage() {
   const [accessFiles, setAccessFiles] = useState<FileList | null>(null)
   const [query, setQuery] = useState('')
   const [logoSrcById, setLogoSrcById] = useState<Record<string, string>>({})
+  const [integrationsBySystem, setIntegrationsBySystem] = useState<
+    Record<string, SystemIntegrationPublic>
+  >({})
+  const [infraBusyId, setInfraBusyId] = useState<string | null>(null)
+  const [limitsDraft, setLimitsDraft] = useState<
+    Record<string, { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string }>
+  >({})
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const load = useCallback(async () => {
@@ -111,6 +137,32 @@ export default function AdminSistemasPage() {
       }
     } else {
       setFilesBySystem({})
+    }
+
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/admin/systems/integrations', { headers })
+      const json = (await res.json()) as {
+        integrations?: SystemIntegrationPublic[]
+        error?: string
+      }
+      if (res.ok && json.integrations) {
+        const map: Record<string, SystemIntegrationPublic> = {}
+        const drafts: typeof limitsDraft = {}
+        for (const row of json.integrations) {
+          map[row.system_id] = row
+          drafts[row.system_id] = {
+            cfGb: bytesToGb(row.cf_storage_limit_bytes),
+            sbDbGb: bytesToGb(row.sb_db_limit_bytes),
+            sbStorGb: bytesToGb(row.sb_storage_limit_bytes),
+            resend: String(row.resend_daily_limit),
+          }
+        }
+        setIntegrationsBySystem(map)
+        setLimitsDraft(drafts)
+      }
+    } catch {
+      // integrações são opcionais até a migration rodar
     }
 
     setLoading(false)
@@ -309,6 +361,60 @@ export default function AdminSistemasPage() {
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
   }
 
+  function applyIntegration(integration: SystemIntegrationPublic) {
+    setIntegrationsBySystem((prev) => ({ ...prev, [integration.system_id]: integration }))
+    setLimitsDraft((prev) => ({
+      ...prev,
+      [integration.system_id]: {
+        cfGb: bytesToGb(integration.cf_storage_limit_bytes),
+        sbDbGb: bytesToGb(integration.sb_db_limit_bytes),
+        sbStorGb: bytesToGb(integration.sb_storage_limit_bytes),
+        resend: String(integration.resend_daily_limit),
+      },
+    }))
+  }
+
+  async function runInfraAction(systemId: string, action: 'import' | 'sync' | 'limits') {
+    setInfraBusyId(systemId)
+    try {
+      const headers = await authHeaders()
+      const draft = limitsDraft[systemId]
+      const body =
+        action === 'limits'
+          ? {
+              action: 'limits',
+              cf_storage_limit_gb: draft?.cfGb,
+              sb_db_limit_gb: draft?.sbDbGb,
+              sb_storage_limit_gb: draft?.sbStorGb,
+              resend_daily_limit: draft?.resend,
+            }
+          : { action }
+
+      const res = await fetch(`/api/admin/systems/${systemId}/sync-infra`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
+      const json = (await res.json()) as {
+        integration?: SystemIntegrationPublic
+        error?: string
+      }
+      if (!res.ok) throw new Error(json.error || 'Falha na operação de infra.')
+      if (json.integration) applyIntegration(json.integration)
+      toast.success(
+        action === 'import'
+          ? 'Credenciais importadas do .env.'
+          : action === 'limits'
+            ? 'Limites atualizados.'
+            : 'Infra sincronizada.',
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha na operação de infra.')
+    } finally {
+      setInfraBusyId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       {confirmDialog}
@@ -401,6 +507,27 @@ export default function AdminSistemasPage() {
                     <span>.env: {envCount}</span>
                     <span>Acessos: {accessCount}</span>
                   </div>
+
+                  <InfraPanel
+                    systemId={system.id}
+                    envCount={envCount}
+                    integ={integrationsBySystem[system.id] ?? null}
+                    draft={
+                      limitsDraft[system.id] ?? {
+                        cfGb: '10',
+                        sbDbGb: '0.5',
+                        sbStorGb: '1',
+                        resend: '100',
+                      }
+                    }
+                    busy={infraBusyId === system.id}
+                    onDraftChange={(next) =>
+                      setLimitsDraft((prev) => ({ ...prev, [system.id]: next }))
+                    }
+                    onImport={() => runInfraAction(system.id, 'import')}
+                    onSync={() => runInfraAction(system.id, 'sync')}
+                    onSaveLimits={() => runInfraAction(system.id, 'limits')}
+                  />
 
                   {system.notes ? <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{system.notes}</p> : null}
 
@@ -559,6 +686,228 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     <div className="block text-sm">
       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
       {children}
+    </div>
+  )
+}
+
+function badgeClass(state: 'ok' | 'warn' | 'off' | 'err') {
+  if (state === 'ok') return 'bg-emerald-100 text-emerald-800'
+  if (state === 'warn') return 'bg-amber-100 text-amber-900'
+  if (state === 'err') return 'bg-rose-100 text-rose-800'
+  return 'bg-slate-100 text-slate-500'
+}
+
+function providerState(
+  has: boolean,
+  pct: number | null,
+  hasError: boolean,
+  envCount: number,
+): 'ok' | 'warn' | 'off' | 'err' {
+  if (!has) return envCount > 0 ? 'off' : 'off'
+  if (hasError) return 'err'
+  if (pct != null && pct >= 80) return 'warn'
+  return 'ok'
+}
+
+function UsageBar({
+  label,
+  used,
+  limit,
+  unit,
+}: {
+  label: string
+  used: number | null
+  limit: number
+  unit: 'bytes' | 'count'
+}) {
+  const pct = usagePct(used, limit)
+  const tone =
+    pct == null ? 'bg-slate-200' : pct >= 90 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+  const usedLabel = unit === 'bytes' ? formatBytes(used) : used == null ? '—' : String(used)
+  const limitLabel = unit === 'bytes' ? formatBytes(limit) : String(limit)
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2 text-[10px] font-medium text-slate-600">
+        <span>{label}</span>
+        <span>
+          {usedLabel} / {limitLabel}
+          {pct != null ? ` (${pct}%)` : ''}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function InfraPanel({
+  systemId,
+  envCount,
+  integ,
+  draft,
+  busy,
+  onDraftChange,
+  onImport,
+  onSync,
+  onSaveLimits,
+}: {
+  systemId: string
+  envCount: number
+  integ: SystemIntegrationPublic | null
+  draft: { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string }
+  busy: boolean
+  onDraftChange: (next: { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string }) => void
+  onImport: () => void
+  onSync: () => void
+  onSaveLimits: () => void
+}) {
+  void systemId
+  const hasErr = Boolean(integ?.last_error)
+  const cfPct = usagePct(integ?.cf_storage_used_bytes, integ?.cf_storage_limit_bytes)
+  const sbStorPct = usagePct(integ?.sb_storage_used_bytes, integ?.sb_storage_limit_bytes)
+  const sbDbPct = usagePct(integ?.sb_db_used_bytes, integ?.sb_db_limit_bytes)
+  const resPct = usagePct(integ?.resend_sent_today, integ?.resend_daily_limit)
+
+  return (
+    <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+      <div className="flex flex-wrap gap-1.5">
+        <span
+          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+            providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare), envCount),
+          )}`}
+        >
+          Cloudflare
+        </span>
+        <span
+          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+            providerState(Boolean(integ?.has_supabase), sbStorPct ?? sbDbPct, hasErr && Boolean(integ?.has_supabase), envCount),
+          )}`}
+        >
+          Supabase
+        </span>
+        <span
+          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
+            providerState(Boolean(integ?.has_resend), resPct, hasErr && Boolean(integ?.has_resend), envCount),
+          )}`}
+        >
+          Resend
+        </span>
+        {!integ && envCount === 0 ? (
+          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+            sem .env
+          </span>
+        ) : null}
+      </div>
+
+      {integ?.has_cloudflare ? (
+        <UsageBar
+          label={`R2${integ.cf_r2_bucket ? ` · ${integ.cf_r2_bucket}` : ''}`}
+          used={integ.cf_storage_used_bytes}
+          limit={integ.cf_storage_limit_bytes}
+          unit="bytes"
+        />
+      ) : null}
+
+      {integ?.has_supabase ? (
+        <>
+          <UsageBar
+            label="SB Storage"
+            used={integ.sb_storage_used_bytes}
+            limit={integ.sb_storage_limit_bytes}
+            unit="bytes"
+          />
+          <UsageBar
+            label={integ.sb_db_used_bytes == null ? 'SB DB (sync incompleto)' : 'SB DB'}
+            used={integ.sb_db_used_bytes}
+            limit={integ.sb_db_limit_bytes}
+            unit="bytes"
+          />
+        </>
+      ) : null}
+
+      {integ?.has_resend ? (
+        <UsageBar
+          label="E-mails hoje"
+          used={integ.resend_sent_today}
+          limit={integ.resend_daily_limit}
+          unit="count"
+        />
+      ) : null}
+
+      {integ?.last_error ? (
+        <p className="line-clamp-2 text-[10px] leading-snug text-rose-700" title={integ.last_error}>
+          {integ.last_error}
+        </p>
+      ) : null}
+
+      {integ ? (
+        <details className="text-[10px] text-slate-600">
+          <summary className="cursor-pointer font-semibold uppercase tracking-wide">Limites</summary>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <label className="space-y-0.5">
+              <span>R2 GB</span>
+              <input
+                value={draft.cfGb}
+                onChange={(e) => onDraftChange({ ...draft, cfGb: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+              />
+            </label>
+            <label className="space-y-0.5">
+              <span>SB DB GB</span>
+              <input
+                value={draft.sbDbGb}
+                onChange={(e) => onDraftChange({ ...draft, sbDbGb: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+              />
+            </label>
+            <label className="space-y-0.5">
+              <span>SB Stor GB</span>
+              <input
+                value={draft.sbStorGb}
+                onChange={(e) => onDraftChange({ ...draft, sbStorGb: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+              />
+            </label>
+            <label className="space-y-0.5">
+              <span>Resend/dia</span>
+              <input
+                value={draft.resend}
+                onChange={(e) => onDraftChange({ ...draft, resend: e.target.value })}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onSaveLimits}
+            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            Salvar limites
+          </button>
+        </details>
+      ) : null}
+
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          disabled={busy || envCount === 0}
+          onClick={onImport}
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          {busy ? '...' : 'Importar .env'}
+        </button>
+        <button
+          type="button"
+          disabled={busy || (envCount === 0 && !integ)}
+          onClick={onSync}
+          className="flex-1 rounded-lg bg-slate-900 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {busy ? '...' : 'Sincronizar'}
+        </button>
+      </div>
     </div>
   )
 }

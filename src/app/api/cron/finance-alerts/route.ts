@@ -9,10 +9,11 @@ import {
   collectFinanceDueToday,
   todayIsoInCuiaba,
 } from '@/lib/finance-daily-alerts'
+import { syncAllSystemsInfra } from '@/lib/system-infra-sync'
 import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 function isAuthorized(request: Request): boolean {
   const auth = request.headers.get('authorization')?.trim()
@@ -60,13 +61,29 @@ async function runFinanceAlerts() {
     else errors.push(sent.error)
   }
 
-  if (errors.length) {
+  let infraSynced = 0
+  let infraAlerts = 0
+  try {
+    const infra = await syncAllSystemsInfra(supabase)
+    infraSynced = infra.synced
+    infraAlerts = infra.alerts.length
+    if (infra.alerts.length) sentMessages.push('infra')
+    if (infra.errors.length) {
+      errors.push(...infra.errors.slice(0, 5))
+    }
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : 'Falha no sync de infra')
+  }
+
+  if (errors.length && sentMessages.length === 0) {
     return NextResponse.json(
       {
         error: errors.join('; '),
         today: todayIso,
         financeCount: lines.length,
         domainCount: domains.length,
+        infraSynced,
+        infraAlerts,
         sent: sentMessages,
       },
       { status: 500 },
@@ -78,7 +95,10 @@ async function runFinanceAlerts() {
     today: todayIso,
     financeCount: lines.length,
     domainCount: domains.length,
+    infraSynced,
+    infraAlerts,
     sent: sentMessages,
+    warnings: errors.length ? errors : undefined,
     skipped: sentMessages.length === 0,
   })
 }
