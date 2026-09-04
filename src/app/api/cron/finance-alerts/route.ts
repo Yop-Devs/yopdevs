@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole } from '@/lib/admin-api-auth'
 import {
+  buildDomainExpiryMessage,
+  collectDomainsExpiringInDays,
+} from '@/lib/admin-telegram-alerts'
+import {
   buildFinanceAlertMessage,
   collectFinanceDueToday,
   todayIsoInCuiaba,
@@ -36,31 +40,46 @@ async function runFinanceAlerts() {
 
   const todayIso = todayIsoInCuiaba()
   const lines = await collectFinanceDueToday(supabase, todayIso)
-  const message = buildFinanceAlertMessage(lines, todayIso)
+  const financeMessage = buildFinanceAlertMessage(lines, todayIso)
 
-  if (!message) {
-    return NextResponse.json({
-      ok: true,
-      today: todayIso,
-      count: 0,
-      skipped: true,
-      reason: 'Nenhum lançamento com data de hoje.',
-    })
+  const domains = await collectDomainsExpiringInDays(supabase, 7, todayIso)
+  const domainMessage = buildDomainExpiryMessage(domains, 7)
+
+  const sentMessages: string[] = []
+  const errors: string[] = []
+
+  if (financeMessage) {
+    const sent = await sendTelegramAlert(financeMessage)
+    if (sent.ok) sentMessages.push('finance')
+    else errors.push(sent.error)
   }
 
-  const sent = await sendTelegramAlert(message)
-  if (!sent.ok) {
+  if (domainMessage) {
+    const sent = await sendTelegramAlert(domainMessage)
+    if (sent.ok) sentMessages.push('domain')
+    else errors.push(sent.error)
+  }
+
+  if (errors.length) {
     return NextResponse.json(
-      { error: sent.error, today: todayIso, count: lines.length },
-      { status: sent.status ?? 500 },
+      {
+        error: errors.join('; '),
+        today: todayIso,
+        financeCount: lines.length,
+        domainCount: domains.length,
+        sent: sentMessages,
+      },
+      { status: 500 },
     )
   }
 
   return NextResponse.json({
     ok: true,
     today: todayIso,
-    count: lines.length,
-    skipped: false,
+    financeCount: lines.length,
+    domainCount: domains.length,
+    sent: sentMessages,
+    skipped: sentMessages.length === 0,
   })
 }
 

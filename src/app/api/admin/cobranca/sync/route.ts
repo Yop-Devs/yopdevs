@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/admin-api-auth'
+import { notifyIfChargeBecamePaid } from '@/lib/admin-telegram-alerts'
+import type { BoletoStatus } from '@/lib/admin-cobranca'
 import {
   boletoPatchFromMpPayment,
   findLatestMpPaymentByExternalReference,
@@ -46,7 +48,9 @@ export async function POST(request: Request) {
   for (const id of ids) {
     const { data: boleto, error } = await auth.supabase
       .from('yop_admin_boletos')
-      .select('id, mp_payment_id, external_reference, payment_method, date_of_expiration')
+      .select(
+        'id, status, description, amount, payment_method, client_id, mp_payment_id, external_reference, date_of_expiration, client:yop_admin_clients(person_name, company_name, full_name)',
+      )
       .eq('id', id)
       .maybeSingle()
 
@@ -65,7 +69,6 @@ export async function POST(request: Request) {
       }
 
       if (!payment) {
-        // Ainda sem pagamento (ex.: link de cartão não usado) — marca vencido se passou a validade
         if (boleto.date_of_expiration) {
           const exp = new Date(boleto.date_of_expiration).getTime()
           if (Number.isFinite(exp) && exp < Date.now()) {
@@ -87,6 +90,8 @@ export async function POST(request: Request) {
       }
 
       const patch = boletoPatchFromMpPayment(payment)
+      const previousStatus = boleto.status as BoletoStatus
+      const client = Array.isArray(boleto.client) ? boleto.client[0] ?? null : boleto.client
       const { error: upError } = await auth.supabase
         .from('yop_admin_boletos')
         .update({
@@ -95,8 +100,24 @@ export async function POST(request: Request) {
         })
         .eq('id', id)
 
-      if (upError) results.push({ id, ok: false, error: upError.message })
-      else results.push({ id, ok: true })
+      if (upError) {
+        results.push({ id, ok: false, error: upError.message })
+      } else {
+        await notifyIfChargeBecamePaid(
+          previousStatus,
+          {
+            id: boleto.id,
+            description: boleto.description,
+            amount: boleto.amount,
+            status: previousStatus,
+            payment_method: boleto.payment_method === 'credit_card' ? 'credit_card' : 'boleto',
+            client_id: boleto.client_id,
+            client,
+          },
+          patch.status,
+        )
+        results.push({ id, ok: true })
+      }
     } catch (err) {
       results.push({
         id,
