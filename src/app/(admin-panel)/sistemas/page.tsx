@@ -517,31 +517,35 @@ export default function AdminSistemasPage() {
                 </div>
 
                 <div className="flex flex-1 flex-col gap-3 p-4">
-                  <div>
-                    <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900">{system.company_name}</h3>
-                    <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{system.name}</p>
+                  <div className="space-y-1">
+                    <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900">
+                      {system.company_name}
+                    </h3>
+                    {system.name.trim().toLowerCase() !== system.company_name.trim().toLowerCase() ? (
+                      <p className="text-[11px] font-medium text-slate-500">{system.name}</p>
+                    ) : null}
                     {isHttpLink(system.link) ? (
                       <a
                         href={system.link!}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 block truncate text-sm text-violet-700 hover:underline"
+                        className="block truncate text-sm text-violet-700 hover:underline"
                       >
                         {system.link!.replace(/^https?:\/\//, '')}
                       </a>
                     ) : system.link ? (
-                      <p className="mt-1.5 text-sm text-slate-500">{system.link}</p>
+                      <p className="text-sm text-slate-500">{system.link}</p>
                     ) : null}
                   </div>
 
-                  <span className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium ${reminderTone(domainDays)}`}>
-                    {reminderLabel(domainDays, 'Domínio')}
-                    {system.domain_expires_at ? ` · ${formatDateBr(system.domain_expires_at)}` : ''}
-                  </span>
-
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                    <span>.env: {envCount}</span>
-                    <span>Acessos: {accessCount}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-lg px-2 py-1 text-[11px] font-medium ${reminderTone(domainDays)}`}>
+                      {reminderLabel(domainDays, 'Domínio')}
+                      {system.domain_expires_at ? ` · ${formatDateBr(system.domain_expires_at)}` : ''}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      .env {envCount} · acessos {accessCount}
+                    </span>
                   </div>
 
                   <InfraPanel
@@ -746,25 +750,12 @@ function providerState(
   return 'ok'
 }
 
-function runwayHint(runway: StorageRunway): string {
-  if (runway.used == null) return 'Aguardando primeira medição'
-  if (runway.sampleDays < 1 || runway.avgDailyGrowth == null) {
-    return 'Sincronize por alguns dias para estimar autonomia'
-  }
-  if (runway.avgDailyGrowth <= 0) {
-    return `Uso estável · cabe nos próximos ${runway.coversDays} dias`
-  }
-  const growth = formatBytes(runway.avgDailyGrowth)
-  if (runway.daysLeft != null) {
-    const horizon =
-      runway.coversHorizon == null
-        ? ''
-        : runway.coversHorizon
-          ? ` · ok p/ ${runway.coversDays}d`
-          : ` · curto p/ ${runway.coversDays}d`
-    return `+${growth}/dia · ~${runway.daysLeft}d restantes${horizon}`
-  }
-  return `+${growth}/dia`
+function runwayHint(runway: StorageRunway): string | null {
+  if (runway.used == null) return null
+  if (runway.sampleDays < 1 || runway.avgDailyGrowth == null) return null
+  if (runway.avgDailyGrowth <= 0) return 'estável'
+  if (runway.daysLeft != null) return `~${runway.daysLeft}d`
+  return `+${formatBytes(runway.avgDailyGrowth)}/d`
 }
 
 function UsageBar({
@@ -773,42 +764,66 @@ function UsageBar({
   limit,
   unit,
   runway,
+  warn,
 }: {
   label: string
   used: number | null
   limit: number
   unit: 'bytes' | 'count'
   runway?: StorageRunway
+  warn?: string | null
 }) {
   const pct = usagePct(used, limit)
-  const remaining = used != null ? Math.max(0, limit - used) : null
   const tone =
     pct == null ? 'bg-slate-200' : pct >= 90 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
   const fmt = (n: number | null) =>
     unit === 'bytes' ? formatBytes(n) : n == null ? '—' : String(n)
-  const usedLabel = fmt(used)
-  const limitLabel = fmt(limit)
-  const remainLabel = fmt(remaining)
+  const hint = warn ?? (runway ? runwayHint(runway) : null)
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2 text-[10px] font-medium text-slate-600">
-        <span>{label}</span>
-        <span>
-          {usedLabel} / {limitLabel}
-          {pct != null ? ` (${pct}%)` : ''}
+    <div className="min-w-0 space-y-1">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="truncate text-[11px] font-semibold text-slate-600">{label}</span>
+        <span className="shrink-0 text-[11px] tabular-nums text-slate-800">
+          {fmt(used)}
+          <span className="text-slate-400"> / {fmt(limit)}</span>
+          {pct != null ? <span className="ml-1 text-slate-500">({pct}%)</span> : null}
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[10px] text-slate-500">
-        <span>Restante: {remainLabel}</span>
-        {runway ? <span className="text-right">{runwayHint(runway)}</span> : null}
-      </div>
+      {hint ? <p className="truncate text-[10px] text-slate-400">{hint}</p> : null}
     </div>
   )
 }
+
+function CredField({
+  label,
+  saved,
+  children,
+}: {
+  label: string
+  saved?: boolean
+  children: ReactNode
+}) {
+  return (
+    <label className="block space-y-1">
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+        {saved ? (
+          <span className="rounded bg-emerald-50 px-1 py-px text-[9px] font-bold normal-case tracking-normal text-emerald-700">
+            salvo
+          </span>
+        ) : null}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+const credInputClass =
+  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none placeholder:text-slate-300 focus:border-slate-400'
 
 function InfraPanel({
   systemId,
@@ -840,7 +855,11 @@ function InfraPanel({
   onSaveCredentials: (creds: Record<string, string | boolean>) => void
 }) {
   void systemId
-  const [credsOpen, setCredsOpen] = useState(false)
+  const needsSetup = !integ && envCount === 0
+  const needsPat =
+    Boolean(integ?.has_supabase) &&
+    Boolean(integ?.missing.supabase.some((m) => m.includes('ACCESS_TOKEN')))
+  const [credsOpen, setCredsOpen] = useState(needsSetup || needsPat)
   const [cfAccountId, setCfAccountId] = useState('')
   const [cfApiToken, setCfApiToken] = useState('')
   const [cfBucket, setCfBucket] = useState('')
@@ -885,10 +904,6 @@ function InfraPanel({
   const trackingSb = integ?.track_supabase ?? trackSb
   const trackingResend = integ?.track_resend ?? trackResend
 
-  const showCf = trackingCf
-  const showSb = trackingSb
-  const showResend = trackingResend
-
   function submitCredentials() {
     onSaveCredentials({
       cf_account_id: cfAccountId,
@@ -904,321 +919,320 @@ function InfraPanel({
     })
   }
 
+  const providerPills = (
+    <div className="flex flex-wrap gap-1">
+      {(
+        [
+          {
+            on: trackingCf,
+            label: 'CF',
+            state: providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare)),
+          },
+          {
+            on: trackingSb,
+            label: 'SB',
+            state: providerState(
+              Boolean(integ?.has_supabase),
+              sbStorPct ?? sbDbPct,
+              hasErr && Boolean(integ?.has_supabase),
+            ),
+          },
+          {
+            on: trackingResend,
+            label: 'Resend',
+            state: providerState(
+              Boolean(integ?.has_resend),
+              resPct ?? resMonthPct,
+              hasErr && Boolean(integ?.has_resend),
+            ),
+          },
+        ] as const
+      ).map((p) => (
+        <span
+          key={p.label}
+          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+            p.on ? badgeClass(p.state) : 'bg-slate-100 text-slate-400'
+          }`}
+        >
+          {p.on ? p.label : `${p.label} off`}
+        </span>
+      ))}
+    </div>
+  )
+
   return (
-    <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-      <div className="flex flex-wrap gap-1.5">
-        {trackingCf ? (
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-              providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare)),
-            )}`}
-          >
-            Cloudflare
-          </span>
-        ) : (
-          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
-            CF off
-          </span>
-        )}
-        {trackingSb ? (
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-              providerState(Boolean(integ?.has_supabase), sbStorPct ?? sbDbPct, hasErr && Boolean(integ?.has_supabase)),
-            )}`}
-          >
-            Supabase
-          </span>
-        ) : (
-          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
-            SB off
-          </span>
-        )}
-        {trackingResend ? (
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClass(
-              providerState(Boolean(integ?.has_resend), resPct ?? resMonthPct, hasErr && Boolean(integ?.has_resend)),
-            )}`}
-          >
-            Resend
-          </span>
-        ) : (
-          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
-            Resend off
-          </span>
-        )}
-        {!integ && envCount === 0 ? (
-          <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-            sem .env
-          </span>
-        ) : null}
+    <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/90 p-3">
+      <div className="flex items-center justify-between gap-2">
+        {providerPills}
+        <button
+          type="button"
+          disabled={busy || (!integ && envCount === 0)}
+          onClick={onSync}
+          className="shrink-0 rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {busy ? '...' : 'Sync'}
+        </button>
       </div>
 
-      {showCf ? (
-        <UsageBar
-          label={`R2${integ?.cf_r2_bucket ? ` · ${integ.cf_r2_bucket}` : ''}`}
-          used={integ?.cf_storage_used_bytes ?? null}
-          limit={integ?.cf_storage_limit_bytes ?? 10 * 1024 ** 3}
-          unit="bytes"
-          runway={integ?.runway.cloudflare}
-        />
-      ) : null}
+      {(trackingCf || trackingSb || trackingResend) && (
+        <div
+          className={`grid gap-2.5 ${
+            [trackingCf, trackingSb, trackingResend].filter(Boolean).length > 1
+              ? 'sm:grid-cols-1'
+              : ''
+          }`}
+        >
+          {trackingCf ? (
+            <UsageBar
+              label="R2"
+              used={integ?.cf_storage_used_bytes ?? null}
+              limit={integ?.cf_storage_limit_bytes ?? 10 * 1024 ** 3}
+              unit="bytes"
+              runway={integ?.runway.cloudflare}
+            />
+          ) : null}
 
-      {showSb ? (
-        <>
-          <UsageBar
-            label="SB Storage (bucket)"
-            used={integ?.sb_storage_used_bytes ?? null}
-            limit={integ?.sb_storage_limit_bytes ?? 1024 ** 3}
-            unit="bytes"
-            runway={integ?.runway.sb_storage}
-          />
-          <UsageBar
-            label={integ?.sb_db_used_bytes == null ? 'SB DB (precisa ACCESS_TOKEN)' : 'SB DB'}
-            used={integ?.sb_db_used_bytes ?? null}
-            limit={integ?.sb_db_limit_bytes ?? 512 * 1024 ** 2}
-            unit="bytes"
-            runway={integ?.runway.sb_db}
-          />
-        </>
-      ) : null}
+          {trackingSb ? (
+            <div className="grid grid-cols-2 gap-2.5">
+              <UsageBar
+                label="Storage"
+                used={integ?.sb_storage_used_bytes ?? null}
+                limit={integ?.sb_storage_limit_bytes ?? 1024 ** 3}
+                unit="bytes"
+                runway={integ?.runway.sb_storage}
+              />
+              <UsageBar
+                label="DB"
+                used={integ?.sb_db_used_bytes ?? null}
+                limit={integ?.sb_db_limit_bytes ?? 512 * 1024 ** 2}
+                unit="bytes"
+                runway={integ?.runway.sb_db}
+                warn={needsPat ? 'falta PAT' : null}
+              />
+            </div>
+          ) : null}
 
-      {showResend ? (
-        <>
-          <UsageBar
-            label="Resend hoje"
-            used={integ?.resend_sent_today ?? null}
-            limit={integ?.resend_daily_limit ?? 100}
-            unit="count"
-          />
-          <UsageBar
-            label="Resend mês"
-            used={integ?.resend_sent_month ?? null}
-            limit={integ?.resend_monthly_limit ?? 3000}
-            unit="count"
-          />
-        </>
-      ) : null}
-
-      {integ && trackingCf && !integ.has_cloudflare && integ.missing.cloudflare.length ? (
-        <p className="text-[10px] text-amber-800">CF incompleto: {integ.missing.cloudflare.join(' · ')}</p>
-      ) : null}
-      {integ &&
-      trackingSb &&
-      integ.has_supabase &&
-      integ.missing.supabase.includes('SUPABASE_ACCESS_TOKEN (para tamanho do DB)') ? (
-        <p className="text-[10px] text-amber-800">
-          DB: cole o SUPABASE_ACCESS_TOKEN abaixo (PAT do dashboard)
-        </p>
-      ) : null}
+          {trackingResend ? (
+            <div className="grid grid-cols-2 gap-2.5">
+              <UsageBar
+                label="E-mails hoje"
+                used={integ?.resend_sent_today ?? null}
+                limit={integ?.resend_daily_limit ?? 100}
+                unit="count"
+              />
+              <UsageBar
+                label="E-mails mês"
+                used={integ?.resend_sent_month ?? null}
+                limit={integ?.resend_monthly_limit ?? 3000}
+                unit="count"
+              />
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {integ?.last_error ? (
-        <p className="line-clamp-3 text-[10px] leading-snug text-rose-700" title={integ.last_error}>
+        <p className="line-clamp-2 text-[10px] leading-snug text-rose-600" title={integ.last_error}>
           {integ.last_error}
         </p>
       ) : null}
 
       <details
-        className="text-[10px] text-slate-600"
-        open={credsOpen || (!integ && envCount === 0)}
+        className="group rounded-lg border border-slate-200/80 bg-white"
+        open={credsOpen}
         onToggle={(e) => setCredsOpen((e.target as HTMLDetailsElement).open)}
       >
-        <summary className="cursor-pointer font-semibold uppercase tracking-wide">
-          Conectar APIs (chaves manuais)
+        <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-semibold text-slate-600 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            <span>Chaves e provedores</span>
+            <span className="text-[10px] font-medium text-slate-400 group-open:hidden">abrir</span>
+            <span className="hidden text-[10px] font-medium text-slate-400 group-open:inline">fechar</span>
+          </span>
         </summary>
-        <div className="mt-2 space-y-2">
-          <p className="text-[10px] leading-snug text-slate-500">
-            Marque só o que o sistema usa. Desmarcado = sem avisos e sem sync desse provedor.
-          </p>
-          <div className="flex flex-wrap gap-3 text-[11px] font-semibold text-slate-700">
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={trackCf} onChange={(e) => setTrackCf(e.target.checked)} />
-              Usa Cloudflare
-            </label>
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={trackSb} onChange={(e) => setTrackSb(e.target.checked)} />
-              Usa Supabase
-            </label>
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={trackResend} onChange={(e) => setTrackResend(e.target.checked)} />
-              Usa Resend
-            </label>
+
+        <div className="space-y-3 border-t border-slate-100 px-2.5 py-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                { checked: trackCf, set: setTrackCf, label: 'Cloudflare' },
+                { checked: trackSb, set: setTrackSb, label: 'Supabase' },
+                { checked: trackResend, set: setTrackResend, label: 'Resend' },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => t.set(!t.checked)}
+                className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                  t.checked
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           {trackCf ? (
-            <>
-              <p className="font-bold uppercase tracking-wide text-slate-500">Cloudflare R2</p>
-              <label className="block space-y-0.5">
-                <span>Account ID</span>
+            <div className="space-y-2">
+              <CredField label="Account ID">
                 <input
                   value={cfAccountId}
                   onChange={(e) => setCfAccountId(e.target.value)}
-                  placeholder="abc123..."
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  placeholder="Account ID"
+                  className={credInputClass}
                   autoComplete="off"
                 />
-              </label>
-              <label className="block space-y-0.5">
-                <span>API Token {integ?.secrets.cf_api_token ? '(salvo ••••)' : ''}</span>
+              </CredField>
+              <CredField label="API Token" saved={integ?.secrets.cf_api_token}>
                 <input
                   type="password"
                   value={cfApiToken}
                   onChange={(e) => setCfApiToken(e.target.value)}
-                  placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token Cloudflare'}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token'}
+                  className={credInputClass}
                   autoComplete="new-password"
                 />
-              </label>
-              <label className="block space-y-0.5">
-                <span>R2 Bucket</span>
+              </CredField>
+              <CredField label="Bucket R2">
                 <input
                   value={cfBucket}
                   onChange={(e) => setCfBucket(e.target.value)}
-                  placeholder="meu-bucket"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  placeholder="bucket"
+                  className={credInputClass}
                   autoComplete="off"
                 />
-              </label>
-            </>
+              </CredField>
+            </div>
           ) : null}
 
           {trackSb ? (
-            <>
-              <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Supabase</p>
-              <label className="block space-y-0.5">
-                <span>Project URL</span>
+            <div className="space-y-2">
+              <CredField label="Project URL">
                 <input
                   value={sbUrl}
                   onChange={(e) => setSbUrl(e.target.value)}
                   placeholder="https://xxxx.supabase.co"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  className={credInputClass}
                   autoComplete="off"
                 />
-              </label>
-              <label className="block space-y-0.5">
-                <span>Service Role Key {integ?.secrets.sb_service_role_key ? '(salvo ••••)' : ''}</span>
+              </CredField>
+              <CredField label="Service Role" saved={integ?.secrets.sb_service_role_key}>
                 <input
                   type="password"
                   value={sbServiceKey}
                   onChange={(e) => setSbServiceKey(e.target.value)}
                   placeholder={integ?.secrets.sb_service_role_key ? '••••••••' : 'eyJ...'}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  className={credInputClass}
                   autoComplete="new-password"
                 />
-              </label>
-              <label className="block space-y-0.5">
-                <span>Access Token / PAT {integ?.secrets.sb_access_token ? '(salvo ••••)' : ''} — DB</span>
+              </CredField>
+              <CredField label="PAT (DB)" saved={integ?.secrets.sb_access_token}>
                 <input
                   type="password"
                   value={sbAccessToken}
                   onChange={(e) => setSbAccessToken(e.target.value)}
                   placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
+                  className={credInputClass}
                   autoComplete="new-password"
                 />
-              </label>
-            </>
+              </CredField>
+              {needsPat ? (
+                <p className="text-[10px] text-amber-700">Cole o PAT da conta deste projeto para medir o DB.</p>
+              ) : null}
+            </div>
           ) : null}
 
           {trackResend ? (
-            <>
-              <p className="pt-1 font-bold uppercase tracking-wide text-slate-500">Resend</p>
-              <label className="block space-y-0.5">
-                <span>API Key {integ?.secrets.resend_api_key ? '(salvo ••••)' : ''}</span>
-                <input
-                  type="password"
-                  value={resendKey}
-                  onChange={(e) => setResendKey(e.target.value)}
-                  placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-                  autoComplete="new-password"
-                />
-              </label>
-            </>
+            <CredField label="Resend API Key" saved={integ?.secrets.resend_api_key}>
+              <input
+                type="password"
+                value={resendKey}
+                onChange={(e) => setResendKey(e.target.value)}
+                placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'}
+                className={credInputClass}
+                autoComplete="new-password"
+              />
+            </CredField>
           ) : null}
 
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              disabled={busy || envCount === 0}
+              onClick={onImport}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              .env
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={submitCredentials}
+              className="flex-1 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60"
+            >
+              {busy ? '...' : 'Salvar chaves'}
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details className="group rounded-lg border border-slate-200/80 bg-white">
+        <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-semibold text-slate-600 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            <span>Limites do plano</span>
+            <span className="text-[10px] font-medium text-slate-400 group-open:hidden">abrir</span>
+          </span>
+        </summary>
+        <div className="space-y-2 border-t border-slate-100 px-2.5 py-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <CredField label="R2 GB">
+              <input
+                value={draft.cfGb}
+                onChange={(e) => onDraftChange({ ...draft, cfGb: e.target.value })}
+                className={credInputClass}
+              />
+            </CredField>
+            <CredField label="SB DB GB">
+              <input
+                value={draft.sbDbGb}
+                onChange={(e) => onDraftChange({ ...draft, sbDbGb: e.target.value })}
+                className={credInputClass}
+              />
+            </CredField>
+            <CredField label="SB Storage GB">
+              <input
+                value={draft.sbStorGb}
+                onChange={(e) => onDraftChange({ ...draft, sbStorGb: e.target.value })}
+                className={credInputClass}
+              />
+            </CredField>
+            <CredField label="Resend/dia">
+              <input
+                value={draft.resend}
+                onChange={(e) => onDraftChange({ ...draft, resend: e.target.value })}
+                className={credInputClass}
+              />
+            </CredField>
+            <CredField label="Resend/mês">
+              <input
+                value={draft.resendMonth}
+                onChange={(e) => onDraftChange({ ...draft, resendMonth: e.target.value })}
+                className={credInputClass}
+              />
+            </CredField>
+          </div>
           <button
             type="button"
-            disabled={busy}
-            onClick={submitCredentials}
-            className="w-full rounded-lg bg-emerald-700 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60"
+            disabled={busy || !integ}
+            onClick={onSaveLimits}
+            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
-            {busy ? 'Salvando...' : 'Salvar e sincronizar'}
+            Salvar limites
           </button>
         </div>
       </details>
-
-      <details className="text-[10px] text-slate-600">
-        <summary className="cursor-pointer font-semibold uppercase tracking-wide">Limites</summary>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <label className="space-y-0.5">
-            <span>R2 GB</span>
-            <input
-              value={draft.cfGb}
-              onChange={(e) => onDraftChange({ ...draft, cfGb: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-            />
-          </label>
-          <label className="space-y-0.5">
-            <span>SB DB GB</span>
-            <input
-              value={draft.sbDbGb}
-              onChange={(e) => onDraftChange({ ...draft, sbDbGb: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-            />
-          </label>
-          <label className="space-y-0.5">
-            <span>SB Stor GB</span>
-            <input
-              value={draft.sbStorGb}
-              onChange={(e) => onDraftChange({ ...draft, sbStorGb: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-            />
-          </label>
-          <label className="space-y-0.5">
-            <span>Resend/dia</span>
-            <input
-              value={draft.resend}
-              onChange={(e) => onDraftChange({ ...draft, resend: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-            />
-          </label>
-          <label className="col-span-2 space-y-0.5">
-            <span>Resend/mês</span>
-            <input
-              value={draft.resendMonth}
-              onChange={(e) => onDraftChange({ ...draft, resendMonth: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px]"
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          disabled={busy || !integ}
-          onClick={onSaveLimits}
-          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-        >
-          Salvar limites
-        </button>
-      </details>
-
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          disabled={busy || envCount === 0}
-          onClick={onImport}
-          className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-        >
-          {busy ? '...' : 'Importar .env'}
-        </button>
-        <button
-          type="button"
-          disabled={busy || (!integ && envCount === 0)}
-          onClick={onSync}
-          className="flex-1 rounded-lg bg-slate-900 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {busy ? '...' : 'Sincronizar'}
-        </button>
-      </div>
     </div>
   )
 }

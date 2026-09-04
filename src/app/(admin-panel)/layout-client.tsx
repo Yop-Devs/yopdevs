@@ -20,21 +20,37 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     async function gate() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.replace(adminPaths.login)
-        return
+      try {
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), 6000)
+        })
+        const session = await Promise.race([
+          sessionPromise.then((r) => r.data.session),
+          timeoutPromise,
+        ])
+        if (cancelled) return
+        if (!session) {
+          router.replace(adminPaths.login)
+          return
+        }
+        if (!isEmailAllowed(session.user.email)) {
+          await supabase.auth.signOut()
+          router.replace(`${adminPaths.login}?error=unauthorized`)
+          return
+        }
+        setEmail(session.user.email ?? null)
+        setLoading(false)
+      } catch {
+        if (!cancelled) router.replace(adminPaths.login)
       }
-      if (!isEmailAllowed(session.user.email)) {
-        await supabase.auth.signOut()
-        router.replace(`${adminPaths.login}?error=unauthorized`)
-        return
-      }
-      setEmail(session.user.email ?? null)
-      setLoading(false)
     }
     gate()
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
   async function signOut() {

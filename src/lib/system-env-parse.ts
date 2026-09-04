@@ -50,6 +50,7 @@ const ALIASES: Record<keyof Omit<ParsedSystemEnv, 'sb_project_ref'>, string[]> =
     'EXPO_PUBLIC_SUPABASE_URL',
     'REACT_APP_SUPABASE_URL',
     'SUPABASE_PROJECT_URL',
+    'NEXT_PUBLIC_SUPABASE_PROJECT_URL',
   ],
   sb_anon_key: [
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -60,6 +61,7 @@ const ALIASES: Record<keyof Omit<ParsedSystemEnv, 'sb_project_ref'>, string[]> =
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
     'REACT_APP_SUPABASE_ANON_KEY',
     'SUPABASE_PUBLIC_KEY',
+    'NEXT_PUBLIC_ANON_KEY',
   ],
   sb_service_role_key: [
     'SUPABASE_SERVICE_ROLE_KEY',
@@ -68,12 +70,16 @@ const ALIASES: Record<keyof Omit<ParsedSystemEnv, 'sb_project_ref'>, string[]> =
     'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY', // raro, mas alguns .env errados usam
     'SERVICE_ROLE_KEY',
     'SUPABASE_SECRET_KEY',
+    'SUPABASE_SECRET',
+    'SERVICE_KEY',
   ],
   sb_access_token: [
     'SUPABASE_ACCESS_TOKEN',
     'SUPABASE_PAT',
     'SUPABASE_MANAGEMENT_TOKEN',
     'SUPABASE_TOKEN',
+    'SUPABASE_PERSONAL_ACCESS_TOKEN',
+    'YOP_SUPABASE_ACCESS_TOKEN',
   ],
   resend_api_key: ['RESEND_API_KEY', 'RESEND_KEY'],
 }
@@ -258,6 +264,11 @@ export function buildEnvParseReport(content: string, fileName: string | null = n
   }
   if (!matched.sb_service_role_key) {
     hints.push('Não achei SUPABASE_SERVICE_ROLE_KEY (necessário para medir Storage).')
+  }
+  if (matched.sb_url && matched.sb_service_role_key && !matched.sb_access_token) {
+    hints.push(
+      'Storage ok. Para medir o DB, cole o PAT (sbp_...) da conta deste projeto no painel — .env de app quase nunca traz isso.',
+    )
   }
   if (matched.sb_url && !matched.sb_service_role_key && !matched.sb_anon_key) {
     hints.push('Há URL, mas falta anon key ou service role.')

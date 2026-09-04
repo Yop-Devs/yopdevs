@@ -198,7 +198,7 @@ function missingSupabase(row: SystemIntegrationRow): string[] {
   const m: string[] = []
   if (!row.sb_url) m.push('NEXT_PUBLIC_SUPABASE_URL')
   if (!row.sb_service_role_key) m.push('SUPABASE_SERVICE_ROLE_KEY')
-  if (!row.sb_access_token) m.push('SUPABASE_ACCESS_TOKEN (para tamanho do DB)')
+  if (!row.sb_access_token) m.push('SUPABASE_ACCESS_TOKEN (PAT da conta deste projeto, para tamanho do DB)')
   return m
 }
 

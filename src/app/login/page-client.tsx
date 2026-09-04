@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
@@ -38,13 +38,25 @@ export default function AdminLoginPage() {
   useEffect(() => {
     let cancelled = false
     async function boot() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (cancelled) return
-      if (session?.user?.email && isEmailAllowed(session.user.email)) {
-        router.replace(adminPaths.sistemas)
-        return
+      setChecking(true)
+      try {
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), 4000)
+        })
+        const raced = await Promise.race([
+          sessionPromise.then((r) => r.data.session),
+          timeoutPromise,
+        ])
+        if (cancelled) return
+        if (raced?.user?.email && isEmailAllowed(raced.user.email)) {
+          router.replace(adminPaths.sistemas)
+        }
+      } catch {
+        // formulário permanece visível
+      } finally {
+        if (!cancelled) setChecking(false)
       }
-      setChecking(false)
     }
     boot()
     return () => {

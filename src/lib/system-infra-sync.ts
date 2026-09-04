@@ -59,27 +59,38 @@ export async function importEnvForSystem(
 
   const { data: existing } = await yop
     .from('yop_admin_system_integrations')
-    .select('track_cloudflare, track_supabase, track_resend')
+    .select('*')
     .eq('system_id', systemId)
     .maybeSingle()
 
   const report = buildEnvParseReport(downloaded.content, downloaded.fileName)
   const parsed = parseSystemEnv(downloaded.content)
-  const flags = flagsFromParsedEnv(parsed)
   const now = new Date().toISOString()
+  const prev = (existing ?? null) as SystemIntegrationRow | null
+
+  const merged = {
+    cf_account_id: parsed.cf_account_id ?? prev?.cf_account_id ?? null,
+    cf_api_token: parsed.cf_api_token ?? prev?.cf_api_token ?? null,
+    cf_r2_bucket: parsed.cf_r2_bucket ?? prev?.cf_r2_bucket ?? null,
+    sb_url: parsed.sb_url ?? prev?.sb_url ?? null,
+    sb_anon_key: parsed.sb_anon_key ?? prev?.sb_anon_key ?? null,
+    sb_service_role_key: parsed.sb_service_role_key ?? prev?.sb_service_role_key ?? null,
+    sb_project_ref: parsed.sb_project_ref ?? prev?.sb_project_ref ?? null,
+    // Não apaga secrets já salvos se o .env do cliente não tiver essas chaves
+    sb_access_token: parsed.sb_access_token ?? prev?.sb_access_token ?? null,
+    resend_api_key: parsed.resend_api_key ?? prev?.resend_api_key ?? null,
+  }
+
+  const flags = flagsFromParsedEnv(merged)
 
   // Só liga tracking se achou credenciais; se não achou, mantém o que o usuário definiu (ou off)
-  const track_cloudflare = flags.has_cloudflare
-    ? true
-    : Boolean(existing?.track_cloudflare)
+  const track_cloudflare = flags.has_cloudflare ? true : Boolean(prev?.track_cloudflare)
   const track_supabase = flags.has_supabase
     ? true
-    : existing?.track_supabase != null
-      ? Boolean(existing.track_supabase)
+    : prev?.track_supabase != null
+      ? Boolean(prev.track_supabase)
       : true
-  const track_resend = flags.has_resend
-    ? true
-    : Boolean(existing?.track_resend)
+  const track_resend = flags.has_resend ? true : Boolean(prev?.track_resend)
 
   const payload = {
     system_id: systemId,
@@ -87,15 +98,7 @@ export async function importEnvForSystem(
     track_cloudflare,
     track_supabase,
     track_resend,
-    cf_account_id: parsed.cf_account_id,
-    cf_api_token: parsed.cf_api_token,
-    cf_r2_bucket: parsed.cf_r2_bucket,
-    sb_url: parsed.sb_url,
-    sb_anon_key: parsed.sb_anon_key,
-    sb_service_role_key: parsed.sb_service_role_key,
-    sb_project_ref: parsed.sb_project_ref,
-    sb_access_token: parsed.sb_access_token,
-    resend_api_key: parsed.resend_api_key,
+    ...merged,
     env_parsed_at: now,
     last_error:
       report.hints.length && !flags.has_supabase && !flags.has_cloudflare && !flags.has_resend
@@ -477,6 +480,19 @@ async function measureSupabaseDbBytes(
   throw new Error('Supabase DB: resposta sem tamanho reconhecível')
 }
 
+/** PAT da conta YOP (Management API) — mede DB de qualquer projeto acessível. */
+export function getYopSupabaseAccessToken(): string | null {
+  const token =
+    process.env.YOP_SUPABASE_ACCESS_TOKEN?.trim() ||
+    process.env.SUPABASE_ACCESS_TOKEN?.trim() ||
+    ''
+  return token || null
+}
+
+function resolveSbAccessToken(integ: SystemIntegrationRow): string | null {
+  return integ.sb_access_token?.trim() || getYopSupabaseAccessToken()
+}
+
 async function measureResendUsage(
   apiKey: string,
   dayIso: string,
@@ -652,11 +668,14 @@ export async function syncInfraForSystem(
       errors.push('Supabase storage: falta SUPABASE_SERVICE_ROLE_KEY')
     }
 
-    if (integ.sb_project_ref && integ.sb_access_token) {
+    const projectRef = integ.sb_project_ref || projectRefFromSupabaseUrl(integ.sb_url)
+    const accessToken = resolveSbAccessToken(integ)
+    if (projectRef && accessToken) {
       try {
-        const dbUsed = await measureSupabaseDbBytes(integ.sb_project_ref, integ.sb_access_token)
+        const dbUsed = await measureSupabaseDbBytes(projectRef, accessToken)
         if (dbUsed != null) {
           patch.sb_db_used_bytes = dbUsed
+          patch.sb_project_ref = projectRef
           patch.sb_synced_at = now
           patch.has_supabase = true
         }
@@ -664,7 +683,9 @@ export async function syncInfraForSystem(
         errors.push(`Supabase DB: ${err instanceof Error ? err.message : 'erro'}`)
       }
     } else if (integ.sb_url || integ.has_supabase) {
-      errors.push('Supabase DB: adicione SUPABASE_ACCESS_TOKEN (PAT) para medir o banco')
+      errors.push(
+        'Supabase DB: cole o Access Token (PAT sbp_...) da MESMA conta deste projeto — Account → Access Tokens',
+      )
     }
   }
 
