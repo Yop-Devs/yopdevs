@@ -1,5 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { todayIsoInCuiaba } from '@/lib/finance-daily-alerts'
+import {
+  decryptSecretsInRow,
+  encryptSecretsForStorage,
+  integrationNeedsReencrypt,
+  secretsEncryptionConfigured,
+} from '@/lib/secrets-crypto'
 import { flagsFromParsedEnv, projectRefFromSupabaseUrl } from '@/lib/system-env-parse'
 import {
   formatBytes,
@@ -120,7 +126,7 @@ export async function saveManualCredentials(
       ? input.track_resend
       : flags.has_resend || isTracked(prev?.track_resend, false)
 
-  const payload = {
+  const payload = encryptSecretsForStorage({
     system_id: systemId,
     ...flags,
     track_cloudflare,
@@ -139,6 +145,12 @@ export async function saveManualCredentials(
     updated_at: now,
     resend_daily_limit: prev?.resend_daily_limit ?? 100,
     resend_monthly_limit: prev?.resend_monthly_limit ?? 3000,
+  })
+
+  if (!secretsEncryptionConfigured()) {
+    throw new Error(
+      'SECRETS_ENCRYPTION_KEY não configurada na Vercel. Gere: openssl rand -base64 32',
+    )
   }
 
   const { error } = await yop.from('yop_admin_system_integrations').upsert(payload, { onConflict: 'system_id' })
@@ -625,7 +637,28 @@ export async function syncInfraForSystem(
   if (error) throw new Error(error.message)
   if (!row) throw new Error('Integração não encontrada. Salve as chaves no painel primeiro.')
 
-  const integ = row as SystemIntegrationRow
+  // Descriptografa secrets para uso nas APIs; migra plaintext legado se necessário
+  let integ = decryptSecretsInRow(row as SystemIntegrationRow)
+  if (integrationNeedsReencrypt(row as SystemIntegrationRow)) {
+    try {
+      await yop
+        .from('yop_admin_system_integrations')
+        .update({
+          ...encryptSecretsForStorage({
+            cf_api_token: integ.cf_api_token,
+            sb_anon_key: integ.sb_anon_key,
+            sb_service_role_key: integ.sb_service_role_key,
+            sb_access_token: integ.sb_access_token,
+            resend_api_key: integ.resend_api_key,
+          }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('system_id', systemId)
+    } catch (err) {
+      console.warn('[infra-sync] reencrypt legacy secrets failed', err)
+    }
+  }
+
   const trackCf = isTracked(integ.track_cloudflare, false)
   const trackSb = isTracked(integ.track_supabase, true)
   const trackResend = isTracked(integ.track_resend, false)
@@ -775,6 +808,54 @@ export async function syncInfraForSystem(
 
   const snapshots = await loadSnapshots(yop, systemId)
   return toPublicIntegration(finalRow, snapshots)
+}
+
+/** Criptografa em massa secrets ainda em plaintext (migração one-shot). */
+export async function reencryptAllIntegrationSecrets(yop: SupabaseClient): Promise<{
+  updated: number
+  skipped: number
+  errors: string[]
+}> {
+  if (!secretsEncryptionConfigured()) {
+    throw new Error('SECRETS_ENCRYPTION_KEY não configurada.')
+  }
+
+  const { data, error } = await yop.from('yop_admin_system_integrations').select('*')
+  if (error) throw new Error(error.message)
+
+  let updated = 0
+  let skipped = 0
+  const errors: string[] = []
+
+  for (const row of data ?? []) {
+    const typed = row as SystemIntegrationRow
+    if (!integrationNeedsReencrypt(typed)) {
+      skipped += 1
+      continue
+    }
+    try {
+      const plain = decryptSecretsInRow(typed)
+      const { error: upErr } = await yop
+        .from('yop_admin_system_integrations')
+        .update({
+          ...encryptSecretsForStorage({
+            cf_api_token: plain.cf_api_token,
+            sb_anon_key: plain.sb_anon_key,
+            sb_service_role_key: plain.sb_service_role_key,
+            sb_access_token: plain.sb_access_token,
+            resend_api_key: plain.resend_api_key,
+          }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('system_id', typed.system_id)
+      if (upErr) throw new Error(upErr.message)
+      updated += 1
+    } catch (err) {
+      errors.push(`${typed.system_id}: ${err instanceof Error ? err.message : 'erro'}`)
+    }
+  }
+
+  return { updated, skipped, errors }
 }
 
 export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
