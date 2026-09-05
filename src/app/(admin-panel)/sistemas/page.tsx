@@ -1166,7 +1166,9 @@ function InfraPanel({
                 <input type="password" value={sbAccessToken} onChange={(e) => setSbAccessToken(e.target.value)} placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'} className={credInputClass} autoComplete="new-password" />
               </CredField>
               {needsPat ? (
-                <p className="text-[10px] text-amber-700 sm:col-span-3">Cole o PAT da conta deste projeto para medir o DB.</p>
+                <p className="text-[10px] text-amber-700 sm:col-span-3">
+                  PAT: Account → Access Tokens na conta dona deste projeto (Owner/Admin), não o JWT da API.
+                </p>
               ) : null}
             </div>
           ) : null}

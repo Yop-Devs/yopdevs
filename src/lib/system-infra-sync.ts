@@ -460,11 +460,63 @@ async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): P
   ])
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const json =
+      typeof atob === 'function'
+        ? atob(pad)
+        : Buffer.from(pad, 'base64').toString('utf8')
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+/** Valida se a service_role bate com o project ref da URL (evita "signature verification failed"). */
+function assertServiceRoleMatchesProject(serviceKey: string, projectRef: string | null): void {
+  const payload = decodeJwtPayload(serviceKey)
+  if (!payload) return
+  const role = typeof payload.role === 'string' ? payload.role : ''
+  const ref = typeof payload.ref === 'string' ? payload.ref : ''
+  if (role && role !== 'service_role') {
+    throw new Error(
+      `chave é "${role}", use a service_role em Project Settings → API (não anon / não PAT)`,
+    )
+  }
+  if (projectRef && ref && ref !== projectRef) {
+    throw new Error(
+      `service_role é do projeto ${ref}, mas a URL aponta para ${projectRef} — cole URL + chave do mesmo projeto`,
+    )
+  }
+}
+
+function formatPatQueryError(status: number, body: string, projectRef: string): string {
+  if (status === 401) {
+    return `PAT inválido ou expirado. Gere outro em Account → Access Tokens (sbp_...)`
+  }
+  if (status === 403 || /necessary privileges/i.test(body)) {
+    return (
+      `PAT sem acesso ao projeto ${projectRef}. ` +
+      `Entre na conta dona desse projeto (Owner/Admin), crie um Access Token novo e cole aqui. ` +
+      `Token com escopo fino precisa de database_read.`
+    )
+  }
+  return `Supabase query: ${status} ${body.slice(0, 160)}`
+}
+
 async function runSupabaseManagementQuery(
   projectRef: string,
   accessToken: string,
   query: string,
 ): Promise<Record<string, unknown> | null> {
+  if (accessToken.startsWith('eyJ')) {
+    throw new Error('PAT inválido: você colou um JWT. Use Access Token sbp_... (Account → Access Tokens)')
+  }
+
   const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
     method: 'POST',
     headers: {
@@ -477,7 +529,7 @@ async function runSupabaseManagementQuery(
 
   const text = await res.text().catch(() => '')
   if (!res.ok) {
-    throw new Error(`Supabase query: ${res.status} ${text.slice(0, 180)}`)
+    throw new Error(formatPatQueryError(res.status, text, projectRef))
   }
 
   try {
@@ -740,12 +792,18 @@ export async function syncInfraForSystem(
       const canSbStorage = Boolean(integ.sb_url && integ.sb_service_role_key)
       if (canSbStorage) {
         try {
+          assertServiceRoleMatchesProject(integ.sb_service_role_key!, projectRef)
           const used = await measureSupabaseStorage(integ.sb_url!, integ.sb_service_role_key!)
           patch.sb_storage_used_bytes = used
           patch.sb_synced_at = now
           patch.has_supabase = true
         } catch (err) {
-          errors.push(`Supabase storage: ${err instanceof Error ? err.message : 'erro'}`)
+          const msg = err instanceof Error ? err.message : 'erro'
+          errors.push(
+            /signature verification failed/i.test(msg)
+              ? `Supabase storage: service_role não bate com a URL do projeto ${projectRef ?? '?'} — copie de novo em Settings → API`
+              : `Supabase storage: ${msg}`,
+          )
         }
       } else if (!measuredViaPat) {
         errors.push('Supabase storage: falta SUPABASE_SERVICE_ROLE_KEY ou PAT')
