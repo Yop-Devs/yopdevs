@@ -121,11 +121,16 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${n.toFixed(n >= 10 ? 0 : 1)} ${units[i]}`
 }
 
-/** Mesmo padrão do painel de Usage do Supabase (GB decimal). */
+/** Mesmo padrão do painel Cloudflare / Supabase Usage (unidades decimais). */
 export function formatGbDecimal(bytes: number | null | undefined): string {
   if (bytes == null || !Number.isFinite(bytes)) return '—'
   const gb = bytes / 1_000_000_000
-  if (gb < 0.001) return `${(bytes / 1_000_000).toFixed(0)} MB`
+  if (gb < 1) {
+    const mb = bytes / 1_000_000
+    if (mb < 0.01) return `${Math.round(bytes / 1000)} KB`
+    // Ex.: Cloudflare R2 mostra "262.37 MB"
+    return `${mb.toFixed(2)} MB`
+  }
   if (gb < 10) return `${gb.toFixed(3)} GB`
   return `${gb.toFixed(2)} GB`
 }
