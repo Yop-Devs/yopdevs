@@ -16,7 +16,6 @@ import {
 import {
   formatBytes,
   usagePct,
-  type StorageRunway,
   type SystemIntegrationPublic,
 } from '@/lib/system-infra-types'
 import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
@@ -476,7 +475,7 @@ export default function AdminSistemasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-5">
       {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Sistemas</h2>
@@ -507,142 +506,54 @@ export default function AdminSistemasPage() {
           Nenhum sistema cadastrado ainda.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((system) => {
-            const files = filesBySystem[system.id] ?? []
-            const envCount = files.filter((f) => f.kind === 'env').length
-            const accessCount = files.filter((f) => f.kind === 'access').length
-            const domainDays = daysUntil(system.domain_expires_at)
-            const logoSrc = logoSrcById[system.id] ?? null
-            const hasLogo = Boolean(logoSrc)
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="hidden border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:gap-4">
+            <span>Sistema</span>
+            <span>Uso</span>
+            <span className="text-right">Ações</span>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {filtered.map((system) => {
+              const files = filesBySystem[system.id] ?? []
+              const envCount = files.filter((f) => f.kind === 'env').length
+              const accessCount = files.filter((f) => f.kind === 'access').length
+              const domainDays = daysUntil(system.domain_expires_at)
+              const logoSrc = logoSrcById[system.id] ?? null
+              const integ = integrationsBySystem[system.id] ?? null
 
-            return (
-              <article
-                key={system.id}
-                className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
-              >
-                <div className="flex items-center justify-center border-b border-slate-100 bg-slate-950 px-4 py-5">
-                  {hasLogo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoSrc}
-                      alt={`Logo ${system.company_name}`}
-                      className="h-14 w-auto max-w-[12rem] object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
-                        if (fallback) fallback.classList.remove('hidden')
-                      }}
-                    />
-                  ) : null}
-                  <span className={`text-sm font-bold uppercase tracking-wider text-white/70 ${hasLogo ? 'hidden' : ''}`}>
-                    {system.name}
-                  </span>
-                </div>
-
-                <div className="flex flex-1 flex-col gap-3 p-4">
-                  <div className="space-y-1">
-                    <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900">
-                      {system.company_name}
-                    </h3>
-                    {system.name.trim().toLowerCase() !== system.company_name.trim().toLowerCase() ? (
-                      <p className="text-[11px] font-medium text-slate-500">{system.name}</p>
-                    ) : null}
-                    {isHttpLink(system.link) ? (
-                      <a
-                        href={system.link!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block truncate text-sm text-violet-700 hover:underline"
-                      >
-                        {system.link!.replace(/^https?:\/\//, '')}
-                      </a>
-                    ) : system.link ? (
-                      <p className="text-sm text-slate-500">{system.link}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-lg px-2 py-1 text-[11px] font-medium ${reminderTone(domainDays)}`}>
-                      {reminderLabel(domainDays, 'Domínio')}
-                      {system.domain_expires_at ? ` · ${formatDateBr(system.domain_expires_at)}` : ''}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      .env {envCount} · acessos {accessCount}
-                    </span>
-                  </div>
-
-                  <InfraPanel
-                    systemId={system.id}
-                    envCount={envCount}
-                    integ={integrationsBySystem[system.id] ?? null}
-                    draft={
-                      limitsDraft[system.id] ?? {
-                        cfGb: '10',
-                        sbDbGb: '0.5',
-                        sbStorGb: '1',
-                        resend: '100',
-                        resendMonth: '3000',
-                      }
+              return (
+                <SystemRow
+                  key={system.id}
+                  system={system}
+                  files={files}
+                  envCount={envCount}
+                  accessCount={accessCount}
+                  domainDays={domainDays}
+                  logoSrc={logoSrc}
+                  integ={integ}
+                  draft={
+                    limitsDraft[system.id] ?? {
+                      cfGb: '10',
+                      sbDbGb: '0.5',
+                      sbStorGb: '1',
+                      resend: '100',
+                      resendMonth: '3000',
                     }
-                    busy={infraBusyId === system.id}
-                    onDraftChange={(next) =>
-                      setLimitsDraft((prev) => ({ ...prev, [system.id]: next }))
-                    }
-                    onImport={() => runInfraAction(system.id, 'import')}
-                    onSync={() => runInfraAction(system.id, 'sync')}
-                    onSaveLimits={() => runInfraAction(system.id, 'limits')}
-                    onSaveCredentials={(creds) => runInfraAction(system.id, 'credentials', creds)}
-                  />
-
-                  {system.notes ? <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{system.notes}</p> : null}
-
-                  {files.length > 0 ? (
-                    <details className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                      <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                        Anexos ({files.length})
-                      </summary>
-                      <ul className="mt-2 space-y-1.5">
-                        {files.map((file) => (
-                          <li key={file.id} className="flex items-center justify-between gap-2 text-[11px]">
-                            <span className="min-w-0 truncate font-medium text-slate-700">
-                              <span className="mr-1 uppercase text-slate-400">{file.kind}</span>
-                              {file.file_name}
-                            </span>
-                            <span className="flex shrink-0 gap-2">
-                              <button type="button" onClick={() => downloadFile(file)} className="font-semibold text-violet-700 hover:underline">
-                                Baixar
-                              </button>
-                              <button type="button" onClick={() => removeFile(file)} className="font-semibold text-rose-700 hover:underline">
-                                Excluir
-                              </button>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
-
-                  <div className="mt-auto flex gap-2 border-t border-slate-100 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(system)}
-                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeSystem(system)}
-                      className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-rose-700 hover:bg-rose-50"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </div>
-              </article>
-            )
-          })}
+                  }
+                  busy={infraBusyId === system.id}
+                  onDraftChange={(next) => setLimitsDraft((prev) => ({ ...prev, [system.id]: next }))}
+                  onImport={() => runInfraAction(system.id, 'import')}
+                  onSync={() => runInfraAction(system.id, 'sync')}
+                  onSaveLimits={() => runInfraAction(system.id, 'limits')}
+                  onSaveCredentials={(creds) => runInfraAction(system.id, 'credentials', creds)}
+                  onEdit={() => openEdit(system)}
+                  onRemove={() => removeSystem(system)}
+                  onDownloadFile={downloadFile}
+                  onRemoveFile={removeFile}
+                />
+              )
+            })}
+          </ul>
         </div>
       )}
 
@@ -774,54 +685,6 @@ function providerState(
   return 'ok'
 }
 
-function runwayHint(runway: StorageRunway): string | null {
-  if (runway.used == null) return null
-  if (runway.sampleDays < 1 || runway.avgDailyGrowth == null) return null
-  if (runway.avgDailyGrowth <= 0) return 'estável'
-  if (runway.daysLeft != null) return `~${runway.daysLeft}d`
-  return `+${formatBytes(runway.avgDailyGrowth)}/d`
-}
-
-function UsageBar({
-  label,
-  used,
-  limit,
-  unit,
-  runway,
-  warn,
-}: {
-  label: string
-  used: number | null
-  limit: number
-  unit: 'bytes' | 'count'
-  runway?: StorageRunway
-  warn?: string | null
-}) {
-  const pct = usagePct(used, limit)
-  const tone =
-    pct == null ? 'bg-slate-200' : pct >= 90 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
-  const fmt = (n: number | null) =>
-    unit === 'bytes' ? formatBytes(n) : n == null ? '—' : String(n)
-  const hint = warn ?? (runway ? runwayHint(runway) : null)
-
-  return (
-    <div className="min-w-0 space-y-1">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-[11px] font-semibold text-slate-600">{label}</span>
-        <span className="shrink-0 text-[11px] tabular-nums text-slate-800">
-          {fmt(used)}
-          <span className="text-slate-400"> / {fmt(limit)}</span>
-          {pct != null ? <span className="ml-1 text-slate-500">({pct}%)</span> : null}
-        </span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
-      </div>
-      {hint ? <p className="truncate text-[10px] text-slate-400">{hint}</p> : null}
-    </div>
-  )
-}
-
 function CredField({
   label,
   saved,
@@ -849,6 +712,285 @@ function CredField({
 const credInputClass =
   'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none placeholder:text-slate-300 focus:border-slate-400'
 
+function MiniUsage({
+  label,
+  used,
+  limit,
+  unit = 'bytes',
+}: {
+  label: string
+  used: number | null
+  limit: number
+  unit?: 'bytes' | 'count'
+}) {
+  const pct = usagePct(used, limit)
+  const tone =
+    pct == null ? 'bg-slate-200' : pct >= 90 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+  const fmt = (n: number | null) =>
+    unit === 'bytes' ? formatBytes(n) : n == null ? '—' : String(n)
+
+  return (
+    <div className="min-w-[7.5rem] flex-1 space-y-1">
+      <div className="flex items-baseline justify-between gap-2 text-[10px]">
+        <span className="font-semibold text-slate-500">{label}</span>
+        <span className="tabular-nums text-slate-700">
+          {fmt(used)}
+          <span className="text-slate-400">/{fmt(limit)}</span>
+          {pct != null ? <span className="text-slate-400"> · {pct}%</span> : null}
+        </span>
+      </div>
+      <div className="h-1 overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function SystemRow({
+  system,
+  files,
+  envCount,
+  accessCount,
+  domainDays,
+  logoSrc,
+  integ,
+  draft,
+  busy,
+  onDraftChange,
+  onImport,
+  onSync,
+  onSaveLimits,
+  onSaveCredentials,
+  onEdit,
+  onRemove,
+  onDownloadFile,
+  onRemoveFile,
+}: {
+  system: AdminSystem
+  files: AdminSystemFile[]
+  envCount: number
+  accessCount: number
+  domainDays: number | null
+  logoSrc: string | null
+  integ: SystemIntegrationPublic | null
+  draft: { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string; resendMonth: string }
+  busy: boolean
+  onDraftChange: (next: {
+    cfGb: string
+    sbDbGb: string
+    sbStorGb: string
+    resend: string
+    resendMonth: string
+  }) => void
+  onImport: () => void
+  onSync: () => void
+  onSaveLimits: () => void
+  onSaveCredentials: (creds: Record<string, string | boolean>) => void
+  onEdit: () => void
+  onRemove: () => void
+  onDownloadFile: (file: AdminSystemFile) => void
+  onRemoveFile: (file: AdminSystemFile) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const hasErr = Boolean(integ?.last_error)
+  const trackingCf = integ?.track_cloudflare ?? false
+  const trackingSb = integ?.track_supabase ?? true
+  const trackingResend = integ?.track_resend ?? false
+  const cfPct = usagePct(integ?.cf_storage_used_bytes, integ?.cf_storage_limit_bytes)
+  const sbStorPct = usagePct(integ?.sb_storage_used_bytes, integ?.sb_storage_limit_bytes)
+  const sbDbPct = usagePct(integ?.sb_db_used_bytes, integ?.sb_db_limit_bytes)
+  const resPct = usagePct(integ?.resend_sent_today, integ?.resend_daily_limit)
+
+  return (
+    <li className="bg-white">
+      <div className="grid gap-3 px-4 py-3.5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950">
+            {logoSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoSrc} alt="" className="h-full w-full object-contain p-1.5" />
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-white/70">
+                {system.name.slice(0, 3)}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-sm font-bold text-slate-900">{system.company_name}</h3>
+              <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${reminderTone(domainDays)}`}>
+                {reminderLabel(domainDays, 'Domínio')}
+              </span>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+              {system.name.trim().toLowerCase() !== system.company_name.trim().toLowerCase() ? (
+                <span className="truncate">{system.name}</span>
+              ) : null}
+              {isHttpLink(system.link) ? (
+                <a
+                  href={system.link!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-violet-700 hover:underline"
+                >
+                  {system.link!.replace(/^https?:\/\//, '')}
+                </a>
+              ) : null}
+              <span className="text-slate-400">
+                .env {envCount} · acessos {accessCount}
+              </span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                  trackingCf
+                    ? badgeClass(providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr))
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {trackingCf ? 'CF' : 'CF off'}
+              </span>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                  trackingSb
+                    ? badgeClass(providerState(Boolean(integ?.has_supabase), sbStorPct ?? sbDbPct, hasErr))
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {trackingSb ? 'SB' : 'SB off'}
+              </span>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                  trackingResend
+                    ? badgeClass(providerState(Boolean(integ?.has_resend), resPct, hasErr))
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {trackingResend ? 'Resend' : 'Resend off'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-wrap gap-3">
+          {trackingCf ? (
+            <MiniUsage
+              label="R2"
+              used={integ?.cf_storage_used_bytes ?? null}
+              limit={integ?.cf_storage_limit_bytes ?? 10 * 1024 ** 3}
+            />
+          ) : null}
+          {trackingSb ? (
+            <>
+              <MiniUsage
+                label="Storage"
+                used={integ?.sb_storage_used_bytes ?? null}
+                limit={integ?.sb_storage_limit_bytes ?? 1024 ** 3}
+              />
+              <MiniUsage
+                label="DB"
+                used={integ?.sb_db_used_bytes ?? null}
+                limit={integ?.sb_db_limit_bytes ?? 512 * 1024 ** 2}
+              />
+            </>
+          ) : null}
+          {trackingResend ? (
+            <MiniUsage
+              label="E-mails"
+              used={integ?.resend_sent_month ?? null}
+              limit={integ?.resend_monthly_limit ?? 3000}
+              unit="count"
+            />
+          ) : null}
+          {!trackingCf && !trackingSb && !trackingResend ? (
+            <span className="text-[11px] text-slate-400">Nenhum provedor ativo</span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onSync}
+            className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
+          >
+            {busy ? '...' : 'Sync'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50"
+          >
+            {open ? 'Fechar' : 'Detalhes'}
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-700 hover:bg-rose-50"
+          >
+            Excluir
+          </button>
+        </div>
+      </div>
+
+      {integ?.last_error ? (
+        <p className="border-t border-rose-50 bg-rose-50/60 px-4 py-1.5 text-[10px] text-rose-700">{integ.last_error}</p>
+      ) : null}
+
+      {open ? (
+        <div className="space-y-3 border-t border-slate-100 bg-slate-50/80 px-4 py-3">
+          <InfraPanel
+            systemId={system.id}
+            envCount={envCount}
+            integ={integ}
+            draft={draft}
+            busy={busy}
+            onDraftChange={onDraftChange}
+            onImport={onImport}
+            onSync={onSync}
+            onSaveLimits={onSaveLimits}
+            onSaveCredentials={onSaveCredentials}
+            embedded
+          />
+
+          {system.notes ? <p className="text-xs text-slate-600">{system.notes}</p> : null}
+
+          {files.length > 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Anexos ({files.length})</p>
+              <ul className="mt-1.5 space-y-1">
+                {files.map((file) => (
+                  <li key={file.id} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="min-w-0 truncate font-medium text-slate-700">
+                      <span className="mr-1 uppercase text-slate-400">{file.kind}</span>
+                      {file.file_name}
+                    </span>
+                    <span className="flex shrink-0 gap-2">
+                      <button type="button" onClick={() => onDownloadFile(file)} className="font-semibold text-violet-700 hover:underline">
+                        Baixar
+                      </button>
+                      <button type="button" onClick={() => onRemoveFile(file)} className="font-semibold text-rose-700 hover:underline">
+                        Excluir
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </li>
+  )
+}
+
 function InfraPanel({
   systemId,
   envCount,
@@ -860,6 +1002,7 @@ function InfraPanel({
   onSync,
   onSaveLimits,
   onSaveCredentials,
+  embedded = false,
 }: {
   systemId: string
   envCount: number
@@ -877,13 +1020,15 @@ function InfraPanel({
   onSync: () => void
   onSaveLimits: () => void
   onSaveCredentials: (creds: Record<string, string | boolean>) => void
+  embedded?: boolean
 }) {
   void systemId
+  void onSync
   const needsSetup = !integ && envCount === 0
   const needsPat =
     Boolean(integ?.has_supabase) &&
     Boolean(integ?.missing.supabase.some((m) => m.includes('ACCESS_TOKEN')))
-  const [credsOpen, setCredsOpen] = useState(needsSetup || needsPat)
+  const [credsOpen, setCredsOpen] = useState(embedded || needsSetup || needsPat)
   const [cfAccountId, setCfAccountId] = useState('')
   const [cfApiToken, setCfApiToken] = useState('')
   const [cfBucket, setCfBucket] = useState('')
@@ -917,13 +1062,6 @@ function InfraPanel({
     integ?.track_resend,
   ])
 
-  const hasErr = Boolean(integ?.last_error)
-  const cfPct = usagePct(integ?.cf_storage_used_bytes, integ?.cf_storage_limit_bytes)
-  const sbStorPct = usagePct(integ?.sb_storage_used_bytes, integ?.sb_storage_limit_bytes)
-  const sbDbPct = usagePct(integ?.sb_db_used_bytes, integ?.sb_db_limit_bytes)
-  const resPct = usagePct(integ?.resend_sent_today, integ?.resend_daily_limit)
-  const resMonthPct = usagePct(integ?.resend_sent_month, integ?.resend_monthly_limit)
-
   const trackingCf = integ?.track_cloudflare ?? trackCf
   const trackingSb = integ?.track_supabase ?? trackSb
   const trackingResend = integ?.track_resend ?? trackResend
@@ -949,122 +1087,22 @@ function InfraPanel({
     })
   }
 
-  const providerPills = (
-    <div className="flex flex-wrap gap-1">
-      {(
-        [
-          {
-            on: trackingCf,
-            label: 'CF',
-            state: providerState(Boolean(integ?.has_cloudflare), cfPct, hasErr && Boolean(integ?.has_cloudflare)),
-          },
-          {
-            on: trackingSb,
-            label: 'SB',
-            state: providerState(
-              Boolean(integ?.has_supabase),
-              sbStorPct ?? sbDbPct,
-              hasErr && Boolean(integ?.has_supabase),
-            ),
-          },
-          {
-            on: trackingResend,
-            label: 'Resend',
-            state: providerState(
-              Boolean(integ?.has_resend),
-              resPct ?? resMonthPct,
-              hasErr && Boolean(integ?.has_resend),
-            ),
-          },
-        ] as const
-      ).map((p) => (
-        <span
-          key={p.label}
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-            p.on ? badgeClass(p.state) : 'bg-slate-100 text-slate-400'
-          }`}
-        >
-          {p.on ? p.label : `${p.label} off`}
-        </span>
-      ))}
-    </div>
-  )
-
   return (
-    <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/90 p-3">
-      <div className="flex items-center justify-between gap-2">
-        {providerPills}
-        <button
-          type="button"
-          disabled={busy || (!integ && envCount === 0)}
-          onClick={onSync}
-          className="shrink-0 rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {busy ? '...' : 'Sync'}
-        </button>
-      </div>
-
-      {(trackingCf || trackingSb || trackingResend) && (
-        <div
-          className={`grid gap-2.5 ${
-            [trackingCf, trackingSb, trackingResend].filter(Boolean).length > 1
-              ? 'sm:grid-cols-1'
-              : ''
-          }`}
-        >
-          {trackingCf ? (
-            <UsageBar
-              label="R2"
-              used={integ?.cf_storage_used_bytes ?? null}
-              limit={integ?.cf_storage_limit_bytes ?? 10 * 1024 ** 3}
-              unit="bytes"
-              runway={integ?.runway.cloudflare}
-            />
-          ) : null}
-
-          {trackingSb ? (
-            <div className="grid grid-cols-2 gap-2.5">
-              <UsageBar
-                label="Storage"
-                used={integ?.sb_storage_used_bytes ?? null}
-                limit={integ?.sb_storage_limit_bytes ?? 1024 ** 3}
-                unit="bytes"
-                runway={integ?.runway.sb_storage}
-              />
-              <UsageBar
-                label="DB"
-                used={integ?.sb_db_used_bytes ?? null}
-                limit={integ?.sb_db_limit_bytes ?? 512 * 1024 ** 2}
-                unit="bytes"
-                runway={integ?.runway.sb_db}
-                warn={needsPat ? 'falta PAT' : null}
-              />
-            </div>
-          ) : null}
-
-          {trackingResend ? (
-            <div className="grid grid-cols-2 gap-2.5">
-              <UsageBar
-                label="E-mails hoje"
-                used={integ?.resend_sent_today ?? null}
-                limit={integ?.resend_daily_limit ?? 100}
-                unit="count"
-              />
-              <UsageBar
-                label="E-mails mês"
-                used={integ?.resend_sent_month ?? null}
-                limit={integ?.resend_monthly_limit ?? 3000}
-                unit="count"
-              />
-            </div>
-          ) : null}
+    <div className={embedded ? 'space-y-3' : 'space-y-3 rounded-xl border border-slate-100 bg-slate-50/90 p-3'}>
+      {!embedded ? (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1">
+            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${trackingCf ? badgeClass('ok') : 'bg-slate-100 text-slate-400'}`}>
+              {trackingCf ? 'CF' : 'CF off'}
+            </span>
+            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${trackingSb ? badgeClass('ok') : 'bg-slate-100 text-slate-400'}`}>
+              {trackingSb ? 'SB' : 'SB off'}
+            </span>
+            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${trackingResend ? badgeClass('ok') : 'bg-slate-100 text-slate-400'}`}>
+              {trackingResend ? 'Resend' : 'Resend off'}
+            </span>
+          </div>
         </div>
-      )}
-
-      {integ?.last_error ? (
-        <p className="line-clamp-2 text-[10px] leading-snug text-rose-600" title={integ.last_error}>
-          {integ.last_error}
-        </p>
       ) : null}
 
       <details
@@ -1094,9 +1132,7 @@ function InfraPanel({
                 type="button"
                 onClick={() => t.set(!t.checked)}
                 className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-                  t.checked
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  t.checked ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
                 {t.label}
@@ -1105,103 +1141,47 @@ function InfraPanel({
           </div>
 
           {trackCf ? (
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-3">
               <CredField label="Account ID">
-                <input
-                  value={cfAccountId}
-                  onChange={(e) => setCfAccountId(e.target.value)}
-                  placeholder="Account ID"
-                  className={credInputClass}
-                  autoComplete="off"
-                />
+                <input value={cfAccountId} onChange={(e) => setCfAccountId(e.target.value)} placeholder="Account ID" className={credInputClass} autoComplete="off" />
               </CredField>
               <CredField label="API Token" saved={integ?.secrets.cf_api_token}>
-                <input
-                  type="password"
-                  value={cfApiToken}
-                  onChange={(e) => setCfApiToken(e.target.value)}
-                  placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token'}
-                  className={credInputClass}
-                  autoComplete="new-password"
-                />
+                <input type="password" value={cfApiToken} onChange={(e) => setCfApiToken(e.target.value)} placeholder={integ?.secrets.cf_api_token ? '••••••••' : 'Token'} className={credInputClass} autoComplete="new-password" />
               </CredField>
               <CredField label="Bucket R2">
-                <input
-                  value={cfBucket}
-                  onChange={(e) => setCfBucket(e.target.value)}
-                  placeholder="bucket"
-                  className={credInputClass}
-                  autoComplete="off"
-                />
+                <input value={cfBucket} onChange={(e) => setCfBucket(e.target.value)} placeholder="bucket" className={credInputClass} autoComplete="off" />
               </CredField>
             </div>
           ) : null}
 
           {trackSb ? (
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-3">
               <CredField label="Project URL">
-                <input
-                  value={sbUrl}
-                  onChange={(e) => setSbUrl(e.target.value)}
-                  placeholder="https://xxxx.supabase.co"
-                  className={credInputClass}
-                  autoComplete="off"
-                />
+                <input value={sbUrl} onChange={(e) => setSbUrl(e.target.value)} placeholder="https://xxxx.supabase.co" className={credInputClass} autoComplete="off" />
               </CredField>
               <CredField label="Service Role" saved={integ?.secrets.sb_service_role_key}>
-                <input
-                  type="password"
-                  value={sbServiceKey}
-                  onChange={(e) => setSbServiceKey(e.target.value)}
-                  placeholder={integ?.secrets.sb_service_role_key ? '••••••••' : 'eyJ...'}
-                  className={credInputClass}
-                  autoComplete="new-password"
-                />
+                <input type="password" value={sbServiceKey} onChange={(e) => setSbServiceKey(e.target.value)} placeholder={integ?.secrets.sb_service_role_key ? '••••••••' : 'eyJ...'} className={credInputClass} autoComplete="new-password" />
               </CredField>
               <CredField label="PAT (DB)" saved={integ?.secrets.sb_access_token}>
-                <input
-                  type="password"
-                  value={sbAccessToken}
-                  onChange={(e) => setSbAccessToken(e.target.value)}
-                  placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'}
-                  className={credInputClass}
-                  autoComplete="new-password"
-                />
+                <input type="password" value={sbAccessToken} onChange={(e) => setSbAccessToken(e.target.value)} placeholder={integ?.secrets.sb_access_token ? '••••••••' : 'sbp_...'} className={credInputClass} autoComplete="new-password" />
               </CredField>
               {needsPat ? (
-                <p className="text-[10px] text-amber-700">Cole o PAT da conta deste projeto para medir o DB.</p>
+                <p className="text-[10px] text-amber-700 sm:col-span-3">Cole o PAT da conta deste projeto para medir o DB.</p>
               ) : null}
             </div>
           ) : null}
 
           {trackResend ? (
             <CredField label="Resend API Key" saved={integ?.secrets.resend_api_key}>
-              <input
-                type="password"
-                value={resendKey}
-                onChange={(e) => setResendKey(e.target.value)}
-                placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'}
-                className={credInputClass}
-                autoComplete="new-password"
-              />
+              <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} placeholder={integ?.secrets.resend_api_key ? '••••••••' : 're_...'} className={credInputClass} autoComplete="new-password" />
             </CredField>
           ) : null}
 
           <div className="flex gap-1.5">
-            <button
-              type="button"
-              disabled={busy || envCount === 0}
-              onClick={onImport}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-            >
+            <button type="button" disabled={busy || envCount === 0} onClick={onImport} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-50">
               .env
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={submitCredentials}
-              className="flex-1 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60"
-            >
+            <button type="button" disabled={busy} onClick={submitCredentials} className="flex-1 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60">
               {busy ? '...' : 'Salvar chaves'}
             </button>
           </div>
@@ -1216,49 +1196,24 @@ function InfraPanel({
           </span>
         </summary>
         <div className="space-y-2 border-t border-slate-100 px-2.5 py-2.5">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <CredField label="R2 GB">
-              <input
-                value={draft.cfGb}
-                onChange={(e) => onDraftChange({ ...draft, cfGb: e.target.value })}
-                className={credInputClass}
-              />
+              <input value={draft.cfGb} onChange={(e) => onDraftChange({ ...draft, cfGb: e.target.value })} className={credInputClass} />
             </CredField>
             <CredField label="SB DB GB">
-              <input
-                value={draft.sbDbGb}
-                onChange={(e) => onDraftChange({ ...draft, sbDbGb: e.target.value })}
-                className={credInputClass}
-              />
+              <input value={draft.sbDbGb} onChange={(e) => onDraftChange({ ...draft, sbDbGb: e.target.value })} className={credInputClass} />
             </CredField>
             <CredField label="SB Storage GB">
-              <input
-                value={draft.sbStorGb}
-                onChange={(e) => onDraftChange({ ...draft, sbStorGb: e.target.value })}
-                className={credInputClass}
-              />
+              <input value={draft.sbStorGb} onChange={(e) => onDraftChange({ ...draft, sbStorGb: e.target.value })} className={credInputClass} />
             </CredField>
             <CredField label="Resend/dia">
-              <input
-                value={draft.resend}
-                onChange={(e) => onDraftChange({ ...draft, resend: e.target.value })}
-                className={credInputClass}
-              />
+              <input value={draft.resend} onChange={(e) => onDraftChange({ ...draft, resend: e.target.value })} className={credInputClass} />
             </CredField>
             <CredField label="Resend/mês">
-              <input
-                value={draft.resendMonth}
-                onChange={(e) => onDraftChange({ ...draft, resendMonth: e.target.value })}
-                className={credInputClass}
-              />
+              <input value={draft.resendMonth} onChange={(e) => onDraftChange({ ...draft, resendMonth: e.target.value })} className={credInputClass} />
             </CredField>
           </div>
-          <button
-            type="button"
-            disabled={busy || !integ}
-            onClick={onSaveLimits}
-            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
+          <button type="button" disabled={busy || !integ} onClick={onSaveLimits} className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 disabled:opacity-60">
             Salvar limites
           </button>
         </div>
