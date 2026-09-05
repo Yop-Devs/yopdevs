@@ -405,9 +405,11 @@ export default function AdminSistemasPage() {
         headers,
         body: JSON.stringify(body),
       })
-      const json = (await res.json()) as {
+      const raw = await res.text()
+      let json: {
         integration?: SystemIntegrationPublic
         error?: string
+        warning?: string
         report?: {
           keyCount: number
           keyNames: string[]
@@ -416,8 +418,16 @@ export default function AdminSistemasPage() {
           flags?: { has_supabase?: boolean; has_cloudflare?: boolean; has_resend?: boolean }
         }
       }
-      if (!res.ok) throw new Error(json.error || 'Falha na operação de infra.')
+      try {
+        json = raw ? (JSON.parse(raw) as typeof json) : {}
+      } catch {
+        throw new Error(
+          `Resposta inválida do servidor (HTTP ${res.status}). ${raw.slice(0, 120).replace(/\s+/g, ' ')}`,
+        )
+      }
+      if (!res.ok) throw new Error(json.error || `Falha na operação de infra (HTTP ${res.status}).`)
       if (json.integration) applyIntegration(json.integration)
+      if (json.warning) toast.message(json.warning)
 
       if (action === 'import' && json.report) {
         const m = json.report.matched

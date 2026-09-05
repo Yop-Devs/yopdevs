@@ -206,7 +206,8 @@ function pickFuzzy(map: Record<string, string>, kind: 'url' | 'anon' | 'service'
 export function projectRefFromSupabaseUrl(url: string | null): string | null {
   if (!url) return null
   try {
-    const host = new URL(url).hostname
+    const normalized = url.trim().replace(/\.supabase\.cc\b/gi, '.supabase.co')
+    const host = new URL(normalized).hostname
     const m = host.match(/^([a-z0-9]+)\.supabase\.co$/i)
     return m?.[1] ?? null
   } catch {
@@ -216,7 +217,10 @@ export function projectRefFromSupabaseUrl(url: string | null): string | null {
 
 export function parseSystemEnv(content: string): ParsedSystemEnv {
   const map = parseEnvText(content)
-  const sb_url = pick(map, ALIASES.sb_url) || pickFuzzy(map, 'url')
+  const rawUrl = pick(map, ALIASES.sb_url) || pickFuzzy(map, 'url')
+  const sb_url = rawUrl
+    ? rawUrl.trim().replace(/\.supabase\.cc\b/gi, '.supabase.co').replace(/\/+$/, '')
+    : null
   return {
     cf_account_id: pick(map, ALIASES.cf_account_id),
     cf_api_token: pick(map, ALIASES.cf_api_token),

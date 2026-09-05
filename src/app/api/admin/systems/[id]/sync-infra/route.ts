@@ -135,8 +135,19 @@ export async function POST(request: Request, ctx: Ctx) {
 
       const shouldSync = body.sync_after !== false
       if (shouldSync) {
-        const synced = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
-        return NextResponse.json({ ok: true, integration: synced })
+        try {
+          const synced = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
+          return NextResponse.json({ ok: true, integration: synced })
+        } catch (syncErr) {
+          // Chaves já foram salvas — não devolve 500 HTML/timeout confuso
+          const msg = syncErr instanceof Error ? syncErr.message : 'Falha ao medir uso'
+          const fallback = await getPublicIntegration(yop, systemId).catch(() => integration)
+          return NextResponse.json({
+            ok: true,
+            integration: fallback,
+            warning: `Chaves salvas, mas a sincronização falhou: ${msg}`,
+          })
+        }
       }
 
       return NextResponse.json({ ok: true, integration })

@@ -72,7 +72,7 @@ export async function importEnvForSystem(
     cf_account_id: parsed.cf_account_id ?? prev?.cf_account_id ?? null,
     cf_api_token: parsed.cf_api_token ?? prev?.cf_api_token ?? null,
     cf_r2_bucket: parsed.cf_r2_bucket ?? prev?.cf_r2_bucket ?? null,
-    sb_url: parsed.sb_url ?? prev?.sb_url ?? null,
+    sb_url: normalizeSupabaseUrl(parsed.sb_url ?? prev?.sb_url ?? null),
     sb_anon_key: parsed.sb_anon_key ?? prev?.sb_anon_key ?? null,
     sb_service_role_key: parsed.sb_service_role_key ?? prev?.sb_service_role_key ?? null,
     sb_project_ref: parsed.sb_project_ref ?? prev?.sb_project_ref ?? null,
@@ -139,6 +139,22 @@ function cleanText(v: unknown): string | null {
   return t
 }
 
+/** Corrige typos comuns (ex.: .supabase.cc) e remove barra final. */
+export function normalizeSupabaseUrl(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null
+  let u = url.trim().replace(/\/+$/, '')
+  u = u.replace(/\.supabase\.cc\b/gi, '.supabase.co')
+  try {
+    const parsed = new URL(u)
+    if (!parsed.hostname.toLowerCase().endsWith('.supabase.co')) {
+      // ainda aceita; projectRefFromSupabaseUrl valida o ref
+    }
+    return `${parsed.protocol}//${parsed.host}`
+  } catch {
+    return u
+  }
+}
+
 /** Salva credenciais digitadas no painel (sem .env). Campos vazios / •••• mantêm o valor atual. */
 export async function saveManualCredentials(
   yop: SupabaseClient,
@@ -160,7 +176,7 @@ export async function saveManualCredentials(
     ? null
     : cleanText(input.cf_api_token) ?? prev?.cf_api_token ?? null
 
-  const sb_url = cleanText(input.sb_url) ?? prev?.sb_url ?? null
+  const sb_url = normalizeSupabaseUrl(cleanText(input.sb_url) ?? prev?.sb_url ?? null)
   const sb_anon_key = input.clear_sb_anon_key
     ? null
     : cleanText(input.sb_anon_key) ?? prev?.sb_anon_key ?? null
@@ -440,17 +456,18 @@ async function measureSupabaseDbBytes(
 ): Promise<number | null> {
   if (!projectRef || !accessToken) return null
 
-  const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: 'select pg_database_size(current_database())::bigint as size;',
-      read_only: true,
-    }),
-  })
+      const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: 'select pg_database_size(current_database())::bigint as size;',
+          read_only: true,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      })
 
   const text = await res.text().catch(() => '')
   if (!res.ok) {
