@@ -50,6 +50,7 @@ export async function GET(request: Request) {
   const { data, error } = await yop
     .from('yop_admin_mailbox_threads')
     .select('*')
+    .order('starred', { ascending: false })
     .order('last_message_at', { ascending: false })
     .limit(100)
 

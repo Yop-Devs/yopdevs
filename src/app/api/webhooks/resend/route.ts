@@ -25,24 +25,25 @@ export async function POST(request: Request) {
   const rawBody = await request.text()
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim()
 
-  if (secret) {
-    try {
-      const resend = getResendClient() || new Resend(process.env.RESEND_API_KEY || 're_dummy')
-      resend.webhooks.verify({
-        payload: rawBody,
-        headers: {
-          id: request.headers.get('svix-id') || '',
-          timestamp: request.headers.get('svix-timestamp') || '',
-          signature: request.headers.get('svix-signature') || '',
-        },
-        webhookSecret: secret,
-      })
-    } catch (err) {
-      console.error('[resend-webhook] invalid signature', err)
-      return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
-    }
-  } else {
-    console.warn('[resend-webhook] RESEND_WEBHOOK_SECRET ausente — aceitando sem verificação')
+  if (!secret) {
+    console.error('[resend-webhook] RESEND_WEBHOOK_SECRET ausente — rejeitando (fail-closed)')
+    return NextResponse.json({ error: 'Webhook não configurado.' }, { status: 503 })
+  }
+
+  try {
+    const resend = getResendClient() || new Resend(process.env.RESEND_API_KEY || 're_dummy')
+    resend.webhooks.verify({
+      payload: rawBody,
+      headers: {
+        id: request.headers.get('svix-id') || '',
+        timestamp: request.headers.get('svix-timestamp') || '',
+        signature: request.headers.get('svix-signature') || '',
+      },
+      webhookSecret: secret,
+    })
+  } catch (err) {
+    console.error('[resend-webhook] invalid signature', err)
+    return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
   }
 
   let event: ResendEvent

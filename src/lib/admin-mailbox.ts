@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sendTelegramAlert } from '@/lib/telegram'
 
 export type MailboxAttachment = {
   id?: string
@@ -36,6 +37,7 @@ export type MailboxThread = {
   participants: string[]
   last_message_at: string
   unread_count: number
+  starred: boolean
   created_at: string
   updated_at: string
 }
@@ -165,15 +167,22 @@ export async function syncReceivedFromResend(
   for (const item of json.data ?? []) {
     if (!item.id) continue
     try {
-      const result = await ingestInboundEmail(yop, {
-        email_id: item.id,
-        created_at: item.created_at,
-        from: item.from,
-        to: item.to,
-        cc: item.cc,
-        subject: item.subject,
-        message_id: item.message_id,
-      })
+      const createdAtMs = item.created_at ? Date.parse(item.created_at) : NaN
+      const isRecent =
+        Number.isFinite(createdAtMs) && Date.now() - createdAtMs < 2 * 60 * 60 * 1000
+      const result = await ingestInboundEmail(
+        yop,
+        {
+          email_id: item.id,
+          created_at: item.created_at,
+          from: item.from,
+          to: item.to,
+          cc: item.cc,
+          subject: item.subject,
+          message_id: item.message_id,
+        },
+        { notifyTelegram: isRecent },
+      )
       if (result.created) imported += 1
       else skipped += 1
     } catch (err) {
@@ -221,6 +230,7 @@ async function findThreadId(
 export async function ingestInboundEmail(
   yop: SupabaseClient,
   payload: ReceivedEmailPayload,
+  opts?: { notifyTelegram?: boolean },
 ): Promise<{ threadId: string; messageId: string; created: boolean }> {
   const existing = await yop
     .from('yop_admin_mailbox_messages')
@@ -371,7 +381,43 @@ export async function ingestInboundEmail(
     }
   }
 
+  if (opts?.notifyTelegram !== false) {
+    const preview = (detail?.text || subject || '').replace(/\s+/g, ' ').trim().slice(0, 180)
+    const fromLabel = fromName ? `${fromName} <${fromEmail}>` : fromEmail || 'desconhecido'
+    void sendTelegramAlert(
+      [
+        '✉️ Novo e-mail na Yop',
+        `De: ${fromLabel}`,
+        `Assunto: ${subject}`,
+        preview ? `Prévia: ${preview}` : null,
+        'Abra a caixa em admin.yopdevs.com.br/emails',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    ).catch((err) => console.warn('[mailbox] telegram notify failed', err))
+  }
+
   return { threadId, messageId: message.id as string, created: true }
+}
+
+export async function setThreadStarred(
+  yop: SupabaseClient,
+  threadId: string,
+  starred: boolean,
+): Promise<MailboxThread> {
+  const { data, error } = await yop
+    .from('yop_admin_mailbox_threads')
+    .update({ starred, updated_at: new Date().toISOString() })
+    .eq('id', threadId)
+    .select('*')
+    .single()
+  if (error) throw new Error(error.message)
+  return data as MailboxThread
+}
+
+export async function deleteThread(yop: SupabaseClient, threadId: string): Promise<void> {
+  const { error } = await yop.from('yop_admin_mailbox_threads').delete().eq('id', threadId)
+  if (error) throw new Error(error.message)
 }
 
 export async function replyToThread(
@@ -430,7 +476,10 @@ export async function replyToThread(
   const text = input.text.trim()
   if (!text) throw new Error('Mensagem vazia.')
 
-  const html = input.html || `<p>${escapeHtml(text).replace(/\n/g, '<br/>')}</p>`
+  const { text: outboundText, html: outboundHtml } = withMailboxSignature({
+    text,
+    html: input.html,
+  })
 
   const headers: Record<string, string> = {}
   if (inReplyTo) {
@@ -442,8 +491,8 @@ export async function replyToThread(
     from: mailboxFromAddress(),
     to,
     subject,
-    html,
-    text,
+    html: outboundHtml,
+    text: outboundText,
     headers: Object.keys(headers).length ? headers : undefined,
     attachments: input.attachments?.map((a) => ({
       filename: a.filename,
@@ -467,8 +516,8 @@ export async function replyToThread(
       to_emails: to,
       cc_emails: [],
       subject,
-      text_body: text,
-      html_body: html,
+      text_body: outboundText,
+      html_body: outboundHtml,
       message_id: sentId ? `<${sentId}@resend.dev>` : null,
       in_reply_to: inReplyTo,
       attachments: (input.attachments ?? []).map((a) => ({
@@ -525,7 +574,10 @@ export async function composeOutboundEmail(
   const text = input.text.trim()
   if (!text) throw new Error('Mensagem vazia.')
 
-  const html = input.html || `<p>${escapeHtml(text).replace(/\n/g, '<br/>')}</p>`
+  const { text: outboundText, html: outboundHtml } = withMailboxSignature({
+    text,
+    html: input.html,
+  })
   const fromEmail = extractEmail(mailboxFromAddress())
   const now = new Date().toISOString()
   const participants = [...new Set([fromEmail, ...to].filter(Boolean))]
@@ -534,8 +586,8 @@ export async function composeOutboundEmail(
     from: mailboxFromAddress(),
     to,
     subject,
-    html,
-    text,
+    html: outboundHtml,
+    text: outboundText,
     attachments: input.attachments?.map((a) => ({
       filename: a.filename,
       content: a.content,
@@ -572,8 +624,8 @@ export async function composeOutboundEmail(
       to_emails: to,
       cc_emails: [],
       subject,
-      text_body: text,
-      html_body: html,
+      text_body: outboundText,
+      html_body: outboundHtml,
       message_id: sentId ? `<${sentId}@resend.dev>` : null,
       in_reply_to: null,
       attachments: (input.attachments ?? []).map((a) => ({
@@ -602,4 +654,77 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
+}
+
+function siteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || 'https://yopdevs.com.br').replace(/\/$/, '')
+}
+
+const SIGNATURE_MARKER = '<!--yop-mailbox-signature-->'
+
+/** Assinatura HTML profissional (logo + CEO). */
+export function mailboxSignatureHtml(): string {
+  const origin = siteOrigin()
+  const logoUrl = `${origin}/yop-logo.png`
+  const email = extractEmail(mailboxFromAddress()) || 'gabrielcarrara@yopdevs.com.br'
+  return `${SIGNATURE_MARKER}
+<table cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td style="padding:0 16px 0 0;vertical-align:middle;border-right:2px solid #0f172a;">
+      <a href="${origin}" style="text-decoration:none;">
+        <img src="${logoUrl}" alt="YOP Devs" width="88" height="88" style="display:block;width:88px;height:88px;border:0;border-radius:12px;background:#000000;" />
+      </a>
+    </td>
+    <td style="padding:0 0 0 16px;vertical-align:middle;">
+      <p style="margin:0 0 2px;font-size:15px;line-height:1.3;font-weight:700;color:#0f172a;">Gabriel Carrara</p>
+      <p style="margin:0 0 10px;font-size:12px;line-height:1.3;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#2563eb;">CEO · YOP Devs</p>
+      <p style="margin:0 0 2px;font-size:12px;line-height:1.45;color:#475569;">
+        <a href="mailto:${email}" style="color:#475569;text-decoration:none;">${email}</a>
+      </p>
+      <p style="margin:0 0 2px;font-size:12px;line-height:1.45;color:#475569;">
+        <a href="${origin}" style="color:#2563eb;text-decoration:none;">yopdevs.com.br</a>
+        <span style="color:#cbd5e1;"> · </span>
+        Desenvolvimento de sistemas e sites
+      </p>
+    </td>
+  </tr>
+</table>`
+}
+
+export function mailboxSignatureText(): string {
+  const origin = siteOrigin()
+  const email = extractEmail(mailboxFromAddress()) || 'gabrielcarrara@yopdevs.com.br'
+  return [
+    '',
+    '--',
+    'Gabriel Carrara',
+    'CEO · YOP Devs',
+    email,
+    origin,
+    'Desenvolvimento de sistemas e sites',
+  ].join('\n')
+}
+
+function bodyAlreadyHasSignature(html: string, text: string): boolean {
+  return html.includes(SIGNATURE_MARKER) || /CEO\s*[·•|]\s*YOP Devs/i.test(text)
+}
+
+/** Anexa a assinatura YOP ao corpo outbound (HTML + texto). */
+export function withMailboxSignature(input: {
+  text: string
+  html?: string
+}): { text: string; html: string } {
+  const textCore = input.text.trim()
+  const htmlCore =
+    input.html?.trim() ||
+    `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#0f172a;">${escapeHtml(textCore).replace(/\n/g, '<br/>')}</p>`
+
+  if (bodyAlreadyHasSignature(htmlCore, textCore)) {
+    return { text: textCore, html: htmlCore }
+  }
+
+  return {
+    text: `${textCore}${mailboxSignatureText()}`,
+    html: `${htmlCore}${mailboxSignatureHtml()}`,
+  }
 }

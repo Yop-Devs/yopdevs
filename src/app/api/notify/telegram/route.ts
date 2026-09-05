@@ -3,6 +3,7 @@ import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
+/** Só header x-notify-secret ou Authorization Bearer — sem ?secret= (evita leak em logs). */
 function isAuthorized(request: Request): boolean {
   const secret = process.env.TELEGRAM_NOTIFY_SECRET?.trim()
   if (!secret) return false
@@ -10,9 +11,10 @@ function isAuthorized(request: Request): boolean {
   const header = request.headers.get('x-notify-secret')?.trim()
   if (header && header === secret) return true
 
-  const url = new URL(request.url)
-  const query = url.searchParams.get('secret')?.trim()
-  return Boolean(query && query === secret)
+  const auth = request.headers.get('authorization')?.trim()
+  if (auth === `Bearer ${secret}`) return true
+
+  return false
 }
 
 /** POST { "text": "..." } + header x-notify-secret */
@@ -38,17 +40,10 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true })
 }
 
-/** GET ?secret=...&text=... — útil para teste rápido no navegador */
-export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-  }
-
-  const text = new URL(request.url).searchParams.get('text') ?? ''
-  const result = await sendTelegramAlert(text || 'Teste YOP Devs — alerta Telegram ok')
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status ?? 500 })
-  }
-
-  return NextResponse.json({ ok: true })
+/** GET desabilitado — use POST com header de secret. */
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Use POST com header x-notify-secret.' },
+    { status: 405 },
+  )
 }

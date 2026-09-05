@@ -40,10 +40,13 @@ async function handle(request: Request) {
   const xSignature = request.headers.get('x-signature')
   const xRequestId = request.headers.get('x-request-id')
 
-  if (
-    process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim() &&
-    !verifyMpWebhookSignature({ xSignature, xRequestId, dataId })
-  ) {
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim()
+  if (!webhookSecret) {
+    console.error('[mp-webhook] MERCADOPAGO_WEBHOOK_SECRET ausente — rejeitando (fail-closed)')
+    return NextResponse.json({ error: 'Webhook não configurado.' }, { status: 503 })
+  }
+
+  if (!verifyMpWebhookSignature({ xSignature, xRequestId, dataId })) {
     return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
   }
 
@@ -57,8 +60,8 @@ async function handle(request: Request) {
 
   const supabase = getSupabaseServiceRole()
   if (!supabase) {
-    console.error('[mp-webhook] SUPABASE_SERVICE_ROLE_KEY ausente; não foi possível persistir status.')
-    return NextResponse.json({ ok: true, persisted: false })
+    console.error('[mp-webhook] SUPABASE_SERVICE_ROLE_KEY ausente')
+    return NextResponse.json({ error: 'Serviço indisponível.' }, { status: 503 })
   }
 
   try {

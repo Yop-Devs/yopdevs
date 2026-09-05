@@ -26,8 +26,9 @@ function isAuthorized(request: Request): boolean {
   const header = request.headers.get('x-notify-secret')?.trim()
   if (header && header === notifySecret) return true
 
-  const query = new URL(request.url).searchParams.get('secret')?.trim()
-  return Boolean(query && query === notifySecret)
+  if (auth === `Bearer ${notifySecret}`) return true
+
+  return false
 }
 
 async function runFinanceAlerts() {
