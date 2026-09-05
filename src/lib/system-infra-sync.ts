@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { ADMIN_SYSTEM_BUCKET } from '@/lib/admin-systems'
 import { todayIsoInCuiaba } from '@/lib/finance-daily-alerts'
-import { flagsFromParsedEnv, parseSystemEnv, projectRefFromSupabaseUrl, decodeEnvBuffer, buildEnvParseReport, type EnvParseReport, type ParsedSystemEnv } from '@/lib/system-env-parse'
+import { projectRefFromSupabaseUrl } from '@/lib/system-env-parse'
 import {
   formatBytes,
   isTracked,
@@ -15,103 +14,6 @@ import { sendTelegramAlert } from '@/lib/telegram'
 
 export type { SystemIntegrationPublic, SystemIntegrationRow }
 export { formatBytes, toPublicIntegration, usagePct }
-
-async function downloadLatestEnv(
-  yop: SupabaseClient,
-  systemId: string,
-): Promise<{ content: string; fileName: string } | null> {
-  const { data: files, error } = await yop
-    .from('yop_admin_system_files')
-    .select('file_path, file_name, kind, created_at')
-    .eq('system_id', systemId)
-    .order('created_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
-  if (!files?.length) return null
-
-  // Prefere kind=env; senão arquivo cujo nome parece .env
-  const file =
-    files.find((f) => f.kind === 'env') ||
-    files.find((f) => /\.env/i.test(f.file_name || '') || /^env/i.test(f.file_name || '')) ||
-    null
-
-  if (!file?.file_path) return null
-
-  const { data: blob, error: dlError } = await yop.storage.from(ADMIN_SYSTEM_BUCKET).download(file.file_path)
-  if (dlError || !blob) throw new Error(dlError?.message || 'Falha ao baixar .env')
-  const buf = Buffer.from(await blob.arrayBuffer())
-  const content = decodeEnvBuffer(buf)
-  return { content, fileName: file.file_name }
-}
-
-export async function importEnvForSystem(
-  yop: SupabaseClient,
-  systemId: string,
-): Promise<{
-  parsed: ParsedSystemEnv
-  flags: ReturnType<typeof flagsFromParsedEnv>
-  report: EnvParseReport
-}> {
-  const downloaded = await downloadLatestEnv(yop, systemId)
-  if (!downloaded) {
-    throw new Error('Nenhum arquivo .env anexado a este sistema.')
-  }
-
-  const { data: existing } = await yop
-    .from('yop_admin_system_integrations')
-    .select('*')
-    .eq('system_id', systemId)
-    .maybeSingle()
-
-  const report = buildEnvParseReport(downloaded.content, downloaded.fileName)
-  const parsed = parseSystemEnv(downloaded.content)
-  const now = new Date().toISOString()
-  const prev = (existing ?? null) as SystemIntegrationRow | null
-
-  const merged = {
-    cf_account_id: parsed.cf_account_id ?? prev?.cf_account_id ?? null,
-    cf_api_token: parsed.cf_api_token ?? prev?.cf_api_token ?? null,
-    cf_r2_bucket: parsed.cf_r2_bucket ?? prev?.cf_r2_bucket ?? null,
-    sb_url: normalizeSupabaseUrl(parsed.sb_url ?? prev?.sb_url ?? null),
-    sb_anon_key: parsed.sb_anon_key ?? prev?.sb_anon_key ?? null,
-    sb_service_role_key: parsed.sb_service_role_key ?? prev?.sb_service_role_key ?? null,
-    sb_project_ref: parsed.sb_project_ref ?? prev?.sb_project_ref ?? null,
-    // Não apaga secrets já salvos se o .env do cliente não tiver essas chaves
-    sb_access_token: parsed.sb_access_token ?? prev?.sb_access_token ?? null,
-    resend_api_key: parsed.resend_api_key ?? prev?.resend_api_key ?? null,
-  }
-
-  const flags = flagsFromParsedEnv(merged)
-
-  // Só liga tracking se achou credenciais; se não achou, mantém o que o usuário definiu (ou off)
-  const track_cloudflare = flags.has_cloudflare ? true : Boolean(prev?.track_cloudflare)
-  const track_supabase = flags.has_supabase
-    ? true
-    : prev?.track_supabase != null
-      ? Boolean(prev.track_supabase)
-      : true
-  const track_resend = flags.has_resend ? true : Boolean(prev?.track_resend)
-
-  const payload = {
-    system_id: systemId,
-    ...flags,
-    track_cloudflare,
-    track_supabase,
-    track_resend,
-    ...merged,
-    env_parsed_at: now,
-    last_error:
-      report.hints.length && !flags.has_supabase && !flags.has_cloudflare && !flags.has_resend
-        ? report.hints.join(' | ')
-        : null,
-    updated_at: now,
-  }
-
-  const { error } = await yop.from('yop_admin_system_integrations').upsert(payload, { onConflict: 'system_id' })
-  if (error) throw new Error(error.message)
-
-  return { parsed, flags, report }
-}
 
 export type ManualCredentialsInput = {
   cf_account_id?: string | null
@@ -697,27 +599,9 @@ export async function getPublicIntegration(
 export async function syncInfraForSystem(
   yop: SupabaseClient,
   systemId: string,
-  options?: { importEnvFirst?: boolean },
 ): Promise<SystemIntegrationPublic> {
   const errors: string[] = []
-
-  // Só tenta .env se pedido e se existir arquivo anexado
-  if (options?.importEnvFirst !== false) {
-    try {
-      const downloaded = await downloadLatestEnv(yop, systemId)
-      if (downloaded) {
-        await importEnvForSystem(yop, systemId)
-      }
-    } catch (err) {
-      const { data: existing } = await yop
-        .from('yop_admin_system_integrations')
-        .select('system_id')
-        .eq('system_id', systemId)
-        .maybeSingle()
-      if (!existing) throw err
-      errors.push(err instanceof Error ? err.message : 'Falha ao importar .env')
-    }
-  }
+  // .env é só anexo — chaves vêm do painel. Nunca reimportar no sync (sobrescrevia URL/PAT).
 
   const { data: row, error } = await yop
     .from('yop_admin_system_integrations')
@@ -726,7 +610,7 @@ export async function syncInfraForSystem(
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  if (!row) throw new Error('Integração não encontrada. Anexe um .env e importe.')
+  if (!row) throw new Error('Integração não encontrada. Salve as chaves no painel primeiro.')
 
   const integ = row as SystemIntegrationRow
   const trackCf = isTracked(integ.track_cloudflare, false)
@@ -894,7 +778,7 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
 
   for (const system of systems ?? []) {
     try {
-      const pub = await syncInfraForSystem(yop, system.id, { importEnvFirst: true })
+      const pub = await syncInfraForSystem(yop, system.id)
       synced += 1
       const label = system.company_name || system.name
 

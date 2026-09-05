@@ -378,7 +378,7 @@ export default function AdminSistemasPage() {
 
   async function runInfraAction(
     systemId: string,
-    action: 'import' | 'sync' | 'limits' | 'credentials',
+    action: 'sync' | 'limits' | 'credentials',
     extra?: Record<string, unknown>,
   ) {
     setInfraBusyId(systemId)
@@ -409,13 +409,6 @@ export default function AdminSistemasPage() {
         integration?: SystemIntegrationPublic
         error?: string
         warning?: string
-        report?: {
-          keyCount: number
-          keyNames: string[]
-          matched: Record<string, boolean>
-          hints: string[]
-          flags?: { has_supabase?: boolean; has_cloudflare?: boolean; has_resend?: boolean }
-        }
       }
       try {
         json = raw ? (JSON.parse(raw) as typeof json) : {}
@@ -428,23 +421,7 @@ export default function AdminSistemasPage() {
       if (json.integration) applyIntegration(json.integration)
       if (json.warning) toast.message(json.warning)
 
-      if (action === 'import' && json.report) {
-        const m = json.report.matched
-        const found = [
-          m.sb_url ? 'URL' : null,
-          m.sb_anon_key ? 'anon' : null,
-          m.sb_service_role_key ? 'service_role' : null,
-          m.cf_api_token ? 'Cloudflare' : null,
-          m.resend_api_key ? 'Resend' : null,
-        ].filter(Boolean)
-        const hint = json.report.hints[0]
-        toast.success(
-          found.length
-            ? `.env lido (${json.report.keyCount} chaves). Detectado: ${found.join(', ')}.`
-            : `.env lido (${json.report.keyCount} chaves), mas nenhuma credencial reconhecida.`,
-        )
-        if (hint) toast.message(hint)
-      } else if (action === 'credentials') {
+      if (action === 'credentials') {
         toast.success('Chaves salvas.')
         // Sync em seguida, em request separado (evita 504 do Cloudflare no save)
         const syncRes = await fetch(`/api/admin/systems/${systemId}/sync-infra`, {
@@ -542,7 +519,6 @@ export default function AdminSistemasPage() {
                   }
                   busy={infraBusyId === system.id}
                   onDraftChange={(next) => setLimitsDraft((prev) => ({ ...prev, [system.id]: next }))}
-                  onImport={() => runInfraAction(system.id, 'import')}
                   onSync={() => runInfraAction(system.id, 'sync')}
                   onSaveLimits={() => runInfraAction(system.id, 'limits')}
                   onSaveCredentials={(creds) => runInfraAction(system.id, 'credentials', creds)}
@@ -572,7 +548,9 @@ export default function AdminSistemasPage() {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{editing ? 'Editar sistema' : 'Novo sistema'}</h3>
-                <p className="text-sm text-slate-500">Anexos aceitos: .env, .txt e .pdf (vários por tipo).</p>
+                <p className="text-sm text-slate-500">
+                  Anexos (.env, .txt, .pdf) ficam só para consulta — não alimentam o Sync. Chaves de infra vão em Detalhes.
+                </p>
               </div>
               <button type="button" onClick={() => setEditorOpen(false)} className="rounded-lg p-1 text-slate-400 hover:text-slate-700" aria-label="Fechar">
                 ✕
@@ -613,7 +591,7 @@ export default function AdminSistemasPage() {
                   {logoFile ? <p className="mt-1 text-[11px] font-medium text-emerald-700">Selecionada: {logoFile.name}</p> : null}
                 </div>
                 <div className="block text-sm">
-                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar .env (1+)</span>
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar .env (arquivo)</span>
                   <input
                     type="file"
                     multiple
@@ -757,7 +735,6 @@ function SystemRow({
   draft,
   busy,
   onDraftChange,
-  onImport,
   onSync,
   onSaveLimits,
   onSaveCredentials,
@@ -782,7 +759,6 @@ function SystemRow({
     resend: string
     resendMonth: string
   }) => void
-  onImport: () => void
   onSync: () => void
   onSaveLimits: () => void
   onSaveCredentials: (creds: Record<string, string | boolean>) => void
@@ -947,14 +923,10 @@ function SystemRow({
       {open ? (
         <div className="space-y-3 border-t border-slate-100 bg-slate-50/80 px-4 py-3">
           <InfraPanel
-            systemId={system.id}
-            envCount={envCount}
             integ={integ}
             draft={draft}
             busy={busy}
             onDraftChange={onDraftChange}
-            onImport={onImport}
-            onSync={onSync}
             onSaveLimits={onSaveLimits}
             onSaveCredentials={onSaveCredentials}
             embedded
@@ -992,20 +964,14 @@ function SystemRow({
 }
 
 function InfraPanel({
-  systemId,
-  envCount,
   integ,
   draft,
   busy,
   onDraftChange,
-  onImport,
-  onSync,
   onSaveLimits,
   onSaveCredentials,
   embedded = false,
 }: {
-  systemId: string
-  envCount: number
   integ: SystemIntegrationPublic | null
   draft: { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string; resendMonth: string }
   busy: boolean
@@ -1016,15 +982,11 @@ function InfraPanel({
     resend: string
     resendMonth: string
   }) => void
-  onImport: () => void
-  onSync: () => void
   onSaveLimits: () => void
   onSaveCredentials: (creds: Record<string, string | boolean>) => void
   embedded?: boolean
 }) {
-  void systemId
-  void onSync
-  const needsSetup = !integ && envCount === 0
+  const needsSetup = !integ
   const needsPat =
     Boolean(integ?.has_supabase) &&
     Boolean(integ?.missing.supabase.some((m) => m.includes('ACCESS_TOKEN')))
@@ -1180,13 +1142,13 @@ function InfraPanel({
           ) : null}
 
           <div className="flex gap-1.5">
-            <button type="button" disabled={busy || envCount === 0} onClick={onImport} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-              .env
-            </button>
             <button type="button" disabled={busy} onClick={submitCredentials} className="flex-1 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-emerald-800 disabled:opacity-60">
               {busy ? '...' : 'Salvar chaves'}
             </button>
           </div>
+          <p className="text-[10px] text-slate-400">
+            Chaves só pelo painel. Arquivo .env fica só como anexo (não é importado no Sync).
+          </p>
         </div>
       </details>
 

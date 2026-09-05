@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole, requireAdminUser } from '@/lib/admin-api-auth'
 import {
   getPublicIntegration,
-  importEnvForSystem,
   saveManualCredentials,
   syncInfraForSystem,
 } from '@/lib/system-infra-sync'
@@ -65,7 +64,7 @@ export async function GET(request: Request, ctx: Ctx) {
 
 /**
  * body.action:
- * - import: parse do .env
+ * - import: legado (desativado na UI; .env é só anexo)
  * - credentials: salva chaves digitadas no painel
  * - sync: mede uso (usa .env se houver; senão credenciais salvas)
  * - limits: atualiza limites editáveis
@@ -102,15 +101,13 @@ export async function POST(request: Request, ctx: Ctx) {
 
   try {
     if (action === 'import') {
-      const { flags, report } = await importEnvForSystem(yop, systemId)
-      // Após importar, mede uso automaticamente
-      let integration = await getPublicIntegration(yop, systemId)
-      try {
-        integration = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
-      } catch {
-        // mantém integração importada mesmo se medição falhar
-      }
-      return NextResponse.json({ ok: true, flags, report, integration })
+      return NextResponse.json(
+        {
+          error:
+            'Import automático do .env foi desativado. Cole URL, service_role e PAT em Chaves e provedores.',
+        },
+        { status: 410 },
+      )
     }
 
     if (action === 'credentials') {
@@ -136,7 +133,7 @@ export async function POST(request: Request, ctx: Ctx) {
       const shouldSync = body.sync_after !== false
       if (shouldSync) {
         try {
-          const synced = await syncInfraForSystem(yop, systemId, { importEnvFirst: false })
+          const synced = await syncInfraForSystem(yop, systemId)
           return NextResponse.json({ ok: true, integration: synced })
         } catch (syncErr) {
           // Chaves já foram salvas — não devolve 500 HTML/timeout confuso
@@ -189,7 +186,7 @@ export async function POST(request: Request, ctx: Ctx) {
       if (error) throw new Error(error.message)
       if (!data) {
         return NextResponse.json(
-          { error: 'Integração ainda não existe. Salve as chaves ou importe o .env primeiro.' },
+          { error: 'Integração ainda não existe. Salve as chaves no painel primeiro.' },
           { status: 404 },
         )
       }
@@ -199,7 +196,7 @@ export async function POST(request: Request, ctx: Ctx) {
     }
 
     const integration = await Promise.race([
-      syncInfraForSystem(yop, systemId, { importEnvFirst: true }),
+      syncInfraForSystem(yop, systemId),
       new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Sync demorou demais (45s). Verifique URL (.supabase.co) e o PAT.')), 45_000)
       }),
