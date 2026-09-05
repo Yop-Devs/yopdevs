@@ -14,17 +14,17 @@ export async function requireAdminHost(path = '/login') {
 
 /**
  * Exige host admin + sessão + e-mail allowlist (server-side).
- * Complementa o gate do layout-client e o RLS is_yop_admin().
+ * Redirect relativo no próprio host — evita loop com ADMIN_ORIGIN.
  */
 export async function requireAdminSession(loginPath = adminPaths.login) {
   await requireAdminHost(loginPath)
 
   const user = await getServerSessionUser()
   if (!user) {
-    redirect(adminPublicUrl(`${loginPath}?error=session`))
+    redirect(`${loginPath}?error=session`)
   }
   if (!isEmailAllowed(user.email)) {
-    redirect(adminPublicUrl(`${loginPath}?error=unauthorized`))
+    redirect(`${loginPath}?error=unauthorized`)
   }
 
   return user

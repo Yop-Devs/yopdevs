@@ -25,6 +25,8 @@ export default function AdminLoginPage() {
       setError('Acesso restrito. Esta conta não está autorizada.')
     } else if (err === 'auth-code-error') {
       setError('Falha na autenticação. Tente novamente.')
+    } else if (err === 'session') {
+      setInfo('Faça login novamente para continuar.')
     }
   }, [searchParams])
 
@@ -38,6 +40,17 @@ export default function AdminLoginPage() {
   useEffect(() => {
     let cancelled = false
     async function boot() {
+      // Limpa sessão antiga em localStorage (pré-cookies) para não confundir o fluxo
+      try {
+        window.localStorage.removeItem('yop-auth-session')
+      } catch {
+        // ignore
+      }
+      // Se o server mandou de volta por falta de cookie, não auto-entrar
+      if (searchParams.get('error') === 'session') {
+        setChecking(false)
+        return
+      }
       setChecking(true)
       try {
         const sessionPromise = supabase.auth.getSession()
@@ -62,7 +75,7 @@ export default function AdminLoginPage() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, searchParams])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
