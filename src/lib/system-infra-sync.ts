@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { todayIsoInCuiaba } from '@/lib/finance-daily-alerts'
-import { projectRefFromSupabaseUrl } from '@/lib/system-env-parse'
+import { flagsFromParsedEnv, projectRefFromSupabaseUrl } from '@/lib/system-env-parse'
 import {
   formatBytes,
   isTracked,
