@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isEmailAllowed } from '@/lib/allowed-emails'
 import BrandMark from '@/components/BrandMark'
+import TurnstileWidget, { isTurnstileConfigured } from '@/components/TurnstileWidget'
 import { adminPaths, MAIN_SITE_ORIGIN } from '@/lib/admin-host'
 
 export default function AdminLoginPage() {
@@ -12,10 +13,12 @@ export default function AdminLoginPage() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const captchaOn = isTurnstileConfigured()
 
   const [siteHome, setSiteHome] = useState(MAIN_SITE_ORIGIN)
 
@@ -40,13 +43,11 @@ export default function AdminLoginPage() {
   useEffect(() => {
     let cancelled = false
     async function boot() {
-      // Limpa sessão antiga em localStorage (pré-cookies) para não confundir o fluxo
       try {
         window.localStorage.removeItem('yop-auth-session')
       } catch {
         // ignore
       }
-      // Se o server mandou de volta por falta de cookie, não auto-entrar
       if (searchParams.get('error') === 'session') {
         setChecking(false)
         return
@@ -86,9 +87,25 @@ export default function AdminLoginPage() {
       setError('Este e-mail não tem permissão para acessar o admin.')
       return
     }
+    if (captchaOn && !turnstileToken) {
+      setError('Confirme o captcha antes de entrar.')
+      return
+    }
 
     setLoading(true)
     try {
+      const guardRes = await fetch('/api/admin/login-guard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), turnstileToken }),
+      })
+      const guardJson = (await guardRes.json().catch(() => ({}))) as { error?: string }
+      if (!guardRes.ok) {
+        setError(guardJson.error || 'Não foi possível validar o login.')
+        setTurnstileToken('')
+        return
+      }
+
       const { error: signError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -100,6 +117,7 @@ export default function AdminLoginPage() {
         } else {
           setError(signError.message)
         }
+        setTurnstileToken('')
         return
       }
       router.replace(adminPaths.sistemas)
@@ -199,9 +217,17 @@ export default function AdminLoginPage() {
             />
           </div>
 
+          {captchaOn ? (
+            <TurnstileWidget
+              theme="dark"
+              onToken={setTurnstileToken}
+              onExpire={() => setTurnstileToken('')}
+            />
+          ) : null}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (captchaOn && !turnstileToken)}
             className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:bg-violet-100 disabled:opacity-60"
           >
             {loading ? 'Entrando...' : 'Entrar'}

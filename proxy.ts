@@ -9,6 +9,7 @@ import {
   isMainSiteHost,
   toAdminPublicPath,
 } from '@/lib/admin-host'
+import { supabaseAuthCookieOptions } from '@/lib/auth-cookies'
 import { buildContentSecurityPolicy, CSP_NONCE } from '@/lib/csp'
 
 function isStaticAsset(pathname: string): boolean {
@@ -71,23 +72,27 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/auth')
 
   if (needsAuthRefresh) {
+    const cookieBase = supabaseAuthCookieOptions()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookieOptions: cookieBase,
         cookies: {
           get(name: string) {
             return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: Record<string, unknown>) {
-            request.cookies.set({ name, value, ...options })
+            const merged = { ...cookieBase, ...options }
+            request.cookies.set({ name, value, ...merged })
             response = NextResponse.next({ request: { headers: requestHeaders } })
-            response.cookies.set({ name, value, ...options })
+            response.cookies.set({ name, value, ...merged })
           },
           remove(name: string, options: Record<string, unknown>) {
-            request.cookies.set({ name, value: '', ...options })
+            const merged = { ...cookieBase, ...options, maxAge: 0 }
+            request.cookies.set({ name, value: '', ...merged })
             response = NextResponse.next({ request: { headers: requestHeaders } })
-            response.cookies.set({ name, value: '', ...options })
+            response.cookies.set({ name, value: '', ...merged })
           },
         },
       },

@@ -21,6 +21,7 @@ export function buildContentSecurityPolicy(nonce: string = CSP_NONCE): string {
     "img-src 'self' data: blob: https://cdn.simpleicons.org https://*.supabase.co",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://viacep.com.br https://challenges.cloudflare.com",
+    "frame-src 'self' https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "media-src 'self'",

@@ -1,33 +1,10 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
+import { allowRateLimit, clientIpFromRequest } from '@/lib/rate-limit'
+import { turnstileRequired, verifyTurnstileToken } from '@/lib/turnstile'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? '')
-}
-
-/** Rate limit simples em memória (por IP) — best-effort em serverless. */
-const hits = new Map<string, { count: number; resetAt: number }>()
-const WINDOW_MS = 10 * 60 * 1000
-const MAX_HITS = 8
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip')?.trim() ||
-    'unknown'
-  )
-}
-
-function allowRequest(ip: string): boolean {
-  const now = Date.now()
-  const row = hits.get(ip)
-  if (!row || now > row.resetAt) {
-    hits.set(ip, { count: 1, resetAt: now + WINDOW_MS })
-    return true
-  }
-  if (row.count >= MAX_HITS) return false
-  row.count += 1
-  return true
 }
 
 export async function POST(request: Request) {
@@ -38,8 +15,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const ip = clientIp(request)
-  if (!allowRequest(ip)) {
+  const ip = clientIpFromRequest(request)
+  if (!allowRateLimit(`send:${ip}`, { windowMs: 10 * 60 * 1000, max: 8 })) {
     return NextResponse.json(
       { error: { message: 'Muitas tentativas. Aguarde alguns minutos.' } },
       { status: 429 },
@@ -52,10 +29,27 @@ export async function POST(request: Request) {
     const name = typeof body?.name === 'string' ? body.name.trim() : ''
     const email = typeof body?.email === 'string' ? body.email.trim() : ''
     const message = typeof body?.message === 'string' ? body.message.trim() : ''
+    const turnstileToken =
+      typeof body?.turnstileToken === 'string'
+        ? body.turnstileToken
+        : typeof body?.['cf-turnstile-response'] === 'string'
+          ? body['cf-turnstile-response']
+          : ''
     // honeypot — bots preenchem; humanos deixam vazio
     const website = typeof body?.website === 'string' ? body.website.trim() : ''
     if (website) {
       return NextResponse.json({ ok: true })
+    }
+
+    const captcha = await verifyTurnstileToken(turnstileToken, ip)
+    if (!captcha.ok) {
+      return NextResponse.json({ error: { message: captcha.error } }, { status: 400 })
+    }
+    if (turnstileRequired() && !turnstileToken) {
+      return NextResponse.json(
+        { error: { message: 'Confirme o captcha antes de continuar.' } },
+        { status: 400 },
+      )
     }
 
     if (!name || !email || !message) {

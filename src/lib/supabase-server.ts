@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
+import { supabaseAuthCookieOptions } from '@/lib/auth-cookies'
 
 /** Cliente Supabase no server (cookies da sessão). */
 export async function createSupabaseServerClient() {
@@ -9,22 +10,24 @@ export async function createSupabaseServerClient() {
   if (!url || !anon) return null
 
   const cookieStore = await cookies()
+  const base = supabaseAuthCookieOptions()
 
   return createServerClient(url, anon, {
+    cookieOptions: base,
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value
       },
       set(name: string, value: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value, ...options })
+          cookieStore.set({ name, value, ...base, ...options })
         } catch {
           // Server Component pode não permitir set — ok no layout read-only
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value: '', ...options })
+          cookieStore.set({ name, value: '', ...base, ...options, maxAge: 0 })
         } catch {
           // ignore
         }

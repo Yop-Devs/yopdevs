@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { supabaseAuthCookieOptions } from '@/lib/auth-cookies'
 
 let _client: SupabaseClient | null = null
 
@@ -14,7 +15,10 @@ function getClient(): SupabaseClient {
   if (!url || !key) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
   }
-  _client = createBrowserClient(url, key)
+  _client = createBrowserClient(url, key, {
+    cookieOptions: supabaseAuthCookieOptions(),
+    isSingleton: true,
+  })
   return _client
 }
 
