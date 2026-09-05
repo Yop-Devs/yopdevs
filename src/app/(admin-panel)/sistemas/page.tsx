@@ -397,7 +397,7 @@ export default function AdminSistemasPage() {
               resend_monthly_limit: draft?.resendMonth,
             }
           : action === 'credentials'
-            ? { action: 'credentials', sync_after: true, ...extra }
+            ? { action: 'credentials', sync_after: false, ...extra }
             : { action }
 
       const res = await fetch(`/api/admin/systems/${systemId}/sync-infra`, {
@@ -445,14 +445,28 @@ export default function AdminSistemasPage() {
             : `.env lido (${json.report.keyCount} chaves), mas nenhuma credencial reconhecida.`,
         )
         if (hint) toast.message(hint)
+      } else if (action === 'credentials') {
+        toast.success('Chaves salvas.')
+        // Sync em seguida, em request separado (evita 504 do Cloudflare no save)
+        const syncRes = await fetch(`/api/admin/systems/${systemId}/sync-infra`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action: 'sync' }),
+        })
+        const syncRaw = await syncRes.text()
+        let syncJson: { integration?: SystemIntegrationPublic; error?: string } = {}
+        try {
+          syncJson = syncRaw ? (JSON.parse(syncRaw) as typeof syncJson) : {}
+        } catch {
+          throw new Error(
+            `Sync falhou (HTTP ${syncRes.status}). Confira a URL (.supabase.co, não .cc) e o PAT.`,
+          )
+        }
+        if (!syncRes.ok) throw new Error(syncJson.error || `Sync falhou (HTTP ${syncRes.status}).`)
+        if (syncJson.integration) applyIntegration(syncJson.integration)
+        toast.success('Infra sincronizada.')
       } else {
-        toast.success(
-          action === 'limits'
-            ? 'Limites atualizados.'
-            : action === 'credentials'
-              ? 'Chaves salvas e infra sincronizada.'
-              : 'Infra sincronizada.',
-        )
+        toast.success(action === 'limits' ? 'Limites atualizados.' : 'Infra sincronizada.')
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha na operação de infra.')
@@ -915,11 +929,17 @@ function InfraPanel({
   const trackingResend = integ?.track_resend ?? trackResend
 
   function submitCredentials() {
+    const url = sbUrl.trim().replace(/\.supabase\.cc\b/gi, '.supabase.co')
+    if (trackSb && url && !/\.supabase\.co$/i.test(url.replace(/\/+$/, ''))) {
+      toast.error('URL do Supabase inválida. Use https://xxxxx.supabase.co')
+      return
+    }
+    if (url !== sbUrl) setSbUrl(url)
     onSaveCredentials({
       cf_account_id: cfAccountId,
       cf_api_token: cfApiToken,
       cf_r2_bucket: cfBucket,
-      sb_url: sbUrl,
+      sb_url: url || sbUrl,
       sb_service_role_key: sbServiceKey,
       sb_access_token: sbAccessToken,
       resend_api_key: resendKey,

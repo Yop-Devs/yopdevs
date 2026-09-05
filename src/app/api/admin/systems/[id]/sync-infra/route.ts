@@ -198,7 +198,12 @@ export async function POST(request: Request, ctx: Ctx) {
       return NextResponse.json({ ok: true, integration })
     }
 
-    const integration = await syncInfraForSystem(yop, systemId, { importEnvFirst: true })
+    const integration = await Promise.race([
+      syncInfraForSystem(yop, systemId, { importEnvFirst: true }),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Sync demorou demais (45s). Verifique URL (.supabase.co) e o PAT.')), 45_000)
+      }),
+    ])
     return NextResponse.json({ ok: true, integration })
   } catch (err) {
     console.error('[sync-infra]', systemId, err instanceof Error ? err.message : err)

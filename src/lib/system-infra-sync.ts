@@ -403,51 +403,61 @@ async function sumStorageBucket(
 }
 
 async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): Promise<number> {
-  const client = createClient(serviceUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const url = serviceUrl.trim().replace(/\.supabase\.cc\b/gi, '.supabase.co').replace(/\/+$/, '')
+  const run = async () => {
+    const client = createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
-  // 1) Tenta schema storage.objects (mais preciso)
-  const storageClient = createClient(serviceUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    db: { schema: 'storage' },
-  })
+    // 1) Tenta schema storage.objects (mais preciso)
+    const storageClient = createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'storage' },
+    })
 
-  const pageSize = 1000
-  let offset = 0
-  let total = 0
-  let guard = 0
-  let usedObjectsTable = false
+    const pageSize = 1000
+    let offset = 0
+    let total = 0
+    let guard = 0
+    let usedObjectsTable = false
 
-  while (guard < 100) {
-    const { data: rows, error: qError } = await storageClient
-      .from('objects')
-      .select('metadata')
-      .range(offset, offset + pageSize - 1)
+    while (guard < 30) {
+      const { data: rows, error: qError } = await storageClient
+        .from('objects')
+        .select('metadata')
+        .range(offset, offset + pageSize - 1)
 
-    if (qError) break
-    usedObjectsTable = true
-    if (!rows?.length) break
+      if (qError) break
+      usedObjectsTable = true
+      if (!rows?.length) break
 
-    for (const row of rows as { metadata?: { size?: number | string } | null }[]) {
-      const size = Number(row.metadata?.size ?? 0)
-      if (Number.isFinite(size)) total += size
+      for (const row of rows as { metadata?: { size?: number | string } | null }[]) {
+        const size = Number(row.metadata?.size ?? 0)
+        if (Number.isFinite(size)) total += size
+      }
+
+      if (rows.length < pageSize) break
+      offset += pageSize
+      guard += 1
     }
 
-    if (rows.length < pageSize) break
-    offset += pageSize
-    guard += 1
+    if (usedObjectsTable) return total
+
+    // 2) Fallback: listBuckets + list recursivo
+    const { data: buckets, error: bErr } = await client.storage.listBuckets()
+    if (bErr) throw new Error(bErr.message)
+    for (const bucket of buckets ?? []) {
+      total += await sumStorageBucket(client, bucket.name)
+    }
+    return total
   }
 
-  if (usedObjectsTable) return total
-
-  // 2) Fallback: listBuckets + list recursivo
-  const { data: buckets, error: bErr } = await client.storage.listBuckets()
-  if (bErr) throw new Error(bErr.message)
-  for (const bucket of buckets ?? []) {
-    total += await sumStorageBucket(client, bucket.name)
-  }
-  return total
+  return Promise.race([
+    run(),
+    new Promise<number>((_, reject) => {
+      setTimeout(() => reject(new Error('Supabase storage: timeout ao medir bucket (25s)')), 25_000)
+    }),
+  ])
 }
 
 async function measureSupabaseDbBytes(
