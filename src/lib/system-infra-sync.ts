@@ -460,50 +460,83 @@ async function measureSupabaseStorage(serviceUrl: string, serviceKey: string): P
   ])
 }
 
+async function runSupabaseManagementQuery(
+  projectRef: string,
+  accessToken: string,
+  query: string,
+): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, read_only: true }),
+    signal: AbortSignal.timeout(20_000),
+  })
+
+  const text = await res.text().catch(() => '')
+  if (!res.ok) {
+    throw new Error(`Supabase query: ${res.status} ${text.slice(0, 180)}`)
+  }
+
+  try {
+    const json = JSON.parse(text) as
+      | Record<string, unknown>[]
+      | { data?: Record<string, unknown>[] }
+      | { result?: Record<string, unknown>[] }
+
+    const rows = Array.isArray(json)
+      ? json
+      : Array.isArray((json as { data?: unknown[] }).data)
+        ? (json as { data: Record<string, unknown>[] }).data
+        : Array.isArray((json as { result?: unknown[] }).result)
+          ? (json as { result: Record<string, unknown>[] }).result
+          : []
+
+    return rows[0] ?? null
+  } catch {
+    throw new Error('Supabase query: resposta inválida')
+  }
+}
+
+/** Mede DB + Storage numa query só (Management API / PAT) — bem mais rápido que listar buckets. */
+async function measureSupabaseViaPat(
+  projectRef: string | null,
+  accessToken: string | null,
+): Promise<{ dbBytes: number | null; storageBytes: number | null }> {
+  if (!projectRef || !accessToken) return { dbBytes: null, storageBytes: null }
+
+  const row = await runSupabaseManagementQuery(
+    projectRef,
+    accessToken,
+    `
+      select
+        pg_database_size(current_database())::bigint as db_size,
+        coalesce((select sum((metadata->>'size')::bigint) from storage.objects), 0)::bigint as storage_size;
+    `.replace(/\s+/g, ' ').trim(),
+  )
+
+  const dbBytes = Number(row?.db_size)
+  const storageBytes = Number(row?.storage_size)
+  return {
+    dbBytes: Number.isFinite(dbBytes) ? dbBytes : null,
+    storageBytes: Number.isFinite(storageBytes) ? storageBytes : null,
+  }
+}
+
 async function measureSupabaseDbBytes(
   projectRef: string | null,
   accessToken: string | null,
 ): Promise<number | null> {
   if (!projectRef || !accessToken) return null
-
-      const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: 'select pg_database_size(current_database())::bigint as size;',
-          read_only: true,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      })
-
-  const text = await res.text().catch(() => '')
-  if (!res.ok) {
-    throw new Error(`Supabase DB query: ${res.status} ${text.slice(0, 180)}`)
-  }
-
-  try {
-    const json = JSON.parse(text) as
-      | { size?: number | string }[]
-      | { data?: { size?: number | string }[] }
-      | { result?: { size?: number | string }[] }
-
-    const rows = Array.isArray(json)
-      ? json
-      : Array.isArray((json as { data?: unknown[] }).data)
-        ? (json as { data: { size?: number | string }[] }).data
-        : Array.isArray((json as { result?: unknown[] }).result)
-          ? (json as { result: { size?: number | string }[] }).result
-          : []
-
-    const size = Number(rows[0]?.size)
-    if (Number.isFinite(size)) return size
-  } catch {
-    // ignore parse
-  }
-
+  const row = await runSupabaseManagementQuery(
+    projectRef,
+    accessToken,
+    'select pg_database_size(current_database())::bigint as size;',
+  )
+  const size = Number(row?.size)
+  if (Number.isFinite(size)) return size
   throw new Error('Supabase DB: resposta sem tamanho reconhecível')
 }
 
@@ -681,23 +714,46 @@ export async function syncInfraForSystem(
   }
 
   if (trackSb) {
-    const canSbStorage = Boolean(integ.sb_url && integ.sb_service_role_key)
-    if (canSbStorage) {
-      try {
-        const used = await measureSupabaseStorage(integ.sb_url!, integ.sb_service_role_key!)
-        patch.sb_storage_used_bytes = used
-        patch.sb_synced_at = now
-        patch.has_supabase = true
-      } catch (err) {
-        errors.push(`Supabase storage: ${err instanceof Error ? err.message : 'erro'}`)
-      }
-    } else {
-      errors.push('Supabase storage: falta SUPABASE_SERVICE_ROLE_KEY')
-    }
-
     const projectRef = integ.sb_project_ref || projectRefFromSupabaseUrl(integ.sb_url)
     const accessToken = resolveSbAccessToken(integ)
+    let measuredViaPat = false
+
+    // Caminho rápido: PAT + SQL (DB + Storage juntos)
     if (projectRef && accessToken) {
+      try {
+        const { dbBytes, storageBytes } = await measureSupabaseViaPat(projectRef, accessToken)
+        if (dbBytes != null) patch.sb_db_used_bytes = dbBytes
+        if (storageBytes != null) patch.sb_storage_used_bytes = storageBytes
+        if (dbBytes != null || storageBytes != null) {
+          patch.sb_project_ref = projectRef
+          patch.sb_synced_at = now
+          patch.has_supabase = true
+          measuredViaPat = true
+        }
+      } catch (err) {
+        errors.push(`Supabase (PAT): ${err instanceof Error ? err.message : 'erro'}`)
+      }
+    }
+
+    // Fallback Storage: service role listando objetos (pode ser lento)
+    if (patch.sb_storage_used_bytes == null) {
+      const canSbStorage = Boolean(integ.sb_url && integ.sb_service_role_key)
+      if (canSbStorage) {
+        try {
+          const used = await measureSupabaseStorage(integ.sb_url!, integ.sb_service_role_key!)
+          patch.sb_storage_used_bytes = used
+          patch.sb_synced_at = now
+          patch.has_supabase = true
+        } catch (err) {
+          errors.push(`Supabase storage: ${err instanceof Error ? err.message : 'erro'}`)
+        }
+      } else if (!measuredViaPat) {
+        errors.push('Supabase storage: falta SUPABASE_SERVICE_ROLE_KEY ou PAT')
+      }
+    }
+
+    // Fallback DB só se PAT path não preencheu
+    if (patch.sb_db_used_bytes == null && projectRef && accessToken && !measuredViaPat) {
       try {
         const dbUsed = await measureSupabaseDbBytes(projectRef, accessToken)
         if (dbUsed != null) {
@@ -709,7 +765,7 @@ export async function syncInfraForSystem(
       } catch (err) {
         errors.push(`Supabase DB: ${err instanceof Error ? err.message : 'erro'}`)
       }
-    } else if (integ.sb_url || integ.has_supabase) {
+    } else if (patch.sb_db_used_bytes == null && (integ.sb_url || integ.has_supabase) && !accessToken) {
       errors.push(
         'Supabase DB: cole o Access Token (PAT sbp_...) da MESMA conta deste projeto — Account → Access Tokens',
       )
