@@ -6,10 +6,10 @@ import PortfolioReveal from './PortfolioReveal'
 
 const contactLinks = [
   {
-    href: 'mailto:gabrielcarrarapessoal@gmail.com',
+    href: 'mailto:gabrielcarrara@yopdevs.com.br',
     icon: Mail,
     labelKey: 'email' as const,
-    value: 'gabrielcarrarapessoal@gmail.com',
+    value: 'gabrielcarrara@yopdevs.com.br',
     external: false,
   },
   {

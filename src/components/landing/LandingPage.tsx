@@ -28,7 +28,7 @@ import { Globe, Copy, Check, Mail } from 'lucide-react'
 import { TechBrandIcon } from '@/components/TechBrandIcon'
 import BrandMark from '@/components/BrandMark'
 
-const CONTACT_EMAIL = 'gabrielcarrarapessoal@gmail.com'
+const CONTACT_EMAIL = 'gabrielcarrara@yopdevs.com.br'
 
 function emailComposeLinks(subject: string) {
   const to = encodeURIComponent(CONTACT_EMAIL)

@@ -36,7 +36,8 @@ export async function POST(request: Request) {
 
     const data = await resend.emails.send({
       from: 'YOP DEVS <contato@yopdevs.com.br>',
-      to: ['gabrielqsiqueira6@gmail.com'],
+      to: ['gabrielcarrara@yopdevs.com.br'],
+      replyTo: email,
       subject: `Novo Chamado: ${name}`,
       html: `<p><strong>Nome:</strong> ${escapeHtml(name)}</p>
              <p><strong>E-mail:</strong> ${escapeHtml(email)}</p>
