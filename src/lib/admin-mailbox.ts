@@ -492,6 +492,109 @@ export async function replyToThread(
   return message as MailboxMessage
 }
 
+function parseRecipientList(raw: string | string[] | undefined): string[] {
+  const parts = Array.isArray(raw)
+    ? raw
+    : String(raw || '')
+        .split(/[,;\n]+/)
+        .map((s) => s.trim())
+  const emails = parts
+    .map((p) => extractEmail(p))
+    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+  return [...new Set(emails)]
+}
+
+/** Envia e-mail novo (sem conversa prévia) e cria o thread na caixa. */
+export async function composeOutboundEmail(
+  yop: SupabaseClient,
+  input: {
+    to: string | string[]
+    subject: string
+    text: string
+    html?: string
+    attachments?: { filename: string; content: Buffer; contentType?: string }[]
+  },
+): Promise<{ thread: MailboxThread; message: MailboxMessage }> {
+  const resend = getResendClient()
+  if (!resend) throw new Error('RESEND_API_KEY não configurada.')
+
+  const to = parseRecipientList(input.to)
+  if (!to.length) throw new Error('Informe ao menos um destinatário válido.')
+
+  const subject = (input.subject ?? '').trim() || '(sem assunto)'
+  const text = input.text.trim()
+  if (!text) throw new Error('Mensagem vazia.')
+
+  const html = input.html || `<p>${escapeHtml(text).replace(/\n/g, '<br/>')}</p>`
+  const fromEmail = extractEmail(mailboxFromAddress())
+  const now = new Date().toISOString()
+  const participants = [...new Set([fromEmail, ...to].filter(Boolean))]
+
+  const { data, error } = await resend.emails.send({
+    from: mailboxFromAddress(),
+    to,
+    subject,
+    html,
+    text,
+    attachments: input.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    })),
+  })
+
+  if (error) throw new Error(error.message)
+  const sentId = data?.id ?? null
+
+  const { data: thread, error: tErr } = await yop
+    .from('yop_admin_mailbox_threads')
+    .insert({
+      subject,
+      participants,
+      last_message_at: now,
+      unread_count: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .select('*')
+    .single()
+
+  if (tErr) throw new Error(tErr.message)
+
+  const { data: message, error: msgError } = await yop
+    .from('yop_admin_mailbox_messages')
+    .insert({
+      thread_id: thread.id,
+      resend_email_id: sentId,
+      direction: 'outbound',
+      from_email: fromEmail,
+      from_name: 'Gabriel Carrara',
+      to_emails: to,
+      cc_emails: [],
+      subject,
+      text_body: text,
+      html_body: html,
+      message_id: sentId ? `<${sentId}@resend.dev>` : null,
+      in_reply_to: null,
+      attachments: (input.attachments ?? []).map((a) => ({
+        filename: a.filename,
+        content_type: a.contentType ?? null,
+        size: a.content.length,
+      })),
+      read_at: now,
+      created_at: now,
+    })
+    .select('*')
+    .single()
+
+  if (msgError) throw new Error(msgError.message)
+
+  return {
+    thread: thread as MailboxThread,
+    message: message as MailboxMessage,
+  }
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')

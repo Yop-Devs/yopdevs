@@ -32,6 +32,8 @@ type Message = {
   created_at: string
 }
 
+type Panel = 'inbox' | 'compose'
+
 async function authHeaders(json = true): Promise<HeadersInit> {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
@@ -55,6 +57,7 @@ function formatWhen(iso: string): string {
 }
 
 export default function AdminEmailsPage() {
+  const [panel, setPanel] = useState<Panel>('inbox')
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -63,6 +66,11 @@ export default function AdminEmailsPage() {
   const [reply, setReply] = useState('')
   const [files, setFiles] = useState<FileList | null>(null)
   const [sending, setSending] = useState(false)
+
+  const [composeTo, setComposeTo] = useState('')
+  const [composeSubject, setComposeSubject] = useState('')
+  const [composeBody, setComposeBody] = useState('')
+  const [composeFiles, setComposeFiles] = useState<FileList | null>(null)
 
   const loadThreads = useCallback(async (opts?: { sync?: boolean }) => {
     setLoading(true)
@@ -106,6 +114,7 @@ export default function AdminEmailsPage() {
   }, [loadThreads])
 
   const openThread = useCallback(async (threadId: string) => {
+    setPanel('inbox')
     setSelectedId(threadId)
     setLoadingThread(true)
     setReply('')
@@ -127,6 +136,12 @@ export default function AdminEmailsPage() {
       setLoadingThread(false)
     }
   }, [])
+
+  function openCompose() {
+    setPanel('compose')
+    setSelectedId(null)
+    setMessages([])
+  }
 
   async function onReply(e: FormEvent) {
     e.preventDefault()
@@ -158,24 +173,75 @@ export default function AdminEmailsPage() {
     }
   }
 
+  async function onCompose(e: FormEvent) {
+    e.preventDefault()
+    if (!composeTo.trim() || !composeBody.trim()) return
+    setSending(true)
+    try {
+      const headers = await authHeaders(false)
+      const form = new FormData()
+      form.set('to', composeTo.trim())
+      form.set('subject', composeSubject.trim())
+      form.set('text', composeBody.trim())
+      if (composeFiles) {
+        Array.from(composeFiles).slice(0, 5).forEach((f) => form.append('attachments', f))
+      }
+      const res = await fetch('/api/admin/mailbox/compose', {
+        method: 'POST',
+        headers,
+        body: form,
+      })
+      const json = (await res.json()) as {
+        thread?: Thread
+        message?: Message
+        error?: string
+      }
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar.')
+      toast.success('E-mail enviado.')
+      setComposeTo('')
+      setComposeSubject('')
+      setComposeBody('')
+      setComposeFiles(null)
+      await loadThreads()
+      if (json.thread?.id) {
+        await openThread(json.thread.id)
+      } else {
+        setPanel('inbox')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao enviar.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   const selected = threads.find((t) => t.id === selectedId) ?? null
 
   return (
     <div className="mx-auto flex h-[calc(100vh-5.5rem)] max-w-7xl flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900">Caixa de e-mail</h2>
           <p className="text-sm text-slate-500">
             Conversas em <span className="font-medium text-slate-700">gabrielcarrara@yopdevs.com.br</span>
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void loadThreads({ sync: true })}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
-        >
-          Atualizar
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={openCompose}
+            className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-slate-800"
+          >
+            Novo e-mail
+          </button>
+          <button
+            type="button"
+            onClick={() => void loadThreads({ sync: true })}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
+          >
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <div className="grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
@@ -184,7 +250,8 @@ export default function AdminEmailsPage() {
             <p className="p-4 text-sm text-slate-500">Carregando...</p>
           ) : threads.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">
-              Nenhuma conversa ainda. Assim que o Receiving do Resend estiver ativo, os e-mails aparecem aqui.
+              Nenhuma conversa ainda. Use <span className="font-semibold">Novo e-mail</span> para
+              escrever para alguém, ou aguarde mensagens recebidas.
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -194,7 +261,7 @@ export default function AdminEmailsPage() {
                     type="button"
                     onClick={() => void openThread(thread.id)}
                     className={`w-full px-3 py-3 text-left hover:bg-slate-50 ${
-                      selectedId === thread.id ? 'bg-slate-50' : ''
+                      selectedId === thread.id && panel === 'inbox' ? 'bg-slate-50' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -217,9 +284,81 @@ export default function AdminEmailsPage() {
         </aside>
 
         <section className="flex min-h-0 flex-col">
-          {!selectedId ? (
+          {panel === 'compose' ? (
+            <form onSubmit={onCompose} className="flex min-h-0 flex-1 flex-col">
+              <header className="border-b border-slate-100 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-900">Novo e-mail</h3>
+                <p className="text-[11px] text-slate-500">
+                  Envio de <span className="font-medium">gabrielcarrara@yopdevs.com.br</span>
+                </p>
+              </header>
+
+              <div className="space-y-3 px-4 py-3">
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Para
+                  </span>
+                  <input
+                    type="text"
+                    value={composeTo}
+                    onChange={(e) => setComposeTo(e.target.value)}
+                    placeholder="email@exemplo.com (vários separados por vírgula)"
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Assunto
+                  </span>
+                  <input
+                    type="text"
+                    value={composeSubject}
+                    onChange={(e) => setComposeSubject(e.target.value)}
+                    placeholder="Assunto"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                  />
+                </label>
+              </div>
+
+              <div className="min-h-0 flex-1 px-4">
+                <textarea
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  placeholder="Escreva a mensagem..."
+                  required
+                  className="h-full min-h-[12rem] w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 p-3">
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setComposeFiles(e.target.files)}
+                  className="max-w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-semibold"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPanel('inbox')}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sending || !composeTo.trim() || !composeBody.trim()}
+                    className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {sending ? 'Enviando...' : 'Enviar'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : !selectedId ? (
             <div className="flex flex-1 items-center justify-center p-8 text-sm text-slate-500">
-              Selecione uma conversa
+              Selecione uma conversa ou escreva um novo e-mail
             </div>
           ) : (
             <>
