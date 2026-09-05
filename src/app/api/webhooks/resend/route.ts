@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Resend } from 'resend'
 import { getSupabaseServiceRole } from '@/lib/admin-api-auth'
 import { getResendClient, ingestInboundEmail } from '@/lib/admin-mailbox'
 
@@ -23,34 +24,25 @@ type ResendEvent = {
 export async function POST(request: Request) {
   const rawBody = await request.text()
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim()
-  const resend = getResendClient()
 
-  if (secret && resend) {
+  if (secret) {
     try {
-      const webhooks = resend as unknown as {
-        webhooks?: {
-          verify?: (args: {
-            payload: string
-            headers: { id: string; timestamp: string; signature: string }
-            webhookSecret: string
-          }) => Promise<unknown> | unknown
-        }
-      }
-      if (webhooks.webhooks?.verify) {
-        await webhooks.webhooks.verify({
-          payload: rawBody,
-          headers: {
-            id: request.headers.get('svix-id') || '',
-            timestamp: request.headers.get('svix-timestamp') || '',
-            signature: request.headers.get('svix-signature') || '',
-          },
-          webhookSecret: secret,
-        })
-      }
+      const resend = getResendClient() || new Resend(process.env.RESEND_API_KEY || 're_dummy')
+      resend.webhooks.verify({
+        payload: rawBody,
+        headers: {
+          id: request.headers.get('svix-id') || '',
+          timestamp: request.headers.get('svix-timestamp') || '',
+          signature: request.headers.get('svix-signature') || '',
+        },
+        webhookSecret: secret,
+      })
     } catch (err) {
       console.error('[resend-webhook] invalid signature', err)
       return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
     }
+  } else {
+    console.warn('[resend-webhook] RESEND_WEBHOOK_SECRET ausente — aceitando sem verificação')
   }
 
   let event: ResendEvent

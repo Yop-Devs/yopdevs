@@ -64,10 +64,32 @@ export default function AdminEmailsPage() {
   const [files, setFiles] = useState<FileList | null>(null)
   const [sending, setSending] = useState(false)
 
-  const loadThreads = useCallback(async () => {
+  const loadThreads = useCallback(async (opts?: { sync?: boolean }) => {
     setLoading(true)
     try {
       const headers = await authHeaders()
+      if (opts?.sync) {
+        const syncRes = await fetch('/api/admin/mailbox', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action: 'sync' }),
+        })
+        const syncJson = (await syncRes.json()) as {
+          imported?: number
+          skipped?: number
+          error?: string
+          errors?: string[]
+        }
+        if (!syncRes.ok) throw new Error(syncJson.error || 'Falha ao sincronizar com Resend.')
+        if ((syncJson.imported ?? 0) > 0) {
+          toast.success(`${syncJson.imported} e-mail(s) importado(s) do Resend.`)
+        } else if (syncJson.errors?.length) {
+          toast.message(syncJson.errors[0])
+        } else {
+          toast.message('Nenhum e-mail novo no Resend.')
+        }
+      }
+
       const res = await fetch('/api/admin/mailbox', { headers })
       const json = (await res.json()) as { threads?: Thread[]; error?: string }
       if (!res.ok) throw new Error(json.error || 'Falha ao carregar inbox.')
@@ -78,6 +100,10 @@ export default function AdminEmailsPage() {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void loadThreads({ sync: true })
+  }, [loadThreads])
 
   const openThread = useCallback(async (threadId: string) => {
     setSelectedId(threadId)
@@ -101,10 +127,6 @@ export default function AdminEmailsPage() {
       setLoadingThread(false)
     }
   }, [])
-
-  useEffect(() => {
-    void loadThreads()
-  }, [loadThreads])
 
   async function onReply(e: FormEvent) {
     e.preventDefault()
@@ -149,7 +171,7 @@ export default function AdminEmailsPage() {
         </div>
         <button
           type="button"
-          onClick={() => void loadThreads()}
+          onClick={() => void loadThreads({ sync: true })}
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
         >
           Atualizar

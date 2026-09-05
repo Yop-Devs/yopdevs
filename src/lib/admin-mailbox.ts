@@ -129,6 +129,61 @@ async function fetchReceivedEmail(emailId: string): Promise<ReceivedEmailDetail 
   return (await res.json()) as ReceivedEmailDetail
 }
 
+/** Lista e-mails recebidos no Resend e importa os que ainda não estão na Yop. */
+export async function syncReceivedFromResend(
+  yop: SupabaseClient,
+  limit = 30,
+): Promise<{ imported: number; skipped: number; errors: string[] }> {
+  const key = process.env.RESEND_API_KEY?.trim()
+  if (!key) throw new Error('RESEND_API_KEY não configurada.')
+
+  const res = await fetch(`https://api.resend.com/emails/receiving?limit=${Math.min(100, Math.max(1, limit))}`, {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(30_000),
+  })
+  const text = await res.text().catch(() => '')
+  if (!res.ok) {
+    throw new Error(`Resend list receiving ${res.status}: ${text.slice(0, 200)}`)
+  }
+
+  const json = JSON.parse(text) as {
+    data?: {
+      id?: string
+      created_at?: string
+      from?: string
+      to?: string[]
+      cc?: string[]
+      subject?: string
+      message_id?: string
+    }[]
+  }
+
+  let imported = 0
+  let skipped = 0
+  const errors: string[] = []
+
+  for (const item of json.data ?? []) {
+    if (!item.id) continue
+    try {
+      const result = await ingestInboundEmail(yop, {
+        email_id: item.id,
+        created_at: item.created_at,
+        from: item.from,
+        to: item.to,
+        cc: item.cc,
+        subject: item.subject,
+        message_id: item.message_id,
+      })
+      if (result.created) imported += 1
+      else skipped += 1
+    } catch (err) {
+      errors.push(`${item.id}: ${err instanceof Error ? err.message : 'erro'}`)
+    }
+  }
+
+  return { imported, skipped, errors }
+}
+
 async function findThreadId(
   yop: SupabaseClient,
   opts: {

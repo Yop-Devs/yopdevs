@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole, requireAdminUser } from '@/lib/admin-api-auth'
+import { syncReceivedFromResend } from '@/lib/admin-mailbox'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /** Lista threads ou mensagens de um thread. */
 export async function GET(request: Request) {
@@ -53,4 +55,39 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ threads: data ?? [] })
+}
+
+/** Importa e-mails já recebidos no Resend (fallback se o webhook falhar). */
+export async function POST(request: Request) {
+  const auth = await requireAdminUser(request)
+  if ('error' in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  const yop = getSupabaseServiceRole()
+  if (!yop) {
+    return NextResponse.json({ error: 'Supabase não configurado.' }, { status: 503 })
+  }
+
+  let action = 'sync'
+  try {
+    const body = (await request.json()) as { action?: string }
+    if (body.action) action = body.action
+  } catch {
+    // ok
+  }
+
+  if (action !== 'sync') {
+    return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 })
+  }
+
+  try {
+    const result = await syncReceivedFromResend(yop, 40)
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Falha ao sincronizar inbox.' },
+      { status: 500 },
+    )
+  }
 }
