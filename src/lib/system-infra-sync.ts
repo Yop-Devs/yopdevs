@@ -3,6 +3,7 @@ import { todayIsoInCuiaba } from '@/lib/finance-daily-alerts'
 import { flagsFromParsedEnv, projectRefFromSupabaseUrl } from '@/lib/system-env-parse'
 import {
   formatBytes,
+  formatGbDecimal,
   isTracked,
   toPublicIntegration,
   usagePct,
@@ -788,6 +789,12 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
   const alerts: string[] = []
   const errors: string[] = []
 
+  // Limiares de aviso Telegram (cron diário)
+  const R2_ALERT_PCT = 90
+  const SB_STORAGE_ALERT_PCT = 85
+  const SB_DB_ALERT_PCT = 90
+  const RESEND_DAILY_ALERT_COUNT = 90
+
   for (const system of systems ?? []) {
     try {
       const pub = await syncInfraForSystem(yop, system.id)
@@ -795,37 +802,30 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
       const label = system.company_name || system.name
 
       const cfPct = usagePct(pub.cf_storage_used_bytes, pub.cf_storage_limit_bytes)
-      if (pub.track_cloudflare && pub.has_cloudflare && cfPct != null && cfPct >= 80) {
+      if (pub.track_cloudflare && pub.has_cloudflare && cfPct != null && cfPct >= R2_ALERT_PCT) {
         alerts.push(
-          `☁️ Cloudflare R2 · ${label}\nUso: ${formatBytes(pub.cf_storage_used_bytes)} / ${formatBytes(pub.cf_storage_limit_bytes)} (${cfPct}%)`,
+          `☁️ Cloudflare R2 · ${label}\nUso: ${formatGbDecimal(pub.cf_storage_used_bytes)} / ${formatGbDecimal(pub.cf_storage_limit_bytes)} (${cfPct}%)`,
         )
       }
 
       const sbStorPct = usagePct(pub.sb_storage_used_bytes, pub.sb_storage_limit_bytes)
-      if (pub.track_supabase && pub.has_supabase && sbStorPct != null && sbStorPct >= 80) {
+      if (pub.track_supabase && pub.has_supabase && sbStorPct != null && sbStorPct >= SB_STORAGE_ALERT_PCT) {
         alerts.push(
-          `🗄️ Supabase Storage · ${label}\nUso: ${formatBytes(pub.sb_storage_used_bytes)} / ${formatBytes(pub.sb_storage_limit_bytes)} (${sbStorPct}%)`,
+          `🗄️ Supabase Storage · ${label}\nUso: ${formatGbDecimal(pub.sb_storage_used_bytes)} / ${formatGbDecimal(pub.sb_storage_limit_bytes)} (${sbStorPct}%)`,
         )
       }
 
       const sbDbPct = usagePct(pub.sb_db_used_bytes, pub.sb_db_limit_bytes)
-      if (pub.track_supabase && pub.has_supabase && sbDbPct != null && sbDbPct >= 80) {
+      if (pub.track_supabase && pub.has_supabase && sbDbPct != null && sbDbPct >= SB_DB_ALERT_PCT) {
         alerts.push(
-          `🗃️ Supabase DB · ${label}\nUso: ${formatBytes(pub.sb_db_used_bytes)} / ${formatBytes(pub.sb_db_limit_bytes)} (${sbDbPct}%)`,
+          `🗃️ Supabase DB · ${label}\nUso: ${formatGbDecimal(pub.sb_db_used_bytes)} / ${formatGbDecimal(pub.sb_db_limit_bytes)} (${sbDbPct}%)`,
         )
       }
 
-      const resPct = usagePct(pub.resend_sent_today, pub.resend_daily_limit)
-      if (pub.track_resend && pub.has_resend && resPct != null && resPct >= 80) {
+      const sentToday = Number(pub.resend_sent_today ?? 0)
+      if (pub.track_resend && pub.has_resend && sentToday >= RESEND_DAILY_ALERT_COUNT) {
         alerts.push(
-          `✉️ Resend · ${label}\nE-mails hoje: ${pub.resend_sent_today} / ${pub.resend_daily_limit} (${resPct}%)`,
-        )
-      }
-
-      const resMonthPct = usagePct(pub.resend_sent_month, pub.resend_monthly_limit)
-      if (pub.track_resend && pub.has_resend && resMonthPct != null && resMonthPct >= 80) {
-        alerts.push(
-          `✉️ Resend mês · ${label}\nE-mails no mês: ${pub.resend_sent_month} / ${pub.resend_monthly_limit} (${resMonthPct}%)`,
+          `✉️ Resend · ${label}\nE-mails hoje: ${sentToday} / ${pub.resend_daily_limit} (limite de aviso: ${RESEND_DAILY_ALERT_COUNT})`,
         )
       }
     } catch (err) {
