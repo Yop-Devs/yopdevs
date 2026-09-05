@@ -454,6 +454,18 @@ async function runSupabaseManagementQuery(
   }
 }
 
+function coerceBigInt(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value)
+  if (typeof value === 'string' && value.trim()) {
+    const n = Number(value)
+    if (Number.isFinite(n)) return Math.round(n)
+  }
+  if (value && typeof value === 'object' && 'value' in (value as object)) {
+    return coerceBigInt((value as { value: unknown }).value)
+  }
+  return null
+}
+
 /** Mede DB + Storage numa query só (Management API / PAT) — bem mais rápido que listar buckets. */
 async function measureSupabaseViaPat(
   projectRef: string | null,
@@ -461,21 +473,21 @@ async function measureSupabaseViaPat(
 ): Promise<{ dbBytes: number | null; storageBytes: number | null }> {
   if (!projectRef || !accessToken) return { dbBytes: null, storageBytes: null }
 
+  // DB: soma todos os databases (mesmo critério do docs / reports do Supabase)
+  // Storage: soma metadata.size em storage.objects (bate com Usage em GB decimal)
   const row = await runSupabaseManagementQuery(
     projectRef,
     accessToken,
     `
       select
-        pg_database_size(current_database())::bigint as db_size,
+        (select coalesce(sum(pg_database_size(datname)), 0)::bigint from pg_database) as db_size,
         coalesce((select sum((metadata->>'size')::bigint) from storage.objects), 0)::bigint as storage_size;
     `.replace(/\s+/g, ' ').trim(),
   )
 
-  const dbBytes = Number(row?.db_size)
-  const storageBytes = Number(row?.storage_size)
   return {
-    dbBytes: Number.isFinite(dbBytes) ? dbBytes : null,
-    storageBytes: Number.isFinite(storageBytes) ? storageBytes : null,
+    dbBytes: coerceBigInt(row?.db_size),
+    storageBytes: coerceBigInt(row?.storage_size),
   }
 }
 
@@ -487,10 +499,10 @@ async function measureSupabaseDbBytes(
   const row = await runSupabaseManagementQuery(
     projectRef,
     accessToken,
-    'select pg_database_size(current_database())::bigint as size;',
+    'select coalesce(sum(pg_database_size(datname)), 0)::bigint as size from pg_database;',
   )
-  const size = Number(row?.size)
-  if (Number.isFinite(size)) return size
+  const size = coerceBigInt(row?.size)
+  if (size != null) return size
   throw new Error('Supabase DB: resposta sem tamanho reconhecível')
 }
 

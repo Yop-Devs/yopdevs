@@ -121,6 +121,15 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${n.toFixed(n >= 10 ? 0 : 1)} ${units[i]}`
 }
 
+/** Mesmo padrão do painel de Usage do Supabase (GB decimal). */
+export function formatGbDecimal(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes)) return '—'
+  const gb = bytes / 1_000_000_000
+  if (gb < 0.001) return `${(bytes / 1_000_000).toFixed(0)} MB`
+  if (gb < 10) return `${gb.toFixed(3)} GB`
+  return `${gb.toFixed(2)} GB`
+}
+
 export function usagePct(used: number | null | undefined, limit: number | null | undefined): number | null {
   if (used == null || limit == null || limit <= 0) return null
   return Math.min(999, Math.round((used / limit) * 100))

@@ -14,7 +14,7 @@ import {
   resolveSystemLogoUrl,
 } from '@/lib/admin-systems'
 import {
-  formatBytes,
+  formatGbDecimal,
   usagePct,
   type SystemIntegrationPublic,
 } from '@/lib/system-infra-types'
@@ -705,7 +705,7 @@ function MiniUsage({
   const tone =
     pct == null ? 'bg-slate-200' : pct >= 90 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
   const fmt = (n: number | null) =>
-    unit === 'bytes' ? formatBytes(n) : n == null ? '—' : String(n)
+    unit === 'bytes' ? formatGbDecimal(n) : n == null ? '—' : String(n)
 
   return (
     <div className="min-w-[7.5rem] flex-1 space-y-1">
@@ -713,7 +713,7 @@ function MiniUsage({
         <span className="font-semibold text-slate-500">{label}</span>
         <span className="tabular-nums text-slate-700">
           {fmt(used)}
-          <span className="text-slate-400">/{fmt(limit)}</span>
+          <span className="text-slate-400"> / {fmt(limit)}</span>
           {pct != null ? <span className="text-slate-400"> · {pct}%</span> : null}
         </span>
       </div>
