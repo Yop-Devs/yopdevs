@@ -16,6 +16,7 @@ function cspDirectives(scriptSrc: string): string {
     "frame-ancestors 'self'",
     "form-action 'self'",
     scriptSrc,
+    // style-src com unsafe-inline: Observatory aceita (0 pts); Tailwind precisa.
     "style-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
     "img-src 'self' data: blob: https://cdn.simpleicons.org https://*.supabase.co https://challenges.cloudflare.com",
     "font-src 'self' data:",
@@ -30,22 +31,14 @@ function cspDirectives(scriptSrc: string): string {
 }
 
 /**
- * CSP para next.config (headers estáticos — sempre enviados).
- * Usa unsafe-inline em script porque não há nonce por request neste caminho.
+ * CSP por request (proxy). Sem 'unsafe-inline' em script-src em produção
+ * (necessário para Mozilla Observatory / nota A).
+ * Next aplica o nonce aos scripts do framework quando o header vai no request.
  */
-export function buildStaticContentSecurityPolicy(): string {
-  const isDev = process.env.NODE_ENV === 'development'
-  const scriptSrc = isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
-    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
-  return cspDirectives(scriptSrc)
-}
-
-/** CSP com nonce (proxy) — reforço por request. */
 export function buildContentSecurityPolicy(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
   const scriptSrc = isDev
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
-    : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' https://challenges.cloudflare.com`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`
   return cspDirectives(scriptSrc)
 }

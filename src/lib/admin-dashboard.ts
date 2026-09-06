@@ -37,11 +37,49 @@ export type AlertTone = 'danger' | 'warn' | 'info' | 'ok'
 export type DashboardAlert = {
   id: string
   tone: AlertTone
-  kind: 'domain' | 'parcel' | 'fee'
+  kind: 'domain' | 'parcel' | 'fee' | 'infra'
   title: string
   detail: string
   days: number | null
   href: string
+}
+
+export type DashboardInfraRow = {
+  system_id: string
+  company_name: string
+  track_cloudflare: boolean | null
+  track_supabase: boolean | null
+  track_resend: boolean | null
+  has_cloudflare: boolean
+  has_supabase: boolean
+  has_resend: boolean
+  cf_storage_used_bytes: number | null
+  cf_storage_limit_bytes: number | null
+  sb_storage_used_bytes: number | null
+  sb_storage_limit_bytes: number | null
+  sb_db_used_bytes: number | null
+  sb_db_limit_bytes: number | null
+  resend_sent_today: number | null
+  resend_daily_limit: number | null
+  last_error: string | null
+}
+
+export type DashboardAgendaItem = {
+  id: string
+  title: string
+  event_date: string
+  event_time: string | null
+  category: string
+}
+
+const R2_ALERT_PCT = 90
+const SB_STORAGE_ALERT_PCT = 85
+const SB_DB_ALERT_PCT = 90
+const RESEND_DAILY_ALERT_COUNT = 90
+
+function usagePctLocal(used: number | null | undefined, limit: number | null | undefined): number | null {
+  if (used == null || limit == null || limit <= 0) return null
+  return Math.min(999, Math.round((used / limit) * 100))
 }
 
 function alertToneFromDays(days: number | null, warnAt = 30, dangerAt = 7): AlertTone {
@@ -134,6 +172,88 @@ export function buildDashboardAlerts(input: {
     })
   }
 
+  return sortAlerts(alerts)
+}
+
+/** Avisos de uso CF / Supabase / Resend (mesmos limiares do Telegram). */
+export function buildInfraUsageAlerts(rows: DashboardInfraRow[]): DashboardAlert[] {
+  const alerts: DashboardAlert[] = []
+
+  for (const row of rows) {
+    const label = row.company_name || 'Sistema'
+    const trackCf = row.track_cloudflare ?? false
+    const trackSb = row.track_supabase ?? true
+    const trackResend = row.track_resend ?? false
+
+    if (row.last_error?.trim()) {
+      alerts.push({
+        id: `infra-err-${row.system_id}`,
+        tone: 'danger',
+        kind: 'infra',
+        title: `Sync infra · ${label}`,
+        detail: row.last_error.trim().slice(0, 120),
+        days: null,
+        href: adminPaths.sistemas,
+      })
+    }
+
+    const cfPct = usagePctLocal(row.cf_storage_used_bytes, row.cf_storage_limit_bytes)
+    if (trackCf && row.has_cloudflare && cfPct != null && cfPct >= R2_ALERT_PCT) {
+      alerts.push({
+        id: `infra-cf-${row.system_id}`,
+        tone: cfPct >= 95 ? 'danger' : 'warn',
+        kind: 'infra',
+        title: `Cloudflare R2 · ${label}`,
+        detail: `Uso em ${cfPct}% do limite`,
+        days: null,
+        href: adminPaths.sistemas,
+      })
+    }
+
+    const sbStorPct = usagePctLocal(row.sb_storage_used_bytes, row.sb_storage_limit_bytes)
+    if (trackSb && row.has_supabase && sbStorPct != null && sbStorPct >= SB_STORAGE_ALERT_PCT) {
+      alerts.push({
+        id: `infra-sb-stor-${row.system_id}`,
+        tone: sbStorPct >= 95 ? 'danger' : 'warn',
+        kind: 'infra',
+        title: `Supabase Storage · ${label}`,
+        detail: `Uso em ${sbStorPct}% do limite`,
+        days: null,
+        href: adminPaths.sistemas,
+      })
+    }
+
+    const sbDbPct = usagePctLocal(row.sb_db_used_bytes, row.sb_db_limit_bytes)
+    if (trackSb && row.has_supabase && sbDbPct != null && sbDbPct >= SB_DB_ALERT_PCT) {
+      alerts.push({
+        id: `infra-sb-db-${row.system_id}`,
+        tone: sbDbPct >= 95 ? 'danger' : 'warn',
+        kind: 'infra',
+        title: `Supabase DB · ${label}`,
+        detail: `Uso em ${sbDbPct}% do limite`,
+        days: null,
+        href: adminPaths.sistemas,
+      })
+    }
+
+    const sent = Number(row.resend_sent_today ?? 0)
+    if (trackResend && row.has_resend && sent >= RESEND_DAILY_ALERT_COUNT) {
+      alerts.push({
+        id: `infra-resend-${row.system_id}`,
+        tone: 'warn',
+        kind: 'infra',
+        title: `Resend · ${label}`,
+        detail: `${sent} e-mail(s) hoje (aviso a partir de ${RESEND_DAILY_ALERT_COUNT})`,
+        days: null,
+        href: adminPaths.sistemas,
+      })
+    }
+  }
+
+  return sortAlerts(alerts)
+}
+
+function sortAlerts(alerts: DashboardAlert[]): DashboardAlert[] {
   const rank: Record<AlertTone, number> = { danger: 0, warn: 1, info: 2, ok: 3 }
   return alerts.sort((a, b) => {
     const toneDiff = rank[a.tone] - rank[b.tone]
@@ -182,6 +302,13 @@ export function summarizeDashboard(input: {
     alertDangerCount: alerts.filter((a) => a.tone === 'danger').length,
     alertWarnCount: alerts.filter((a) => a.tone === 'warn').length,
   }
+}
+
+export function alertKindLabel(kind: DashboardAlert['kind']): string {
+  if (kind === 'domain') return 'Domínio'
+  if (kind === 'parcel') return 'Parcela'
+  if (kind === 'fee') return 'Mensalidade'
+  return 'Infra'
 }
 
 export const alertToneClass: Record<AlertTone, string> = {

@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 
 type Thread = {
@@ -88,6 +89,7 @@ function participantLabel(participants: string[]): string {
 }
 
 export default function AdminEmailsPage() {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const [panel, setPanel] = useState<Panel>('inbox')
   const [filter, setFilter] = useState<Filter>('all')
   const [threads, setThreads] = useState<Thread[]>([])
@@ -201,7 +203,14 @@ export default function AdminEmailsPage() {
 
   async function removeThread(threadId: string, e?: MouseEvent) {
     e?.stopPropagation()
-    if (!window.confirm('Apagar esta conversa? Não dá para desfazer.')) return
+    const ok = await confirm({
+      title: 'Apagar esta conversa?',
+      description: 'Não dá para desfazer. A conversa e as mensagens somem da caixa.',
+      confirmLabel: 'Apagar',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusyId(threadId)
     try {
       const headers = await authHeaders()
@@ -729,6 +738,7 @@ export default function AdminEmailsPage() {
           )}
         </section>
       </div>
+      {confirmDialog}
     </div>
   )
 }

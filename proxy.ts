@@ -115,8 +115,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Garante CSP/nonce em todas as páginas HTML (não só rotas “interessantes”).
+  // '/' explícito: o regex sozinho muitas vezes não casa a home (CSP sumia no Observatory).
   matcher: [
+    '/',
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?|map)$).*)',
   ],
 }

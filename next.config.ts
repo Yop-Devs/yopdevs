@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
 import withPWA from "next-pwa";
-import { buildStaticContentSecurityPolicy } from "./src/lib/csp";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pwaRuntimeCache = require("./pwa-runtime-cache.js") as Array<unknown>;
 
+/** Headers estáticos. CSP fica só no proxy.ts (nonce por request). */
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: buildStaticContentSecurityPolicy() },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
