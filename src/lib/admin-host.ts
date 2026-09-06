@@ -60,6 +60,7 @@ export const adminOnlyPrefixes = [
   adminPaths.pagamentos,
   adminPaths.cobranca,
   adminPaths.emails,
+  adminPaths.senhas,
 ] as const
 
 export function isAdminOnlyPath(pathname: string): boolean {
