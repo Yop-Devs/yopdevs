@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/finance-alerts",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/agenda-alerts",
+      "schedule": "5 * * * *"
     }
   ]
 }
