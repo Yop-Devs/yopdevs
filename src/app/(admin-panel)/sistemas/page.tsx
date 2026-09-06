@@ -7,7 +7,6 @@ import {
   ADMIN_SYSTEM_BUCKET,
   AdminSystem,
   AdminSystemFile,
-  AdminSystemFileKind,
   daysUntil,
   formatDateBr,
   isHttpLink,
@@ -74,8 +73,6 @@ export default function AdminSistemasPage() {
   const [editing, setEditing] = useState<AdminSystem | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [envFiles, setEnvFiles] = useState<FileList | null>(null)
-  const [accessFiles, setAccessFiles] = useState<FileList | null>(null)
   const [query, setQuery] = useState('')
   const [logoSrcById, setLogoSrcById] = useState<Record<string, string>>({})
   const [integrationsBySystem, setIntegrationsBySystem] = useState<
@@ -189,8 +186,6 @@ export default function AdminSistemasPage() {
     setEditing(null)
     setForm(emptyForm)
     setLogoFile(null)
-    setEnvFiles(null)
-    setAccessFiles(null)
     setEditorOpen(true)
   }
 
@@ -204,8 +199,6 @@ export default function AdminSistemasPage() {
       notes: system.notes ?? '',
     })
     setLogoFile(null)
-    setEnvFiles(null)
-    setAccessFiles(null)
     setEditorOpen(true)
   }
 
@@ -218,28 +211,6 @@ export default function AdminSistemasPage() {
     })
     if (error) throw error
     return path
-  }
-
-  async function attachFiles(systemId: string, files: FileList | null, kind: AdminSystemFileKind) {
-    if (!files?.length) return
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    const userId = session?.user?.id ?? null
-
-    for (const file of Array.from(files)) {
-      const path = await uploadFile(systemId, file, kind)
-      const { error } = await supabase.from('yop_admin_system_files').insert({
-        system_id: systemId,
-        kind,
-        file_name: file.name,
-        file_path: path,
-        mime_type: file.type || null,
-        file_size: file.size,
-        created_by: userId,
-      })
-      if (error) throw error
-    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -300,9 +271,6 @@ export default function AdminSistemasPage() {
           .eq('id', systemId)
         if (logoError) throw logoError
       }
-
-      await attachFiles(systemId, envFiles, 'env')
-      await attachFiles(systemId, accessFiles, 'access')
 
       toast.success(editing ? 'Sistema atualizado.' : 'Sistema cadastrado.')
       setEditorOpen(false)
@@ -531,9 +499,7 @@ export default function AdminSistemasPage() {
           </div>
           <ul className="divide-y divide-slate-100">
             {filtered.map((system) => {
-              const files = filesBySystem[system.id] ?? []
-              const envCount = files.filter((f) => f.kind === 'env').length
-              const accessCount = files.filter((f) => f.kind === 'access').length
+              const files = (filesBySystem[system.id] ?? []).filter((f) => f.kind !== 'env')
               const domainDays = daysUntil(system.domain_expires_at)
               const logoSrc = logoSrcById[system.id] ?? null
               const integ = integrationsBySystem[system.id] ?? null
@@ -543,8 +509,6 @@ export default function AdminSistemasPage() {
                   key={system.id}
                   system={system}
                   files={files}
-                  envCount={envCount}
-                  accessCount={accessCount}
                   domainDays={domainDays}
                   logoSrc={logoSrc}
                   integ={integ}
@@ -589,7 +553,7 @@ export default function AdminSistemasPage() {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{editing ? 'Editar sistema' : 'Novo sistema'}</h3>
                 <p className="text-sm text-slate-500">
-                  Anexos (.env, .txt, .pdf) ficam só para consulta — não alimentam o Sync. Chaves de infra vão em Detalhes.
+                  Anote como entrar em cada painel (Google, GitHub, e-mail/senha…). Sem arquivos .env.
                 </p>
               </div>
               <button type="button" onClick={() => setEditorOpen(false)} className="rounded-lg p-1 text-slate-400 hover:text-slate-700" aria-label="Fechar">
@@ -611,8 +575,8 @@ export default function AdminSistemasPage() {
                 <input value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} placeholder="https://" className={inputClass} />
               </Field>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="block text-sm">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="block text-sm sm:col-span-1">
                   <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Logo</span>
                   <input
                     type="file"
@@ -620,7 +584,6 @@ export default function AdminSistemasPage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0] ?? null
                       setLogoFile(file)
-                      // Permite selecionar o mesmo arquivo de novo depois
                       e.target.value = ''
                     }}
                     className={fileClass}
@@ -630,34 +593,38 @@ export default function AdminSistemasPage() {
                   ) : null}
                   {logoFile ? <p className="mt-1 text-[11px] font-medium text-emerald-700">Selecionada: {logoFile.name}</p> : null}
                 </div>
-                <div className="block text-sm">
-                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar .env (arquivo)</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept=".env,.txt,text/plain"
-                    onChange={(e) => setEnvFiles(e.target.files)}
-                    className={fileClass}
-                  />
-                </div>
-                <div className="block text-sm">
-                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Anexar acessos (.txt/.pdf)</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept=".txt,.pdf,text/plain,application/pdf"
-                    onChange={(e) => setAccessFiles(e.target.files)}
-                    className={fileClass}
-                  />
-                </div>
+                <Field label="Expiração do domínio">
+                  <input type="date" value={form.domain_expires_at} onChange={(e) => setForm((f) => ({ ...f, domain_expires_at: e.target.value }))} className={inputClass} />
+                </Field>
               </div>
 
-              <Field label="Expiração do domínio">
-                <input type="date" value={form.domain_expires_at} onChange={(e) => setForm((f) => ({ ...f, domain_expires_at: e.target.value }))} className={inputClass} />
-              </Field>
+              <Field label="Acessos aos painéis (bloco de notas)">
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={8}
+                  placeholder={`Como entrar em cada plataforma deste cliente. Ex.:
 
-              <Field label="Observações">
-                <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} className={inputClass} />
+Cloudflare
+- Login: Google (conta x@gmail.com)
+- Conta / zona: ...
+
+Vercel
+- Login: GitHub (org Yop-Devs)
+- Projeto: ...
+
+Supabase
+- Login: e-mail ... / senha ...
+- Projeto: ...
+
+Resend / Firebase / outros
+- Método: Google | e-mail | GitHub
+- Observações: ...`}
+                  className={`${inputClass} font-mono text-[13px] leading-relaxed`}
+                />
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  Só você vê isso (admin). Prefira descrever o método de login; evite colar API keys aqui — use “Chaves e provedores” no Sync.
+                </p>
               </Field>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -767,8 +734,6 @@ function MiniUsage({
 function SystemRow({
   system,
   files,
-  envCount,
-  accessCount,
   domainDays,
   logoSrc,
   integ,
@@ -785,8 +750,6 @@ function SystemRow({
 }: {
   system: AdminSystem
   files: AdminSystemFile[]
-  envCount: number
-  accessCount: number
   domainDays: number | null
   logoSrc: string | null
   integ: SystemIntegrationPublic | null
@@ -852,9 +815,11 @@ function SystemRow({
                   {system.link!.replace(/^https?:\/\//, '')}
                 </a>
               ) : null}
-              <span className="text-slate-400">
-                .env {envCount} · acessos {accessCount}
-              </span>
+              {system.notes?.trim() ? (
+                <span className="text-emerald-700">Acessos anotados</span>
+              ) : (
+                <span className="text-amber-600">Sem bloco de acessos</span>
+              )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
               <span
@@ -972,11 +937,23 @@ function SystemRow({
             embedded
           />
 
-          {system.notes ? <p className="text-xs text-slate-600">{system.notes}</p> : null}
+          {system.notes?.trim() ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Acessos aos painéis</p>
+              <pre className="mt-1.5 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-700">
+                {system.notes}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-[11px] text-amber-700">
+              Sem instruções de acesso. Edite o sistema e preencha o bloco de notas (Cloudflare, Vercel, etc.).
+            </p>
+          )}
 
           {files.length > 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Anexos ({files.length})</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Anexos antigos ({files.length})</p>
+              <p className="mt-0.5 text-[10px] text-slate-400">Arquivos .env não aparecem mais. Pode excluir o restante se não precisar.</p>
               <ul className="mt-1.5 space-y-1">
                 {files.map((file) => (
                   <li key={file.id} className="flex items-center justify-between gap-2 text-[11px]">
@@ -1187,7 +1164,7 @@ function InfraPanel({
             </button>
           </div>
           <p className="text-[10px] text-slate-400">
-            Chaves só pelo painel. Arquivo .env fica só como anexo (não é importado no Sync).
+            API keys só aqui (criptografadas). Como entrar nos painéis (Google/Git/senha) fica no bloco de notas do sistema.
           </p>
         </div>
       </details>
