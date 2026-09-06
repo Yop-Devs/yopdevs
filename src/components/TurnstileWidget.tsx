@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { CSP_NONCE } from '@/lib/csp'
 
 type Props = {
@@ -20,7 +20,7 @@ declare global {
           sitekey: string
           callback: (token: string) => void
           'expired-callback'?: () => void
-          'error-callback'?: (errorCode?: string) => void
+          'error-callback'?: () => void
           'timeout-callback'?: () => void
           theme?: 'light' | 'dark' | 'auto'
           appearance?: 'always' | 'execute' | 'interaction-only'
@@ -30,7 +30,6 @@ declare global {
       reset: (widgetId?: string) => void
       remove: (widgetId?: string) => void
     }
-    onTurnstileLoad?: () => void
   }
 }
 
@@ -56,8 +55,15 @@ function loadTurnstileScript(): Promise<void> {
         resolve()
         return
       }
-      existing.addEventListener('load', () => resolve())
-      existing.addEventListener('error', () => reject(new Error('Turnstile script failed')))
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener(
+        'error',
+        () => {
+          scriptLoading = null
+          reject(new Error('Turnstile script failed'))
+        },
+        { once: true },
+      )
       return
     }
     const s = document.createElement('script')
@@ -65,7 +71,6 @@ function loadTurnstileScript(): Promise<void> {
     s.async = true
     s.defer = true
     s.dataset.turnstile = '1'
-    // CSP com nonce: obrigatório para o Turnstile propagar aos recursos filhos
     s.setAttribute('nonce', readCspNonce())
     s.onload = () => resolve()
     s.onerror = () => {
@@ -77,7 +82,7 @@ function loadTurnstileScript(): Promise<void> {
   return scriptLoading
 }
 
-/** Widget Cloudflare Turnstile. Não renderiza se a site key não existir. */
+/** Widget Cloudflare Turnstile — callbacks via ref para não desmontar a cada render. */
 export default function TurnstileWidget({
   onToken,
   onExpire,
@@ -88,96 +93,115 @@ export default function TurnstileWidget({
   const elRef = useRef<HTMLDivElement | null>(null)
   const widgetId = useRef<string | null>(null)
   const reactId = useId()
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
 
-  const fail = useCallback(
-    (message: string) => {
-      setStatus('error')
-      setErrorMsg(message)
-      onError?.(message)
-      onExpire?.()
-    },
-    [onError, onExpire],
-  )
-
-  const renderWidget = useCallback(async () => {
-    if (!SITE_KEY || !elRef.current) return
-    setStatus('loading')
-    setErrorMsg(null)
-    try {
-      await loadTurnstileScript()
-    } catch {
-      fail('Não foi possível carregar o captcha. Recarregue a página.')
-      return
-    }
-    if (!window.turnstile || !elRef.current) {
-      fail('Captcha indisponível neste navegador.')
-      return
-    }
-    if (widgetId.current) {
-      try {
-        window.turnstile.remove(widgetId.current)
-      } catch {
-        // ignore
-      }
-      widgetId.current = null
-    }
-    try {
-      widgetId.current = window.turnstile.render(elRef.current, {
-        sitekey: SITE_KEY,
-        theme,
-        appearance: 'always',
-        size: 'flexible',
-        callback: (token) => {
-          setStatus('ready')
-          onToken(token)
-        },
-        'expired-callback': () => {
-          setStatus('idle')
-          onExpire?.()
-        },
-        'error-callback': () => {
-          fail(
-            'Captcha falhou. Confira no Cloudflare se o domínio admin.yopdevs.com.br está na lista do widget.',
-          )
-        },
-        'timeout-callback': () => {
-          fail('Captcha expirou. Clique em tentar de novo.')
-        },
-      })
-      setStatus('ready')
-    } catch {
-      fail('Erro ao montar o captcha.')
-    }
-  }, [fail, onExpire, onToken, theme])
+  const onTokenRef = useRef(onToken)
+  const onExpireRef = useRef(onExpire)
+  const onErrorRef = useRef(onError)
+  onTokenRef.current = onToken
+  onExpireRef.current = onExpire
+  onErrorRef.current = onError
 
   useEffect(() => {
-    void renderWidget()
+    let cancelled = false
+
+    const fail = (message: string) => {
+      if (cancelled) return
+      setErrorMsg(message)
+      onErrorRef.current?.(message)
+      onExpireRef.current?.()
+    }
+
+    async function mount() {
+      if (!SITE_KEY) return
+      setErrorMsg(null)
+
+      // espera o div existir no DOM
+      await new Promise<void>((r) => requestAnimationFrame(() => r()))
+      if (cancelled || !elRef.current) return
+
+      try {
+        await loadTurnstileScript()
+      } catch {
+        fail('Não foi possível carregar o captcha. Recarregue a página.')
+        return
+      }
+      if (cancelled || !elRef.current || !window.turnstile) {
+        if (!cancelled && !window.turnstile) {
+          fail('Captcha indisponível neste navegador.')
+        }
+        return
+      }
+
+      if (widgetId.current) {
+        try {
+          window.turnstile.remove(widgetId.current)
+        } catch {
+          // ignore
+        }
+        widgetId.current = null
+      }
+
+      // limpa filhos residuais antes de render
+      elRef.current.innerHTML = ''
+
+      try {
+        widgetId.current = window.turnstile.render(elRef.current, {
+          sitekey: SITE_KEY,
+          theme,
+          appearance: 'always',
+          size: 'flexible',
+          callback: (token) => {
+            if (cancelled) return
+            setErrorMsg(null)
+            onTokenRef.current(token)
+          },
+          'expired-callback': () => {
+            if (cancelled) return
+            onExpireRef.current?.()
+          },
+          'error-callback': () => {
+            fail(
+              'Captcha falhou. No Cloudflare Turnstile, inclua admin.yopdevs.com.br e yopdevs.com.br nos hostnames do widget.',
+            )
+          },
+          'timeout-callback': () => {
+            fail('Captcha expirou. Clique em tentar de novo.')
+          },
+        })
+      } catch {
+        fail('Erro ao montar o captcha.')
+      }
+    }
+
+    void mount()
+
     return () => {
+      cancelled = true
       if (widgetId.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetId.current)
         } catch {
           // ignore
         }
+        widgetId.current = null
       }
     }
-  }, [renderWidget, retryKey])
+  }, [theme, retryKey])
 
   if (!SITE_KEY) return null
 
   return (
     <div className={className}>
       <div ref={elRef} data-turnstile-id={reactId} />
-      {status === 'error' && errorMsg ? (
+      {errorMsg ? (
         <div className="mt-2 space-y-2">
           <p className="text-xs text-rose-300">{errorMsg}</p>
           <button
             type="button"
             onClick={() => {
-              onExpire?.()
+              onExpireRef.current?.()
               setRetryKey((k) => k + 1)
             }}
             className="text-xs font-semibold text-violet-200 underline hover:text-white"

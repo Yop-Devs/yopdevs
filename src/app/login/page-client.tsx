@@ -306,7 +306,10 @@ export default function AdminLoginPage() {
                 theme="dark"
                 onToken={setTurnstileToken}
                 onExpire={() => setTurnstileToken('')}
-                onError={(msg) => setError(msg)}
+                onError={(msg) => {
+                  setError(msg)
+                  setTurnstileToken('')
+                }}
               />
             ) : null}
 
@@ -317,6 +320,11 @@ export default function AdminLoginPage() {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
+            {captchaOn && !turnstileToken ? (
+              <p className="text-center text-[11px] text-white/45">
+                Aguarde o captcha concluir (✓) para habilitar Entrar.
+              </p>
+            ) : null}
           </form>
         )}
 
