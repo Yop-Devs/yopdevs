@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
     } else {
       setMessage({ type: 'success', text: 'CHAVE ATUALIZADA. REDIRECIONANDO PARA O TERMINAL...' })
       setTimeout(() => {
-        router.push(adminPaths.sistemas)
+        router.push(adminPaths.dashboard)
       }, 2000)
     }
     setLoading(false)

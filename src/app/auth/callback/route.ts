@@ -7,7 +7,7 @@ import { adminPaths, adminPublicUrl } from '@/lib/admin-host'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? adminPaths.sistemas
+  const next = searchParams.get('next') ?? adminPaths.dashboard
 
   if (code) {
     const cookieStore = await cookies()
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         await supabase.auth.signOut()
         return NextResponse.redirect(adminPublicUrl(`${adminPaths.login}?error=unauthorized`))
       }
-      const cleanNext = next.startsWith('/admin') ? next.replace(/^\/admin/, '') || adminPaths.sistemas : next
+      const cleanNext = next.startsWith('/admin') ? next.replace(/^\/admin/, '') || adminPaths.dashboard : next
       return NextResponse.redirect(adminPublicUrl(cleanNext))
     }
   }

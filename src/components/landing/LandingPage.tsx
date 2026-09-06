@@ -616,7 +616,7 @@ function LandingPageContent() {
         return
       }
 
-      window.location.href = adminPublicUrl(adminPaths.sistemas)
+      window.location.href = adminPublicUrl(adminPaths.dashboard)
     } catch (err) {
       setMessage({ type: 'error', text: getAuthErrorMessage(err) })
       setLoading(false)

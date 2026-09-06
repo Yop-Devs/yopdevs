@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
         return
       }
     }
-    router.replace(adminPaths.sistemas)
+    router.replace(adminPaths.dashboard)
   }
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function AdminLoginPage() {
         setError('Código 2FA inválido. Tente de novo.')
         return
       }
-      router.replace(adminPaths.sistemas)
+      router.replace(adminPaths.dashboard)
     } finally {
       setLoading(false)
     }
