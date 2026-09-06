@@ -47,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="pt-br" className={`${fredoka.variable} overflow-x-hidden`}>
       <head>
+        <meta name="csp-nonce" content={nonce} />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />

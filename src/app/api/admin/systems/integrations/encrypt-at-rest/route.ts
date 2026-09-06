@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole, requireAdminUser } from '@/lib/admin-api-auth'
 import { secretsEncryptionConfigured } from '@/lib/secrets-crypto'
+import { reencryptAllSystemAccessNotes } from '@/lib/system-access-notes'
 import { reencryptAllIntegrationSecrets } from '@/lib/system-infra-sync'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
- * POST — criptografa secrets legados (plaintext) em yop_admin_system_integrations.
+ * POST — criptografa secrets de integrações + bloco de acessos (notes) em plaintext.
  * Exige SECRETS_ENCRYPTION_KEY + admin.
  */
 export async function POST(request: Request) {
@@ -32,8 +33,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await reencryptAllIntegrationSecrets(yop)
-    return NextResponse.json({ ok: true, ...result })
+    const integrations = await reencryptAllIntegrationSecrets(yop)
+    const notes = await reencryptAllSystemAccessNotes(yop)
+    return NextResponse.json({
+      ok: true,
+      integrations,
+      notes,
+      updated: (integrations.updated ?? 0) + (notes.updated ?? 0),
+      skipped: (integrations.skipped ?? 0) + (notes.skipped ?? 0),
+      errors: [...(integrations.errors ?? []), ...(notes.errors ?? [])],
+    })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Falha ao criptografar.' },
@@ -49,6 +58,6 @@ export async function GET(request: Request) {
   }
   return NextResponse.json({
     configured: secretsEncryptionConfigured(),
-    hint: 'POST neste endpoint para migrar plaintext → AES-256-GCM.',
+    hint: 'POST neste endpoint para migrar plaintext → AES-256-GCM (integrações + notes).',
   })
 }

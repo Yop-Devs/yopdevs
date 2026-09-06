@@ -8,7 +8,8 @@ export type AdminSystem = {
   logo_path: string | null
   logo_url: string | null
   domain_expires_at: string | null
-  notes: string | null
+  /** Só flag no client — conteúdo vem via API revelar. */
+  has_access_notes?: boolean
   created_at: string
   updated_at: string
 }

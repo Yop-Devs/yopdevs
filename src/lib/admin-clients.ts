@@ -3,7 +3,6 @@ export type AdminClientSystem = {
   name: string
   company_name: string
   link: string | null
-  notes: string | null
 }
 
 export type AdminClientDocument = {
@@ -51,7 +50,6 @@ export type AdminSystemOption = {
   name: string
   company_name: string
   link: string | null
-  notes: string | null
 }
 
 export type ClientDocMode = 'cpf' | 'cnpj' | 'both'

@@ -89,7 +89,9 @@ export default function AdminSistemasPage() {
     setLoading(true)
     const { data: rows, error } = await supabase
       .from('yop_admin_systems')
-      .select('*')
+      .select(
+        'id, name, company_name, link, logo_path, logo_url, domain_expires_at, created_at, updated_at',
+      )
       .order('company_name', { ascending: true })
 
     if (error) {
@@ -98,7 +100,27 @@ export default function AdminSistemasPage() {
       return
     }
 
-    const list = (rows ?? []) as AdminSystem[]
+    const list = (rows ?? []).map((row) => ({
+      ...(row as Omit<AdminSystem, 'has_access_notes'>),
+      has_access_notes: false,
+    })) as AdminSystem[]
+
+    try {
+      const headers = await authHeaders()
+      const presenceRes = await fetch('/api/admin/systems/access-notes', { headers })
+      const presenceJson = (await presenceRes.json()) as {
+        presence?: Record<string, boolean>
+        error?: string
+      }
+      if (presenceRes.ok && presenceJson.presence) {
+        for (const s of list) {
+          s.has_access_notes = Boolean(presenceJson.presence[s.id])
+        }
+      }
+    } catch {
+      // presença opcional
+    }
+
     setSystems(list)
 
     const logos: Record<string, string> = {}
@@ -189,17 +211,28 @@ export default function AdminSistemasPage() {
     setEditorOpen(true)
   }
 
-  function openEdit(system: AdminSystem) {
+  async function openEdit(system: AdminSystem) {
     setEditing(system)
     setForm({
       name: system.name,
       company_name: system.company_name,
       link: system.link ?? '',
       domain_expires_at: system.domain_expires_at ?? '',
-      notes: system.notes ?? '',
+      notes: '',
     })
     setLogoFile(null)
     setEditorOpen(true)
+    if (system.has_access_notes) {
+      try {
+        const headers = await authHeaders()
+        const res = await fetch(`/api/admin/systems/${system.id}/access-notes`, { headers })
+        const json = (await res.json()) as { notes?: string; error?: string }
+        if (!res.ok) throw new Error(json.error || 'Falha ao carregar acessos.')
+        setForm((f) => ({ ...f, notes: json.notes ?? '' }))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Falha ao revelar bloco de acessos.')
+      }
+    }
   }
 
   async function uploadFile(systemId: string, file: File, folder: string) {
@@ -232,7 +265,6 @@ export default function AdminSistemasPage() {
         company_name: form.company_name.trim(),
         link: form.link.trim() || null,
         domain_expires_at: form.domain_expires_at || null,
-        notes: form.notes.trim() || null,
         updated_at: new Date().toISOString(),
       }
 
@@ -259,6 +291,18 @@ export default function AdminSistemasPage() {
 
       if (!systemId) throw new Error('Sistema sem ID')
 
+      {
+        const headers = await authHeaders()
+        const notesRes = await fetch(`/api/admin/systems/${systemId}/access-notes`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ notes: form.notes }),
+        })
+        const notesJson = (await notesRes.json().catch(() => ({}))) as { error?: string }
+        if (!notesRes.ok) {
+          throw new Error(notesJson.error || 'Sistema salvo, mas o bloco de acessos falhou.')
+        }
+      }
       if (logoFile) {
         const logoPath = await uploadFile(systemId, logoFile, 'logo')
         // Bucket privado: logo_url local/publica fica null; a UI gera URL assinada a partir de logo_path
@@ -439,7 +483,7 @@ export default function AdminSistemasPage() {
       if (!res.ok) throw new Error(json.error || 'Falha ao criptografar.')
       const errs = json.errors?.length ? ` (${json.errors.length} erro(s))` : ''
       toast.success(
-        `Secrets: ${json.updated ?? 0} criptografado(s), ${json.skipped ?? 0} já ok${errs}`,
+        `Criptografados: ${json.updated ?? 0} · já ok: ${json.skipped ?? 0}${errs}`,
       )
       if (json.errors?.length) toast.message(json.errors[0])
     } catch (err) {
@@ -623,7 +667,8 @@ Resend / Firebase / outros
                   className={`${inputClass} font-mono text-[13px] leading-relaxed`}
                 />
                 <p className="mt-1.5 text-[11px] text-slate-500">
-                  Só você vê isso (admin). Prefira descrever o método de login; evite colar API keys aqui — use “Chaves e provedores” no Sync.
+                  Criptografado no servidor (AES). Só aparece aqui e ao revelar em Detalhes. Prefira o método de
+                  login; API keys vão em “Chaves e provedores” no Sync.
                 </p>
               </Field>
 
@@ -771,6 +816,30 @@ function SystemRow({
   onRemoveFile: (file: AdminSystemFile) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [notesPlain, setNotesPlain] = useState<string | null>(null)
+  const [notesBusy, setNotesBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) {
+      setNotesPlain(null)
+    }
+  }, [open])
+
+  async function revealNotes() {
+    if (notesBusy) return
+    setNotesBusy(true)
+    try {
+      const headers = await authHeaders()
+      const res = await fetch(`/api/admin/systems/${system.id}/access-notes`, { headers })
+      const json = (await res.json()) as { notes?: string; error?: string }
+      if (!res.ok) throw new Error(json.error || 'Falha ao revelar.')
+      setNotesPlain(json.notes ?? '')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao revelar acessos.')
+    } finally {
+      setNotesBusy(false)
+    }
+  }
   const hasErr = Boolean(integ?.last_error)
   const trackingCf = integ?.track_cloudflare ?? false
   const trackingSb = integ?.track_supabase ?? true
@@ -815,7 +884,7 @@ function SystemRow({
                   {system.link!.replace(/^https?:\/\//, '')}
                 </a>
               ) : null}
-              {system.notes?.trim() ? (
+              {system.has_access_notes ? (
                 <span className="text-emerald-700">Acessos anotados</span>
               ) : (
                 <span className="text-amber-600">Sem bloco de acessos</span>
@@ -937,12 +1006,40 @@ function SystemRow({
             embedded
           />
 
-          {system.notes?.trim() ? (
+          {system.has_access_notes ? (
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Acessos aos painéis</p>
-              <pre className="mt-1.5 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-700">
-                {system.notes}
-              </pre>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  Acessos aos painéis
+                </p>
+                {notesPlain == null ? (
+                  <button
+                    type="button"
+                    disabled={notesBusy}
+                    onClick={() => void revealNotes()}
+                    className="text-[10px] font-bold uppercase tracking-wide text-violet-700 hover:underline disabled:opacity-50"
+                  >
+                    {notesBusy ? '...' : 'Revelar'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setNotesPlain(null)}
+                    className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:underline"
+                  >
+                    Ocultar
+                  </button>
+                )}
+              </div>
+              {notesPlain != null ? (
+                <pre className="mt-1.5 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-700">
+                  {notesPlain || '(vazio)'}
+                </pre>
+              ) : (
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  Conteúdo criptografado. Clique em Revelar para ver neste momento.
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-[11px] text-amber-700">

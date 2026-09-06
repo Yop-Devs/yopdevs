@@ -13,6 +13,8 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [otp, setOtp] = useState('')
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +31,8 @@ export default function AdminLoginPage() {
       setError('Falha na autenticação. Tente novamente.')
     } else if (err === 'session') {
       setInfo('Faça login novamente para continuar.')
+    } else if (err === 'mfa') {
+      setInfo('Informe o código 2FA do autenticador para continuar.')
     }
   }, [searchParams])
 
@@ -38,6 +42,20 @@ export default function AdminLoginPage() {
       setSiteHome(host.includes('localhost') ? 'http://localhost:3000' : MAIN_SITE_ORIGIN)
     }
   }, [])
+
+  async function resolveMfaOrEnter() {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal?.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.find((f) => f.status === 'verified')
+      if (totp) {
+        setMfaFactorId(totp.id)
+        setInfo('Digite o código de 6 dígitos do Google Authenticator / Authy.')
+        return
+      }
+    }
+    router.replace(adminPaths.sistemas)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -62,9 +80,8 @@ export default function AdminLoginPage() {
           timeoutPromise,
         ])
         if (cancelled) return
-        // Allowlist só no servidor (layout + login-guard). Sessão existente → painel.
         if (raced?.user?.email) {
-          router.replace(adminPaths.sistemas)
+          await resolveMfaOrEnter()
         }
       } catch {
         // formulário permanece visível
@@ -76,6 +93,7 @@ export default function AdminLoginPage() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, searchParams])
 
   async function onSubmit(e: FormEvent) {
@@ -114,6 +132,27 @@ export default function AdminLoginPage() {
           setError(signError.message)
         }
         setTurnstileToken('')
+        return
+      }
+      await resolveMfaOrEnter()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function onVerifyMfa(e: FormEvent) {
+    e.preventDefault()
+    if (!mfaFactorId) return
+    setError(null)
+    setLoading(true)
+    try {
+      const code = otp.replace(/\s+/g, '')
+      const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: mfaFactorId,
+        code,
+      })
+      if (verifyError) {
+        setError('Código 2FA inválido. Tente de novo.')
         return
       }
       router.replace(adminPaths.sistemas)
@@ -173,7 +212,11 @@ export default function AdminLoginPage() {
 
       <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#120a38]/90 p-6 shadow-2xl backdrop-blur">
         <h1 className="text-xl font-semibold tracking-tight">Admin YOP Devs</h1>
-        <p className="mt-1 text-sm text-white/55">Entre com a conta autorizada para gerenciar os sistemas.</p>
+        <p className="mt-1 text-sm text-white/55">
+          {mfaFactorId
+            ? 'Confirme o segundo fator (app autenticador).'
+            : 'Entre com a conta autorizada para gerenciar os sistemas.'}
+        </p>
 
         {error && (
           <div className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
@@ -186,63 +229,107 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={onSubmit} className="mt-5 space-y-4">
-          <div>
-            <label htmlFor="admin-email" className="mb-1.5 block text-xs font-medium text-white/50">
-              E-mail
-            </label>
-            <input
-              id="admin-email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white outline-none ring-violet-300/40 placeholder:text-white/30 focus:ring-2"
-              placeholder="seu@email.com"
-            />
+        {mfaFactorId ? (
+          <form onSubmit={onVerifyMfa} className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="admin-otp" className="mb-1.5 block text-xs font-medium text-white/50">
+                Código 2FA
+              </label>
+              <input
+                id="admin-otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                required
+                maxLength={8}
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm tracking-[0.3em] text-white outline-none ring-violet-300/40 placeholder:text-white/30 focus:ring-2"
+                placeholder="000000"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || otp.trim().length < 6}
+              className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:bg-violet-100 disabled:opacity-60"
+            >
+              {loading ? 'Validando...' : 'Confirmar 2FA'}
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                await supabase.auth.signOut()
+                setMfaFactorId(null)
+                setOtp('')
+              }}
+              className="w-full text-xs text-white/50 hover:text-white hover:underline"
+            >
+              Voltar ao login
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={onSubmit} className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="admin-email" className="mb-1.5 block text-xs font-medium text-white/50">
+                E-mail
+              </label>
+              <input
+                id="admin-email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white outline-none ring-violet-300/40 placeholder:text-white/30 focus:ring-2"
+                placeholder="seu@email.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-password" className="mb-1.5 block text-xs font-medium text-white/50">
+                Senha
+              </label>
+              <input
+                id="admin-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white outline-none ring-violet-300/40 placeholder:text-white/30 focus:ring-2"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {captchaOn ? (
+              <TurnstileWidget
+                theme="dark"
+                onToken={setTurnstileToken}
+                onExpire={() => setTurnstileToken('')}
+                onError={(msg) => setError(msg)}
+              />
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={loading || (captchaOn && !turnstileToken)}
+              className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:bg-violet-100 disabled:opacity-60"
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
+        )}
+
+        {!mfaFactorId ? (
+          <div className="mt-4 flex items-center justify-between text-xs text-white/50">
+            <button type="button" onClick={onReset} disabled={loading} className="hover:text-white hover:underline">
+              Esqueci a senha
+            </button>
+            <a href={siteHome} className="hover:text-white hover:underline">
+              Voltar ao site
+            </a>
           </div>
-          <div>
-            <label htmlFor="admin-password" className="mb-1.5 block text-xs font-medium text-white/50">
-              Senha
-            </label>
-            <input
-              id="admin-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white outline-none ring-violet-300/40 placeholder:text-white/30 focus:ring-2"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {captchaOn ? (
-            <TurnstileWidget
-              theme="dark"
-              onToken={setTurnstileToken}
-              onExpire={() => setTurnstileToken('')}
-            />
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={loading || (captchaOn && !turnstileToken)}
-            className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:bg-violet-100 disabled:opacity-60"
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-
-        <div className="mt-4 flex items-center justify-between text-xs text-white/50">
-          <button type="button" onClick={onReset} disabled={loading} className="hover:text-white hover:underline">
-            Esqueci a senha
-          </button>
-          <a href={siteHome} className="hover:text-white hover:underline">
-            Voltar ao site
-          </a>
-        </div>
+        ) : null}
       </div>
     </div>
   )

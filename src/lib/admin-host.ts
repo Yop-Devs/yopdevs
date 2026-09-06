@@ -47,6 +47,7 @@ export const adminPaths = {
   cobranca: '/cobranca',
   emails: '/emails',
   senhas: '/senhas',
+  seguranca: '/seguranca',
 } as const
 
 export type AdminPath = (typeof adminPaths)[keyof typeof adminPaths]
@@ -61,6 +62,7 @@ export const adminOnlyPrefixes = [
   adminPaths.cobranca,
   adminPaths.emails,
   adminPaths.senhas,
+  adminPaths.seguranca,
 ] as const
 
 export function isAdminOnlyPath(pathname: string): boolean {

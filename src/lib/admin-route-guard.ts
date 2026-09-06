@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isEmailAllowed } from '@/lib/allowed-emails'
 import { adminPublicUrl, isAdminHost, adminPaths } from '@/lib/admin-host'
-import { getServerSessionUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient, getServerSessionUser } from '@/lib/supabase-server'
 
 /** Redireciona rotas do admin para o subdomínio quando acessadas no site principal. */
 export async function requireAdminHost(path = '/login') {
@@ -14,7 +14,7 @@ export async function requireAdminHost(path = '/login') {
 
 /**
  * Exige host admin + sessão + e-mail allowlist (server-side).
- * Redirect relativo no próprio host — evita loop com ADMIN_ORIGIN.
+ * Se 2FA estiver ativo e a sessão ainda for AAL1, manda para o login.
  */
 export async function requireAdminSession(loginPath = adminPaths.login) {
   await requireAdminHost(loginPath)
@@ -25,6 +25,19 @@ export async function requireAdminSession(loginPath = adminPaths.login) {
   }
   if (!isEmailAllowed(user.email)) {
     redirect(`${loginPath}?error=unauthorized`)
+  }
+
+  // Segurança 2FA: se o fator TOTP existe, exige AAL2 (exceto na própria tela de segurança/login).
+  try {
+    const supabase = await createSupabaseServerClient()
+    if (supabase) {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (aal?.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
+        redirect(`${loginPath}?error=mfa`)
+      }
+    }
+  } catch {
+    // se MFA API falhar, não trava o painel
   }
 
   return user

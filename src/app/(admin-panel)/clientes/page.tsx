@@ -103,12 +103,12 @@ export default function AdminClientesPage() {
       supabase
         .from('yop_admin_clients')
         .select(
-          '*, client_systems:yop_admin_client_systems(system_id, system:yop_admin_systems(id, name, company_name, link, notes)), documents:yop_admin_client_documents(*)',
+          '*, client_systems:yop_admin_client_systems(system_id, system:yop_admin_systems(id, name, company_name, link)), documents:yop_admin_client_documents(*)',
         )
         .order('full_name', { ascending: true }),
       supabase
         .from('yop_admin_systems')
-        .select('id, name, company_name, link, notes')
+        .select('id, name, company_name, link')
         .order('name', { ascending: true }),
     ])
 
@@ -132,7 +132,7 @@ export default function AdminClientesPage() {
     const q = query.trim().toLowerCase()
     if (!q) return clients
     return clients.filter((c) => {
-      const systemHay = (c.systems ?? []).map((s) => `${s.name} ${s.company_name} ${s.notes ?? ''}`).join(' ')
+      const systemHay = (c.systems ?? []).map((s) => `${s.name} ${s.company_name}`).join(' ')
       const docsHay = (c.documents ?? []).map((d) => `${d.title} ${d.file_name}`).join(' ')
       const hay = [
         c.person_name,
