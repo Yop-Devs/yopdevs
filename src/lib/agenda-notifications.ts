@@ -70,7 +70,7 @@ export async function processAgendaNotifications(
   if (error) throw new Error(error.message)
   const events = (data ?? []) as AgendaEvent[]
 
-  // --- 08:00 Cuiabá: véspera + dia (sem horário) ---
+  // --- 08:00 Cuiabá: véspera + lembrete do dia ---
   if (hour === 8) {
     for (const ev of events) {
       // véspera: evento amanhã
@@ -86,8 +86,8 @@ export async function processAgendaNotifications(
         }
       }
 
-      // no dia às 08h — só eventos SEM horário
-      if (ev.event_date === today && !ev.event_time && !ev.notified_day_of_at) {
+      // no dia às 08h — sem horário (dia inteiro) OU com horário (lembrete matinal)
+      if (ev.event_date === today && !ev.notified_day_of_at) {
         const msg = buildMessage(ev, 'day_of')
         const res = await sendTelegramAlert(msg)
         if (res.ok) {
@@ -101,16 +101,15 @@ export async function processAgendaNotifications(
     }
   }
 
-  // --- A cada hora: 2h antes (eventos com horário hoje) ---
+  // --- 2h antes: só funciona se este endpoint for chamado de hora em hora
+  // (Hobby Vercel = 1 cron/dia; use cron externo ou Pro para isso) ---
   for (const ev of events) {
     if (ev.event_date !== today || !ev.event_time || ev.notified_two_hours_before_at) continue
     const m = ev.event_time.match(/^(\d{2}):(\d{2})/)
     if (!m) continue
     const eventHour = Number(m[1])
     const remindHour = (eventHour - 2 + 24) % 24
-    // Janela: na hora certa (e se o evento é < 2h depois da meia-noite, o aviso “véspera” já cobre)
     if (hour !== remindHour) continue
-    // Se o horário do evento é 00:00 ou 01:00, 2h antes cai no dia anterior — só avisamos se ainda for hoje
     if (eventHour < 2) continue
 
     const msg = buildMessage(ev, 'two_hours_before')

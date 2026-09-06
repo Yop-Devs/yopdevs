@@ -10,6 +10,7 @@ import {
   todayIsoInCuiaba,
 } from '@/lib/finance-daily-alerts'
 import { syncAllSystemsInfra } from '@/lib/system-infra-sync'
+import { processAgendaNotifications } from '@/lib/agenda-notifications'
 import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -76,6 +77,16 @@ async function runFinanceAlerts() {
     errors.push(err instanceof Error ? err.message : 'Falha no sync de infra')
   }
 
+  let agendaSent = 0
+  try {
+    const agenda = await processAgendaNotifications(supabase)
+    agendaSent = agenda.sent
+    if (agenda.sent > 0) sentMessages.push('agenda')
+    if (agenda.errors.length) errors.push(...agenda.errors.slice(0, 5))
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : 'Falha nos avisos da agenda')
+  }
+
   if (errors.length && sentMessages.length === 0) {
     return NextResponse.json(
       {
@@ -85,6 +96,7 @@ async function runFinanceAlerts() {
         domainCount: domains.length,
         infraSynced,
         infraAlerts,
+        agendaSent,
         sent: sentMessages,
       },
       { status: 500 },
@@ -98,6 +110,7 @@ async function runFinanceAlerts() {
     domainCount: domains.length,
     infraSynced,
     infraAlerts,
+    agendaSent,
     sent: sentMessages,
     warnings: errors.length ? errors : undefined,
     skipped: sentMessages.length === 0,

@@ -475,8 +475,10 @@ export default function AdminAgendaPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-relaxed text-slate-600">
-            <strong className="text-slate-800">Telegram:</strong> sem horário → avisa 1 dia antes (08h) e no dia
-            (08h). Com horário → avisa 1 dia antes (08h) e ~2h antes no dia. Fuso Cuiabá-MT.
+            <strong className="text-slate-800">Telegram (08h Cuiabá):</strong> avisa 1 dia antes e no
+            dia do evento (com ou sem horário). O aviso “2h antes” precisa de cron horário (plano Pro
+            ou ping externo em <code className="rounded bg-white px-1">/api/cron/agenda-alerts</code>
+            ).
           </div>
         </div>
       </div>
