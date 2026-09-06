@@ -115,14 +115,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Garante CSP/nonce em todas as páginas HTML (não só rotas “interessantes”).
   matcher: [
-    '/',
-    {
-      source: '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?)$).*)',
-      missing: [
-        { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' },
-      ],
-    },
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?|map)$).*)',
   ],
 }
