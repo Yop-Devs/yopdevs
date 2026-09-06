@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from '@/components/ui/sonner'
 import BrandMark from '@/components/BrandMark'
 import { supabase } from '@/lib/supabase'
-import { isEmailAllowed } from '@/lib/allowed-emails'
 import { adminPaths } from '@/lib/admin-host'
 import { adminNavItems } from '@/lib/admin-nav'
 
@@ -36,11 +35,7 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
           router.replace(adminPaths.login)
           return
         }
-        if (!isEmailAllowed(session.user.email)) {
-          await supabase.auth.signOut()
-          router.replace(`${adminPaths.login}?error=unauthorized`)
-          return
-        }
+        // Allowlist fica no servidor (requireAdminSession + RLS).
         setEmail(session.user.email ?? null)
         setLoading(false)
       } catch {

@@ -1,3 +1,5 @@
+import 'server-only'
+
 /** Emails autorizados a autenticar e aceder à área privada (admin). */
 
 const FALLBACK_ADMIN_EMAILS = ['gabrielcarrarapessoal@gmail.com'] as const
@@ -14,6 +16,8 @@ function parseEmailList(raw: string | undefined): string[] {
  * Lista efetiva de admins.
  * Preferência: YOP_ADMIN_EMAILS (server) → NEXT_PUBLIC_YOP_ADMIN_EMAILS → fallback.
  * Manter o mesmo e-mail na função SQL is_yop_admin() ao alterar.
+ *
+ * Este módulo é server-only — não importar em Client Components.
  */
 export function getAllowedAdminEmails(): string[] {
   const fromServer = parseEmailList(process.env.YOP_ADMIN_EMAILS)

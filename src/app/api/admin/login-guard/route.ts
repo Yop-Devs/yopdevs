@@ -18,9 +18,9 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { email?: string; turnstileToken?: string }
+  let body: { email?: string; turnstileToken?: string; purpose?: string }
   try {
-    body = (await request.json()) as { email?: string; turnstileToken?: string }
+    body = (await request.json()) as { email?: string; turnstileToken?: string; purpose?: string }
   } catch {
     return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
   }
@@ -29,6 +29,11 @@ export async function POST(request: Request) {
   if (!isEmailAllowed(email)) {
     // Resposta genérica — não revela se o e-mail existe
     return NextResponse.json({ error: 'Credenciais inválidas.' }, { status: 403 })
+  }
+
+  // Reset de senha: só valida allowlist (sem captcha).
+  if (body.purpose === 'reset') {
+    return NextResponse.json({ ok: true })
   }
 
   const captcha = await verifyTurnstileToken(body.turnstileToken, ip)

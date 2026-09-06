@@ -7,8 +7,8 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { isEmailAllowed } from '@/lib/allowed-emails'
 import { adminPaths, adminPublicUrl } from '@/lib/admin-host'
+import TurnstileWidget, { isTurnstileConfigured } from '@/components/TurnstileWidget'
 import {
   FEATURED_PROJECTS,
   SERVICES,
@@ -472,6 +472,8 @@ function LandingPageContent() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const captchaOn = isTurnstileConfigured()
   const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({})
   const [heroReady, setHeroReady] = useState(false)
   const [logoIndex, setLogoIndex] = useState(0)
@@ -568,6 +570,16 @@ function LandingPageContent() {
 
     try {
       if (mode === 'reset') {
+        const guardRes = await fetch('/api/admin/login-guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), purpose: 'reset' }),
+        })
+        if (!guardRes.ok) {
+          setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+          setLoading(false)
+          return
+        }
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/reset-password`,
         })
@@ -580,22 +592,26 @@ function LandingPageContent() {
         return
       }
 
-      if (!isEmailAllowed(email)) {
-        setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+      const guardRes = await fetch('/api/admin/login-guard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), turnstileToken }),
+      })
+      if (!guardRes.ok) {
+        const guardJson = (await guardRes.json().catch(() => ({}))) as { error?: string }
+        setMessage({
+          type: 'error',
+          text: guardJson.error || 'Acesso restrito. Esta conta não está autorizada.',
+        })
+        setTurnstileToken('')
         setLoading(false)
         return
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setMessage({ type: 'error', text: getAuthErrorMessage(error) })
-        setLoading(false)
-        return
-      }
-
-      if (!isEmailAllowed(data.session?.user?.email)) {
-        await supabase.auth.signOut()
-        setMessage({ type: 'error', text: 'Acesso restrito. Esta conta não está autorizada.' })
+        setTurnstileToken('')
         setLoading(false)
         return
       }
@@ -1249,9 +1265,16 @@ function LandingPageContent() {
                   />
                 </div>
               )}
+              {mode === 'login' && captchaOn ? (
+                <TurnstileWidget
+                  theme="dark"
+                  onToken={setTurnstileToken}
+                  onExpire={() => setTurnstileToken('')}
+                />
+              ) : null}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (mode === 'login' && captchaOn && !turnstileToken)}
                 className="w-full rounded-full bg-white py-2.5 text-sm font-semibold text-[#1a0f4a] transition hover:brightness-95 disabled:opacity-60"
               >
                 {loading ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Enviar link'}

@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { isEmailAllowed } from '@/lib/allowed-emails'
 import BrandMark from '@/components/BrandMark'
 import TurnstileWidget, { isTurnstileConfigured } from '@/components/TurnstileWidget'
 import { adminPaths, MAIN_SITE_ORIGIN } from '@/lib/admin-host'
@@ -63,7 +62,8 @@ export default function AdminLoginPage() {
           timeoutPromise,
         ])
         if (cancelled) return
-        if (raced?.user?.email && isEmailAllowed(raced.user.email)) {
+        // Allowlist só no servidor (layout + login-guard). Sessão existente → painel.
+        if (raced?.user?.email) {
           router.replace(adminPaths.sistemas)
         }
       } catch {
@@ -83,10 +83,6 @@ export default function AdminLoginPage() {
     setError(null)
     setInfo(null)
 
-    if (!isEmailAllowed(email)) {
-      setError('Este e-mail não tem permissão para acessar o admin.')
-      return
-    }
     if (captchaOn && !turnstileToken) {
       setError('Confirme o captcha antes de entrar.')
       return
@@ -101,7 +97,7 @@ export default function AdminLoginPage() {
       })
       const guardJson = (await guardRes.json().catch(() => ({}))) as { error?: string }
       if (!guardRes.ok) {
-        setError(guardJson.error || 'Não foi possível validar o login.')
+        setError(guardJson.error || 'Credenciais inválidas.')
         setTurnstileToken('')
         return
       }
@@ -133,12 +129,17 @@ export default function AdminLoginPage() {
       setError('Informe o e-mail para redefinir a senha.')
       return
     }
-    if (!isEmailAllowed(email)) {
-      setError('Este e-mail não tem permissão para acessar o admin.')
-      return
-    }
     setLoading(true)
     try {
+      const guardRes = await fetch('/api/admin/login-guard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), purpose: 'reset' }),
+      })
+      if (!guardRes.ok) {
+        setError('Credenciais inválidas.')
+        return
+      }
       const origin = window.location.origin
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${origin}/auth/reset-password`,
