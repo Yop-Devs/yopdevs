@@ -28,8 +28,11 @@ function applySecurityHeaders(response: NextResponse, nonce: string, csp: string
   return response
 }
 
-/** Injeta CSP + nonce por request para o Next carimbar scripts. */
-export async function proxy(request: NextRequest) {
+/**
+ * Middleware (não proxy.ts): no Next 16.3 + webpack o proxy.ts gera
+ * middleware-manifest vazio e o CSP não chega em produção.
+ */
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const host = getRequestHost(request)
   const onAdminHost = isAdminHost(host)
@@ -115,7 +118,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // '/' explícito: o regex sozinho muitas vezes não casa a home (CSP sumia no Observatory).
   matcher: [
     '/',
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?|map)$).*)',

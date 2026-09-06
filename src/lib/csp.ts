@@ -1,11 +1,13 @@
-import { randomBytes } from 'crypto'
-
 /** Fallback só se o proxy não injetar x-nonce. */
 export const CSP_NONCE = 'fallback-nonce'
 
-/** Gera nonce criptográfico por request (base64url). */
+/** Gera nonce criptográfico por request (base64url). Compatível com Edge. */
 export function createRequestNonce(): string {
-  return randomBytes(16).toString('base64url')
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
 function cspDirectives(scriptSrc: string): string {
