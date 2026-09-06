@@ -82,6 +82,7 @@ export default function AdminSistemasPage() {
     Record<string, SystemIntegrationPublic>
   >({})
   const [infraBusyId, setInfraBusyId] = useState<string | null>(null)
+  const [encryptBusy, setEncryptBusy] = useState(false)
   const [limitsDraft, setLimitsDraft] = useState<
     Record<string, { cfGb: string; sbDbGb: string; sbStorGb: string; resend: string; resendMonth: string }>
   >({})
@@ -451,18 +452,57 @@ export default function AdminSistemasPage() {
     }
   }
 
+  async function encryptSecretsAtRest() {
+    if (encryptBusy) return
+    setEncryptBusy(true)
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/admin/systems/integrations/encrypt-at-rest', {
+        method: 'POST',
+        headers,
+      })
+      const json = (await res.json()) as {
+        ok?: boolean
+        updated?: number
+        skipped?: number
+        errors?: string[]
+        error?: string
+      }
+      if (!res.ok) throw new Error(json.error || 'Falha ao criptografar.')
+      const errs = json.errors?.length ? ` (${json.errors.length} erro(s))` : ''
+      toast.success(
+        `Secrets: ${json.updated ?? 0} criptografado(s), ${json.skipped ?? 0} já ok${errs}`,
+      )
+      if (json.errors?.length) toast.message(json.errors[0])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao criptografar secrets.')
+    } finally {
+      setEncryptBusy(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-black tracking-tight text-slate-900">Gerenciamento de Sistemas</h2>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          + Novo sistema
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void encryptSecretsAtRest()}
+            disabled={encryptBusy}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {encryptBusy ? 'Criptografando...' : 'Criptografar secrets'}
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            + Novo sistema
+          </button>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
