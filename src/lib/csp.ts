@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto'
 
-/** Fallback só se o proxy não injetar x-nonce (não usar em produção como valor fixo). */
+/** Fallback só se o proxy não injetar x-nonce. */
 export const CSP_NONCE = 'fallback-nonce'
 
 /** Gera nonce criptográfico por request (base64url). */
@@ -8,16 +8,7 @@ export function createRequestNonce(): string {
   return randomBytes(16).toString('base64url')
 }
 
-export function buildContentSecurityPolicy(nonce: string): string {
-  const isDev = process.env.NODE_ENV === 'development'
-  // Em prod: 'self' libera chunks /_next; nonce cobre scripts inline do Next.
-  // Sem 'strict-dynamic' — no dev os <script src> não recebem nonce e a página travava.
-  // Em dev: 'unsafe-inline' + 'unsafe-eval' para HMR/webpack.
-  // Turnstile: challenges.cloudflare.com + nonce no api.js (propaga para filhos).
-  const scriptSrc = isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
-    : `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`
-
+function cspDirectives(scriptSrc: string): string {
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -36,4 +27,25 @@ export function buildContentSecurityPolicy(nonce: string): string {
     "media-src 'self'",
     "upgrade-insecure-requests",
   ].join('; ')
+}
+
+/**
+ * CSP para next.config (headers estáticos — sempre enviados).
+ * Usa unsafe-inline em script porque não há nonce por request neste caminho.
+ */
+export function buildStaticContentSecurityPolicy(): string {
+  const isDev = process.env.NODE_ENV === 'development'
+  const scriptSrc = isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
+    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
+  return cspDirectives(scriptSrc)
+}
+
+/** CSP com nonce (proxy) — reforço por request. */
+export function buildContentSecurityPolicy(nonce: string): string {
+  const isDev = process.env.NODE_ENV === 'development'
+  const scriptSrc = isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
+    : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' https://challenges.cloudflare.com`
+  return cspDirectives(scriptSrc)
 }
