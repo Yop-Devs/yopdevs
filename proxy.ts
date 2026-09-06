@@ -10,7 +10,7 @@ import {
   toAdminPublicPath,
 } from '@/lib/admin-host'
 import { supabaseAuthCookieOptions } from '@/lib/auth-cookies'
-import { buildContentSecurityPolicy, CSP_NONCE } from '@/lib/csp'
+import { buildContentSecurityPolicy, createRequestNonce } from '@/lib/csp'
 
 function isStaticAsset(pathname: string): boolean {
   return (
@@ -22,7 +22,13 @@ function isStaticAsset(pathname: string): boolean {
   )
 }
 
-/** Injeta CSP+nonce no request para o Next carimbar scripts (header HTTP vem do next.config). */
+function applySecurityHeaders(response: NextResponse, nonce: string, csp: string) {
+  response.headers.set('x-nonce', nonce)
+  response.headers.set('Content-Security-Policy', csp)
+  return response
+}
+
+/** Injeta CSP + nonce por request para o Next carimbar scripts. */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const host = getRequestHost(request)
@@ -58,14 +64,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  const csp = buildContentSecurityPolicy(CSP_NONCE)
+  const nonce = createRequestNonce()
+  const csp = buildContentSecurityPolicy(nonce)
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-nonce', CSP_NONCE)
+  requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
 
   let response = NextResponse.next({
     request: { headers: requestHeaders },
   })
+  applySecurityHeaders(response, nonce, csp)
 
   const needsAuthRefresh =
     (onAdminHost && isAdminOnlyPath(pathname) && !isStaticAsset(pathname)) ||
@@ -86,12 +94,14 @@ export async function proxy(request: NextRequest) {
             const merged = { ...cookieBase, ...options }
             request.cookies.set({ name, value, ...merged })
             response = NextResponse.next({ request: { headers: requestHeaders } })
+            applySecurityHeaders(response, nonce, csp)
             response.cookies.set({ name, value, ...merged })
           },
           remove(name: string, options: Record<string, unknown>) {
             const merged = { ...cookieBase, ...options, maxAge: 0 }
             request.cookies.set({ name, value: '', ...merged })
             response = NextResponse.next({ request: { headers: requestHeaders } })
+            applySecurityHeaders(response, nonce, csp)
             response.cookies.set({ name, value: '', ...merged })
           },
         },

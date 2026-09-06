@@ -1,7 +1,14 @@
-/** Nonce estático: next.config envia no HTTP; proxy injeta no request para o Next. */
-export const CSP_NONCE = 'YopDevsCspNonce2026'
+import { randomBytes } from 'crypto'
 
-export function buildContentSecurityPolicy(nonce: string = CSP_NONCE): string {
+/** Fallback só se o proxy não injetar x-nonce (não usar em produção como valor fixo). */
+export const CSP_NONCE = 'fallback-nonce'
+
+/** Gera nonce criptográfico por request (base64url). */
+export function createRequestNonce(): string {
+  return randomBytes(16).toString('base64url')
+}
+
+export function buildContentSecurityPolicy(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
   // Em prod: 'self' libera chunks /_next; nonce cobre scripts inline do Next.
   // Sem 'strict-dynamic' — no dev os <script src> não recebem nonce e a página travava.

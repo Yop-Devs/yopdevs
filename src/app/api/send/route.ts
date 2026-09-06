@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
-import { allowRateLimit, clientIpFromRequest } from '@/lib/rate-limit'
+import { allowRateLimitAsync, clientIpFromRequest } from '@/lib/rate-limit'
 import { turnstileRequired, verifyTurnstileToken } from '@/lib/turnstile'
 
 function getResend() {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIpFromRequest(request)
-  if (!allowRateLimit(`send:${ip}`, { windowMs: 10 * 60 * 1000, max: 8 })) {
+  if (!(await allowRateLimitAsync(`send:${ip}`, { windowMs: 10 * 60 * 1000, max: 8 }))) {
     return NextResponse.json(
       { error: { message: 'Muitas tentativas. Aguarde alguns minutos.' } },
       { status: 429 },

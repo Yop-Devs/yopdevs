@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isEmailAllowed } from '@/lib/allowed-emails'
-import { allowRateLimit, clientIpFromRequest } from '@/lib/rate-limit'
+import { allowRateLimitAsync, clientIpFromRequest } from '@/lib/rate-limit'
 import { turnstileRequired, verifyTurnstileToken } from '@/lib/turnstile'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: Request) {
   const ip = clientIpFromRequest(request)
-  if (!allowRateLimit(`admin-login:${ip}`, { windowMs: 15 * 60 * 1000, max: 20 })) {
+  if (!(await allowRateLimitAsync(`admin-login:${ip}`, { windowMs: 15 * 60 * 1000, max: 20 }))) {
     return NextResponse.json(
       { error: 'Muitas tentativas de login. Aguarde alguns minutos.' },
       { status: 429 },
