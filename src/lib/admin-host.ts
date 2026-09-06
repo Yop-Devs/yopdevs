@@ -46,6 +46,7 @@ export const adminPaths = {
   pagamentos: '/pagamentos',
   cobranca: '/cobranca',
   emails: '/emails',
+  senhas: '/senhas',
 } as const
 
 export type AdminPath = (typeof adminPaths)[keyof typeof adminPaths]
