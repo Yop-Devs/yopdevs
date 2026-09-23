@@ -7,10 +7,12 @@ import {
 import {
   buildFinanceAlertMessage,
   collectFinanceDueToday,
+  advanceOperationFeesPastDue,
   todayIsoInCuiaba,
 } from '@/lib/finance-daily-alerts'
 import { syncAllSystemsInfra } from '@/lib/system-infra-sync'
 import { processAgendaNotifications } from '@/lib/agenda-notifications'
+import { syncPendingCharges } from '@/lib/cobranca-sync'
 import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +59,29 @@ async function runFinanceAlerts() {
     else errors.push(sent.error)
   }
 
+  // Depois do alerta do dia: gera o próximo vencimento no dia de cobrança
+  let feesAdvanced = 0
+  try {
+    feesAdvanced = await advanceOperationFeesPastDue(supabase, todayIso)
+    if (feesAdvanced > 0) sentMessages.push('fees-advanced')
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : 'Falha ao avançar mensalidades')
+  }
+
+  // Fallback diário: sync cobranças pendentes (webhook às vezes falha)
+  let chargesSynced = 0
+  let chargesPaid = 0
+  try {
+    if (process.env.MERCADOPAGO_ACCESS_TOKEN?.trim()) {
+      const chargeResults = await syncPendingCharges(supabase, { allPending: true })
+      chargesSynced = chargeResults.filter((r) => r.ok).length
+      chargesPaid = chargeResults.filter((r) => r.becamePaid).length
+      if (chargeResults.length) sentMessages.push('cobranca-sync')
+    }
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : 'Falha no sync de cobranças')
+  }
+
   if (domainMessage) {
     const sent = await sendTelegramAlert(domainMessage)
     if (sent.ok) sentMessages.push('domain')
@@ -94,6 +119,9 @@ async function runFinanceAlerts() {
         today: todayIso,
         financeCount: lines.length,
         domainCount: domains.length,
+        feesAdvanced,
+        chargesSynced,
+        chargesPaid,
         infraSynced,
         infraAlerts,
         agendaSent,
@@ -108,6 +136,9 @@ async function runFinanceAlerts() {
     today: todayIso,
     financeCount: lines.length,
     domainCount: domains.length,
+    feesAdvanced,
+    chargesSynced,
+    chargesPaid,
     infraSynced,
     infraAlerts,
     agendaSent,

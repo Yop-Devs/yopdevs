@@ -318,6 +318,26 @@ export async function getMpPayment(paymentId: string): Promise<MpPaymentResponse
   return json
 }
 
+/** Merchant order (comum em boleto) → IDs de pagamento. */
+export async function getMpMerchantOrderPaymentIds(orderId: string): Promise<string[]> {
+  const res = await fetch(`${MP_API}/merchant_orders/${orderId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken()}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  const json = (await res.json()) as {
+    payments?: { id?: number | string }[]
+    message?: string
+  }
+  if (!res.ok) {
+    throw new Error(json.message || `Falha ao consultar merchant order ${orderId}`)
+  }
+  return (json.payments ?? [])
+    .map((p) => (p.id != null ? String(p.id) : ''))
+    .filter(Boolean)
+}
+
 /** Busca pagamentos ligados a uma cobrança (cartão via preference). */
 export async function findLatestMpPaymentByExternalReference(
   externalReference: string,

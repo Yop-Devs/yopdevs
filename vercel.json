@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/finance-alerts",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/cobranca-sync",
+      "schedule": "0 */4 * * *"
     }
   ]
 }

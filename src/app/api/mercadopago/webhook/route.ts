@@ -2,41 +2,130 @@ import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole } from '@/lib/admin-api-auth'
 import { notifyIfChargeBecamePaid } from '@/lib/admin-telegram-alerts'
 import type { BoletoStatus } from '@/lib/admin-cobranca'
-import { boletoPatchFromMpPayment, getMpPayment, verifyMpWebhookSignature } from '@/lib/mercadopago'
+import {
+  boletoPatchFromMpPayment,
+  getMpMerchantOrderPaymentIds,
+  getMpPayment,
+  verifyMpWebhookSignature,
+} from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
-async function resolvePaymentId(request: Request): Promise<string | null> {
+async function resolvePaymentIds(request: Request): Promise<string[]> {
   const url = new URL(request.url)
   const queryId = url.searchParams.get('data.id') || url.searchParams.get('id')
-  const topic = url.searchParams.get('type') || url.searchParams.get('topic')
+  const topic = (url.searchParams.get('type') || url.searchParams.get('topic') || '').toLowerCase()
 
-  if (queryId && (topic === 'payment' || !topic)) return queryId
+  let body: {
+    type?: string
+    action?: string
+    data?: { id?: string | number }
+    id?: string | number
+    topic?: string
+  } | null = null
 
   if (request.method === 'POST') {
     try {
-      const body = (await request.json()) as {
-        type?: string
-        action?: string
-        data?: { id?: string | number }
-        id?: string | number
-        topic?: string
-      }
-      if (body?.data?.id != null) return String(body.data.id)
-      if (body?.type === 'payment' && body?.id != null) return String(body.id)
-      if ((body?.topic === 'payment' || topic === 'payment') && queryId) return queryId
+      body = (await request.json()) as typeof body
     } catch {
-      // body vazio / IPN antigo
+      body = null
     }
   }
 
-  return queryId
+  const bodyId = body?.data?.id != null ? String(body.data.id) : body?.id != null ? String(body.id) : null
+  const bodyTopic = (body?.type || body?.topic || topic || '').toLowerCase()
+  const resourceId = bodyId || queryId
+
+  if (!resourceId) return []
+
+  // Merchant order (boleto às vezes chega assim) → expandir para payment ids
+  if (bodyTopic === 'merchant_order' || topic === 'merchant_order') {
+    try {
+      return await getMpMerchantOrderPaymentIds(resourceId)
+    } catch (err) {
+      console.error('[mp-webhook] merchant_order', err)
+      return []
+    }
+  }
+
+  if (bodyTopic === 'payment' || topic === 'payment' || !bodyTopic) {
+    return [resourceId]
+  }
+
+  return [resourceId]
+}
+
+async function applyPaymentUpdate(paymentId: string) {
+  const supabase = getSupabaseServiceRole()
+  if (!supabase) throw new Error('SUPABASE_SERVICE_ROLE_KEY ausente')
+
+  const payment = await getMpPayment(paymentId)
+  const patch = boletoPatchFromMpPayment(payment)
+  const externalRef = payment.external_reference || null
+
+  const selectCols =
+    'id, description, amount, status, payment_method, client_id, client:yop_admin_clients(person_name, company_name, full_name)'
+
+  let { data: existingRows, error: findError } = await supabase
+    .from('yop_admin_boletos')
+    .select(selectCols)
+    .eq('mp_payment_id', String(paymentId))
+    .limit(1)
+
+  if (findError) throw new Error(findError.message)
+
+  if ((!existingRows || existingRows.length === 0) && externalRef) {
+    const byRef = await supabase
+      .from('yop_admin_boletos')
+      .select(selectCols)
+      .eq('external_reference', externalRef)
+      .limit(1)
+    if (byRef.error) throw new Error(byRef.error.message)
+    existingRows = byRef.data
+  }
+
+  const existing = existingRows?.[0] as
+    | {
+        id: string
+        description: string
+        amount: number
+        status: BoletoStatus
+        payment_method: 'boleto' | 'credit_card'
+        client_id: string
+        client:
+          | { person_name: string | null; company_name: string | null; full_name: string | null }
+          | { person_name: string | null; company_name: string | null; full_name: string | null }[]
+          | null
+      }
+    | undefined
+
+  const previousStatus = existing?.status ?? null
+
+  const { data, error } = await supabase
+    .from('yop_admin_boletos')
+    .update(patch)
+    .eq('mp_payment_id', String(paymentId))
+    .select('id')
+
+  if (error) throw new Error(error.message)
+
+  if ((!data || data.length === 0) && externalRef) {
+    const { error: byRefError } = await supabase
+      .from('yop_admin_boletos')
+      .update({ ...patch, mp_payment_id: String(paymentId) })
+      .eq('external_reference', externalRef)
+    if (byRefError) throw new Error(byRefError.message)
+  }
+
+  if (existing) {
+    const client = Array.isArray(existing.client) ? existing.client[0] ?? null : existing.client
+    await notifyIfChargeBecamePaid(previousStatus, { ...existing, client }, patch.status)
+  }
 }
 
 async function handle(request: Request) {
-  const paymentId = await resolvePaymentId(request)
   const url = new URL(request.url)
-  const dataId = url.searchParams.get('data.id') || paymentId
+  const dataId = url.searchParams.get('data.id') || url.searchParams.get('id')
   const xSignature = request.headers.get('x-signature')
   const xRequestId = request.headers.get('x-request-id')
 
@@ -46,101 +135,45 @@ async function handle(request: Request) {
     return NextResponse.json({ error: 'Webhook não configurado.' }, { status: 503 })
   }
 
-  if (!verifyMpWebhookSignature({ xSignature, xRequestId, dataId })) {
-    return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
+  // Clona request para poder ler body em resolvePaymentIds após validar assinatura
+  const rawBody = await request.text()
+  const cloned = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.method === 'GET' ? undefined : rawBody,
+  })
+
+  // data.id pode vir no query; body ainda não parseado — validação usa query quando houver
+  let bodyDataId = dataId
+  if (!bodyDataId && rawBody) {
+    try {
+      const parsed = JSON.parse(rawBody) as { data?: { id?: string | number }; id?: string | number }
+      if (parsed?.data?.id != null) bodyDataId = String(parsed.data.id)
+      else if (parsed?.id != null) bodyDataId = String(parsed.id)
+    } catch {
+      /* ignore */
+    }
   }
 
-  if (!paymentId) {
-    return NextResponse.json({ ok: true, ignored: true })
+  if (!verifyMpWebhookSignature({ xSignature, xRequestId, dataId: bodyDataId })) {
+    return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
   }
 
   if (!process.env.MERCADOPAGO_ACCESS_TOKEN?.trim()) {
     return NextResponse.json({ error: 'Token MP ausente.' }, { status: 503 })
   }
 
-  const supabase = getSupabaseServiceRole()
-  if (!supabase) {
-    console.error('[mp-webhook] SUPABASE_SERVICE_ROLE_KEY ausente')
-    return NextResponse.json({ error: 'Serviço indisponível.' }, { status: 503 })
-  }
-
   try {
-    const payment = await getMpPayment(paymentId)
-    const patch = boletoPatchFromMpPayment(payment)
-    const externalRef = payment.external_reference || null
-
-    const selectCols =
-      'id, description, amount, status, payment_method, client_id, client:yop_admin_clients(person_name, company_name, full_name)'
-
-    let { data: existingRows, error: findError } = await supabase
-      .from('yop_admin_boletos')
-      .select(selectCols)
-      .eq('mp_payment_id', String(paymentId))
-      .limit(1)
-
-    if (findError) {
-      console.error('[mp-webhook] find error', findError.message)
-      return NextResponse.json({ error: findError.message }, { status: 500 })
+    const paymentIds = await resolvePaymentIds(cloned)
+    if (!paymentIds.length) {
+      return NextResponse.json({ ok: true, ignored: true })
     }
 
-    if ((!existingRows || existingRows.length === 0) && externalRef) {
-      const byRef = await supabase
-        .from('yop_admin_boletos')
-        .select(selectCols)
-        .eq('external_reference', externalRef)
-        .limit(1)
-      if (byRef.error) {
-        console.error('[mp-webhook] find by ref error', byRef.error.message)
-        return NextResponse.json({ error: byRef.error.message }, { status: 500 })
-      }
-      existingRows = byRef.data
+    for (const paymentId of paymentIds) {
+      await applyPaymentUpdate(paymentId)
     }
 
-    const existing = existingRows?.[0] as
-      | {
-          id: string
-          description: string
-          amount: number
-          status: BoletoStatus
-          payment_method: 'boleto' | 'credit_card'
-          client_id: string
-          client:
-            | { person_name: string | null; company_name: string | null; full_name: string | null }
-            | { person_name: string | null; company_name: string | null; full_name: string | null }[]
-            | null
-        }
-      | undefined
-
-    const previousStatus = existing?.status ?? null
-
-    const { data, error } = await supabase
-      .from('yop_admin_boletos')
-      .update(patch)
-      .eq('mp_payment_id', String(paymentId))
-      .select('id')
-
-    if (error) {
-      console.error('[mp-webhook] update error', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    if ((!data || data.length === 0) && externalRef) {
-      const { error: byRefError } = await supabase
-        .from('yop_admin_boletos')
-        .update({ ...patch, mp_payment_id: String(paymentId) })
-        .eq('external_reference', externalRef)
-      if (byRefError) {
-        console.error('[mp-webhook] update by ref error', byRefError.message)
-        return NextResponse.json({ error: byRefError.message }, { status: 500 })
-      }
-    }
-
-    if (existing) {
-      const client = Array.isArray(existing.client) ? existing.client[0] ?? null : existing.client
-      await notifyIfChargeBecamePaid(previousStatus, { ...existing, client }, patch.status)
-    }
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, payments: paymentIds.length })
   } catch (err) {
     console.error('[mp-webhook]', err)
     return NextResponse.json(

@@ -5,6 +5,7 @@ import {
   type FinanceEntry,
 } from '@/lib/admin-finance'
 import { formatBrl, formatDateBr } from '@/lib/admin-systems'
+import { nextMonthlyDueOnChargeDay } from '@/lib/admin-payments'
 
 export type FinanceAlertLine = {
   section: 'sistema' | 'pessoal' | 'despesa'
@@ -123,6 +124,50 @@ export async function collectFinanceDueToday(
   }
 
   return lines
+}
+
+/**
+ * No dia do vencimento (ou se já passou), agenda a próxima mensalidade
+ * no dia de cobrança do mês seguinte (ex.: após dia 09 → próximo dia 10).
+ */
+export async function advanceOperationFeesPastDue(
+  supabase: SupabaseClient,
+  todayIso = todayIsoInCuiaba(),
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('yop_admin_payments')
+    .select('id, operation_next_due, operation_fee_charge_day, has_operation_fee')
+    .eq('has_operation_fee', true)
+    .not('operation_next_due', 'is', null)
+    .lte('operation_next_due', todayIso)
+
+  if (error) throw new Error(error.message)
+
+  let advanced = 0
+  for (const row of data ?? []) {
+    const due = row.operation_next_due as string
+    const chargeDay = Number(row.operation_fee_charge_day)
+    if (!due || !Number.isFinite(chargeDay) || chargeDay < 1) continue
+
+    const nextDue = nextMonthlyDueOnChargeDay(due, chargeDay)
+    if (nextDue <= due) continue
+
+    const { error: upErr } = await supabase
+      .from('yop_admin_payments')
+      .update({
+        operation_next_due: nextDue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id)
+
+    if (upErr) {
+      console.error('[advance-operation-fee]', row.id, upErr.message)
+      continue
+    }
+    advanced += 1
+  }
+
+  return advanced
 }
 
 export function buildFinanceAlertMessage(lines: FinanceAlertLine[], todayIso: string): string | null {

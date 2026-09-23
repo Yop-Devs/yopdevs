@@ -7,6 +7,9 @@ import {
   AdminPaymentInstallment,
   AdminPaymentWithSystem,
   OPERATION_FEE_PERIODS,
+  formatBrlInput,
+  nextMonthlyDueOnChargeDay,
+  parseBrlAmount,
   periodLabel,
 } from '@/lib/admin-payments'
 import { clientDisplayName } from '@/lib/admin-clients'
@@ -18,13 +21,6 @@ type DraftInstallment = {
   due_date: string
   amount: string
   is_paid: boolean
-}
-
-function toNumber(value: string): number | null {
-  const cleaned = value.replace(',', '.').trim()
-  if (!cleaned) return null
-  const n = Number(cleaned)
-  return Number.isFinite(n) ? n : null
 }
 
 function reminderTone(days: number | null): string {
@@ -51,6 +47,7 @@ export default function AdminPagamentosPage() {
   const [feeAmount, setFeeAmount] = useState('')
   const [chargeDay, setChargeDay] = useState('')
   const [nextDue, setNextDue] = useState('')
+  const [feeAlreadyPaid, setFeeAlreadyPaid] = useState(false)
   const [notes, setNotes] = useState('')
   const [parcelCount, setParcelCount] = useState('2')
   const [drafts, setDrafts] = useState<DraftInstallment[]>([])
@@ -156,9 +153,10 @@ export default function AdminPagamentosPage() {
     const known = OPERATION_FEE_PERIODS.some((p) => p.days === period)
     setPeriodDays(known && period ? String(period) : period ? 'custom' : '30')
     setCustomPeriod(!known && period ? String(period) : '')
-    setFeeAmount(payment.operation_fee_amount != null ? String(payment.operation_fee_amount) : '')
+    setFeeAmount(payment.operation_fee_amount != null ? formatBrlInput(payment.operation_fee_amount) : '')
     setChargeDay(payment.operation_fee_charge_day != null ? String(payment.operation_fee_charge_day) : '')
     setNextDue(payment.operation_next_due ?? '')
+    setFeeAlreadyPaid(false)
     setNotes(payment.notes ?? '')
 
     const existing = installmentsByPayment[payment.id] ?? []
@@ -167,7 +165,7 @@ export default function AdminPagamentosPage() {
         id: i.id,
         installment_number: i.installment_number,
         due_date: i.due_date,
-        amount: String(i.amount),
+        amount: formatBrlInput(i.amount),
         is_paid: i.is_paid,
       }))
     )
@@ -208,15 +206,24 @@ export default function AdminPagamentosPage() {
         toast.error('Informe o período da cobrança de operação.')
         return
       }
-      if (!toNumber(feeAmount)) {
+      if (!parseBrlAmount(feeAmount)) {
         toast.error('Informe o valor da mensalidade de operação.')
+        return
+      }
+      if (!nextDue) {
+        toast.error('Informe o primeiro vencimento da mensalidade.')
+        return
+      }
+      const day = Number.parseInt(chargeDay, 10)
+      if (!Number.isFinite(day) || day < 1 || day > 31) {
+        toast.error('Informe o dia de cobrança (1–31).')
         return
       }
     }
 
     if (!isQuitado) {
       for (const draft of drafts) {
-        if (!draft.due_date || !toNumber(draft.amount)) {
+        if (!draft.due_date || !parseBrlAmount(draft.amount)) {
           toast.error('Preencha data e valor de todas as parcelas.')
           return
         }
@@ -225,13 +232,22 @@ export default function AdminPagamentosPage() {
 
     setSaving(true)
     try {
+      const chargeDayNum = hasOperationFee ? Number.parseInt(chargeDay, 10) : null
+      let resolvedNextDue = hasOperationFee ? nextDue || null : null
+
+      // Se marcou que a mensalidade atual já foi paga, agenda o próximo vencimento
+      // no dia de cobrança do mês seguinte (ex.: 1ª em 09 → próxima em 10).
+      if (hasOperationFee && feeAlreadyPaid && resolvedNextDue && chargeDayNum) {
+        resolvedNextDue = nextMonthlyDueOnChargeDay(resolvedNextDue, chargeDayNum)
+      }
+
       const payload = {
         is_quitado: isQuitado,
         has_operation_fee: hasOperationFee,
         operation_fee_period_days: hasOperationFee ? resolvedPeriod : null,
-        operation_fee_amount: hasOperationFee ? toNumber(feeAmount) : null,
-        operation_fee_charge_day: hasOperationFee ? Number.parseInt(chargeDay, 10) || null : null,
-        operation_next_due: hasOperationFee ? nextDue || null : null,
+        operation_fee_amount: hasOperationFee ? parseBrlAmount(feeAmount) : null,
+        operation_fee_charge_day: hasOperationFee ? chargeDayNum : null,
+        operation_next_due: resolvedNextDue,
         notes: notes.trim() || null,
         updated_at: new Date().toISOString(),
       }
@@ -247,14 +263,18 @@ export default function AdminPagamentosPage() {
           payment_id: editing.id,
           installment_number: idx + 1,
           due_date: d.due_date,
-          amount: toNumber(d.amount),
+          amount: parseBrlAmount(d.amount),
           is_paid: d.is_paid,
         }))
         const { error: instError } = await supabase.from('yop_admin_payment_installments').insert(rows)
         if (instError) throw instError
       }
 
-      toast.success('Pagamento atualizado.')
+      toast.success(
+        feeAlreadyPaid && hasOperationFee
+          ? `Salvo. Próxima mensalidade agendada para ${resolvedNextDue ? resolvedNextDue.split('-').reverse().join('/') : '—'}.`
+          : 'Pagamento atualizado.',
+      )
       setEditorOpen(false)
       await load()
     } catch (err) {
@@ -361,7 +381,7 @@ export default function AdminPagamentosPage() {
                     <div className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium ${reminderTone(opDays)}`}>
                       {periodLabel(payment.operation_fee_period_days)} · {formatBrl(payment.operation_fee_amount)}
                       {payment.operation_fee_charge_day ? ` · dia ${payment.operation_fee_charge_day}` : ''}
-                      {payment.operation_next_due ? ` · próximo ${formatDateBr(payment.operation_next_due)}` : ''}
+                      {payment.operation_next_due ? ` · venc. ${formatDateBr(payment.operation_next_due)}` : ''}
                     </div>
                   ) : null}
 
@@ -458,7 +478,7 @@ export default function AdminPagamentosPage() {
                               setDrafts((rows) => rows.map((r, i) => (i === idx ? { ...r, amount: e.target.value } : r)))
                             }
                             className={inputClass}
-                            placeholder="Valor"
+                            placeholder="1.500,00"
                           />
                           <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
                             <input
@@ -508,16 +528,40 @@ export default function AdminPagamentosPage() {
                     ) : null}
                     <label className="text-sm">
                       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Valor</span>
-                      <input value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} className={inputClass} placeholder="0,00" />
+                      <input value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} className={inputClass} placeholder="1.500,00" />
                     </label>
                     <label className="text-sm">
                       <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Dia de cobrança (1–31)</span>
                       <input value={chargeDay} onChange={(e) => setChargeDay(e.target.value)} className={inputClass} placeholder="10" />
                     </label>
                     <label className="text-sm sm:col-span-2">
-                      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Próximo vencimento</span>
+                      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Primeiro vencimento</span>
                       <input type="date" value={nextDue} onChange={(e) => setNextDue(e.target.value)} className={inputClass} />
+                      <span className="mt-1 block text-[11px] text-slate-500">
+                        Data da 1ª mensalidade (alerta no Telegram). As seguintes usam o dia de cobrança
+                        {chargeDay ? ` (todo dia ${chargeDay})` : ''}.
+                      </span>
                     </label>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={feeAlreadyPaid}
+                        onChange={(e) => setFeeAlreadyPaid(e.target.checked)}
+                      />
+                      Já pagou este vencimento
+                    </label>
+                    {feeAlreadyPaid && nextDue && chargeDay ? (
+                      <p className="text-[11px] text-emerald-700 sm:col-span-2">
+                        Ao salvar, a próxima mensalidade será agendada para{' '}
+                        <strong>
+                          {nextMonthlyDueOnChargeDay(nextDue, Number.parseInt(chargeDay, 10) || 1)
+                            .split('-')
+                            .reverse()
+                            .join('/')}
+                        </strong>
+                        .
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
