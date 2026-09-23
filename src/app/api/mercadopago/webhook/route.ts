@@ -11,22 +11,24 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+type MpWebhookBody = {
+  type?: string
+  action?: string
+  data?: { id?: string | number }
+  id?: string | number
+  topic?: string
+}
+
 async function resolvePaymentIds(request: Request): Promise<string[]> {
   const url = new URL(request.url)
   const queryId = url.searchParams.get('data.id') || url.searchParams.get('id')
   const topic = (url.searchParams.get('type') || url.searchParams.get('topic') || '').toLowerCase()
 
-  let body: {
-    type?: string
-    action?: string
-    data?: { id?: string | number }
-    id?: string | number
-    topic?: string
-  } | null = null
+  let body: MpWebhookBody | null = null
 
   if (request.method === 'POST') {
     try {
-      body = (await request.json()) as typeof body
+      body = (await request.json()) as MpWebhookBody
     } catch {
       body = null
     }
