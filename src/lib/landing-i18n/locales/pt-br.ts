@@ -96,6 +96,10 @@ export const ptBr = {
         'Rede social de tênis com gestão de quadras, clubes, comunidades, torneios, aulas, chat e planos com pagamento automático.',
       demolay:
         'Sistema do capítulo: site público, área do membro, admin, finanças, atas, frequência, notícias e sorteios.',
+      medscript:
+        'Gestão clínica para hospitais e plantões: pacientes, protocolos e dosagens, escala de plantões, ranking, documentos, escola de emergência e relatórios.',
+      daygomes:
+        'Correção de redações para concursos com Kiwify: acesso automático na compra, envio por edital e corretores marcando erros no texto com nota por critério.',
     },
   },
   process: {

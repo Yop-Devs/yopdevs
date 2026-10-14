@@ -85,6 +85,16 @@ export const ptBr = {
         description:
           'Sistema completo do capítulo: site público, área do membro, painel admin, usuários, finanças, atas, frequência, candidaturas, notícias, calendário, selos e sorteios com venda de números de rifa.',
       },
+      medscript: {
+        name: 'MedScript',
+        description:
+          'Plataforma de gestão clínica para hospitais e equipes de emergência: gestão de pacientes, protocolos clínicos e dosagens, agenda de plantões para funcionários, ranking e resumo de atividades, documentações e controle de documentos, organização clínica por equipe, escola com trilha para iniciantes na emergência e relatórios de pacientes.',
+      },
+      daygomes: {
+        name: 'Day Gomes',
+        description:
+          'Plataforma de correção de redações para concursos integrada à Kiwify: o aluno compra o curso e o login é criado automaticamente. Os alunos enviam redações por edital e fase, e a equipe de corretores seleciona as palavras no texto, marca os erros e atribui a nota pelos parâmetros de correção de cada concurso.',
+      },
     },
   },
   experience: {

@@ -85,6 +85,16 @@ export const es = {
         description:
           'Sistema completo del capítulo: sitio público, área de miembro, panel admin, usuarios, finanzas, actas, asistencia, candidaturas, noticias, calendario, sellos y sorteos con venta de números de rifa.',
       },
+      medscript: {
+        name: 'MedScript',
+        description:
+          'Plataforma de gestión clínica para hospitales y equipos de emergencias: gestión de pacientes, protocolos clínicos y dosis, agenda de guardias para el personal, ranking y resumen de actividades, documentación y control de documentos, organización clínica por equipo, escuela con ruta para principiantes en emergencias e informes de pacientes.',
+      },
+      daygomes: {
+        name: 'Day Gomes',
+        description:
+          'Plataforma de corrección de redacciones para oposiciones integrada con Kiwify: el alumno compra el curso y su acceso se crea automáticamente. Los alumnos envían redacciones por convocatoria y fase, y el equipo de correctores selecciona palabras en el texto, marca los errores y asigna la nota según los criterios de cada oposición.',
+      },
     },
   },
   experience: {

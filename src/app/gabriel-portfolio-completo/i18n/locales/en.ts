@@ -84,6 +84,16 @@ export const en = {
         description:
           'Complete chapter system: public site, member area, admin panel, users, finances, minutes, attendance, applications, news, calendar, seals and raffles with ticket number sales.',
       },
+      medscript: {
+        name: 'MedScript',
+        description:
+          'Clinical management platform for hospitals and emergency teams: patient management, clinical protocols and dosages, staff shift schedule, activity ranking and summaries, documentation and document control, team-based clinical organization, an emergency school with a beginner learning path and patient reports.',
+      },
+      daygomes: {
+        name: 'Day Gomes',
+        description:
+          'Essay grading platform for public exams integrated with Kiwify: students buy the course and their login is created automatically. They submit essays per exam notice and phase, and the grading team selects words in the text, marks the errors and scores each essay using the criteria of each exam.',
+      },
     },
   },
   experience: {

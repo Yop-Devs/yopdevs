@@ -15,9 +15,11 @@ const projectLinks = {
   meb: 'https://www.mebtransporte.com.br/',
   toq: 'https://www.toqtennis.com.br/',
   demolay: 'https://www.demolay862.com.br/',
+  medscript: 'https://www.medscript.com.br/',
+  daygomes: 'https://www.daygomes.com.br/',
 } as const
 
-const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'meb', 'toq', 'demolay'] as const
+const projectKeys = ['plify', 'westham', 'palha', 'fenix', 'teuposto', 'meb', 'toq', 'demolay', 'medscript', 'daygomes'] as const
 
 const projectImages: Record<(typeof projectKeys)[number], string> = {
   plify: '/projetos/plify/logo.png?v=3',
@@ -28,6 +30,8 @@ const projectImages: Record<(typeof projectKeys)[number], string> = {
   meb: '/projetos/meb/logo.png?v=3',
   toq: '/projetos/toq/logo.png?v=2',
   demolay: '/projetos/demolay/logo.png?v=2',
+  medscript: '/projetos/medscript/logo.png?v=1',
+  daygomes: '/projetos/daygomes/logo.png?v=1',
 }
 
 const LOGO_STRIP_BG = 'bg-[hsl(222_24%_10%)]'
@@ -44,6 +48,8 @@ const logoSizeClass: Record<(typeof projectKeys)[number], string> = {
   meb: logoStripSize,
   toq: logoStripSize,
   demolay: logoStripSize,
+  medscript: logoStripSize,
+  daygomes: logoStripSize,
 }
 
 const projectColors = [
@@ -55,6 +61,8 @@ const projectColors = [
   'from-indigo-500/30 to-blue-500/30',
   'from-sky-500/30 to-blue-500/30',
   'from-amber-500/30 to-yellow-500/30',
+  'from-red-500/30 to-sky-500/30',
+  'from-fuchsia-500/30 to-violet-500/30',
 ]
 
 function ProjectCard({ pKey, index }: { pKey: (typeof projectKeys)[number]; index: number }) {

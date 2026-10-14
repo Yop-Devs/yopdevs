@@ -85,6 +85,16 @@ export const fr = {
         description:
           "Système complet du chapitre : site public, espace membre, panneau admin, utilisateurs, finances, procès-verbaux, présence, candidatures, actualités, calendrier, sceaux et tirages avec vente de numéros de tombola.",
       },
+      medscript: {
+        name: 'MedScript',
+        description:
+          "Plateforme de gestion clinique pour hôpitaux et équipes d'urgence : gestion des patients, protocoles cliniques et posologies, planning des gardes du personnel, classement et résumé des activités, documentation et contrôle des documents, organisation clinique par équipe, école avec parcours pour débutants aux urgences et rapports patients.",
+      },
+      daygomes: {
+        name: 'Day Gomes',
+        description:
+          "Plateforme de correction de rédactions pour concours intégrée à Kiwify : l'élève achète le cours et son accès est créé automatiquement. Les élèves envoient leurs rédactions par concours et par phase, et l'équipe de correcteurs sélectionne les mots dans le texte, marque les erreurs et attribue la note selon les critères de chaque concours.",
+      },
     },
   },
   experience: {

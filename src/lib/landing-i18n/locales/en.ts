@@ -102,6 +102,10 @@ export const en: DeepStringify<typeof ptBr> = {
         'Tennis social network with court management, clubs, communities, tournaments, lessons, chat and plans with automatic payments.',
       demolay:
         'Chapter system: public site, member area, admin, finance, minutes, attendance, news and raffles.',
+      medscript:
+        'Clinical management for hospitals and shifts: patients, protocols and dosages, shift schedule, ranking, documents, emergency school and reports.',
+      daygomes:
+        'Essay grading for public exams with Kiwify: automatic access on purchase, submissions per exam notice and graders marking errors in the text with criteria-based scores.',
     },
   },
   process: {

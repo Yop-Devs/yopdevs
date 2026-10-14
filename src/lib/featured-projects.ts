@@ -192,6 +192,51 @@ export const FEATURED_PROJECTS = [
       '/projetos/prints/demolay/safe/admin-frequencia.png',
     ],
   },
+  {
+    key: 'medscript',
+    name: 'MedScript',
+    short: 'MedScript',
+    tag: 'Saúde & plantão hospitalar',
+    description:
+      'Plataforma de gestão clínica para hospitais e equipes de emergência: pacientes, protocolos clínicos e dosagens, agenda de plantões, ranking e resumo de atividades, documentações, organização clínica por equipe, escola com trilha para iniciantes e relatórios de pacientes.',
+    href: 'https://www.medscript.com.br/',
+    logo: '/projetos/medscript/logo.png?v=1',
+    image: '/projetos/prints/medscript.png?v=1',
+    print: '/projetos/prints/medscript.png?v=1',
+    gallery: [
+      '/projetos/prints/medscript.png?v=1',
+      '/projetos/prints/medscript/safe/landing.png',
+      '/projetos/prints/medscript/safe/modulos.png',
+      '/projetos/prints/medscript/safe/dashboard.png',
+      '/projetos/prints/medscript/safe/paciente-grave.png',
+      '/projetos/prints/medscript/safe/protocolos-emergencia.png',
+      '/projetos/prints/medscript/safe/protocolos-clinicos.png',
+      '/projetos/prints/medscript/safe/escola.png',
+      '/projetos/prints/medscript/safe/plantoes.png',
+    ],
+  },
+  {
+    key: 'daygomes',
+    name: 'Day Gomes',
+    short: 'Day Gomes',
+    tag: 'Educação & correção de redações',
+    description:
+      'Plataforma de correção de redações para concursos integrada à Kiwify: o aluno compra o curso e recebe o acesso automaticamente, envia as redações por edital e fase, e a equipe de corretores marca os erros direto no texto e atribui a nota pelos critérios de cada concurso.',
+    href: 'https://www.daygomes.com.br/',
+    logo: '/projetos/daygomes/logo.png?v=1',
+    image: '/projetos/prints/daygomes.png?v=1',
+    print: '/projetos/prints/daygomes.png?v=1',
+    gallery: [
+      '/projetos/prints/daygomes.png?v=1',
+      '/projetos/prints/daygomes/safe/login.png',
+      '/projetos/prints/daygomes/safe/aluno-inicio.png',
+      '/projetos/prints/daygomes/safe/meus-editais.png',
+      '/projetos/prints/daygomes/safe/correcao-marcacao.png',
+      '/projetos/prints/daygomes/safe/indice-erros.png',
+      '/projetos/prints/daygomes/safe/corretor-inicio.png',
+      '/projetos/prints/daygomes/safe/corrigidas.png',
+    ],
+  },
 ] as const
 
 export type FeaturedProject = (typeof FEATURED_PROJECTS)[number] & {

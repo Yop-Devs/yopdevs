@@ -102,6 +102,10 @@ export const fr: DeepStringify<typeof ptBr> = {
         'Réseau social de tennis avec gestion de courts, clubs, communautés, tournois, cours, chat et plans avec paiement automatique.',
       demolay:
         'Système du chapitre: site public, espace membre, admin, finances, procès-verbaux, présence, actualités et tirages.',
+      medscript:
+        'Gestion clinique pour hôpitaux et gardes : patients, protocoles et posologies, planning des gardes, classement, documents, école des urgences et rapports.',
+      daygomes:
+        "Correction de rédactions pour concours avec Kiwify : accès automatique à l'achat, envoi par concours et correcteurs qui marquent les erreurs dans le texte avec une note par critère.",
     },
   },
   process: {
