@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import { getSupabaseServiceRole, requireAdminUser } from '@/lib/admin-api-auth'
 import {
   getPublicIntegration,
+  isSupabaseDownMessage,
   saveManualCredentials,
   syncInfraForSystem,
 } from '@/lib/system-infra-sync'
+import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -203,10 +205,20 @@ export async function POST(request: Request, ctx: Ctx) {
     ])
     return NextResponse.json({ ok: true, integration })
   } catch (err) {
-    console.error('[sync-infra]', systemId, err instanceof Error ? err.message : err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Falha ao sincronizar infra.' },
-      { status: 500 },
-    )
+    const msg = err instanceof Error ? err.message : 'Falha ao sincronizar infra.'
+    console.error('[sync-infra]', systemId, msg)
+    if (isSupabaseDownMessage(msg) || /demorou demais|timeout/i.test(msg)) {
+      void sendTelegramAlert(
+        [
+          '🔴 Supabase inativo / sem sincronizar',
+          '',
+          `Sistema: ${systemId}`,
+          `Erro: ${msg.slice(0, 500)}`,
+          '',
+          'O banco provavelmente está pausado. Abra o projeto no Supabase e clique em Restore.',
+        ].join('\n'),
+      )
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

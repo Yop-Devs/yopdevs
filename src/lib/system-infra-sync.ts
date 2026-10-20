@@ -409,6 +409,76 @@ function assertServiceRoleMatchesProject(serviceKey: string, projectRef: string 
   }
 }
 
+const SUPABASE_DOWN_STATUSES = new Set([
+  'INACTIVE',
+  'PAUSING',
+  'GOING_DOWN',
+  'COMING_UP',
+  'RESTORING',
+  'ACTIVE_UNHEALTHY',
+  'INIT_FAILED',
+])
+
+/** Erro de projeto pausado / compute dormindo / API fora — não é falha de chave. */
+export function isSupabaseDownMessage(message: string | null | undefined): boolean {
+  if (!message?.trim()) return false
+  const m = message.toLowerCase()
+  if (
+    /pat inválido|pat sem acesso|faltam chaves|service_role não bate|cole o access token|chave é "/i.test(
+      message,
+    )
+  ) {
+    return false
+  }
+  return /inativ|pausad|inactive|paused|coming_up|coming up|going_down|restoring|unhealthy|not ready|timeout|unavailable|econnrefused|etimedout|failed to fetch|database is not available|compute instance|projeto inativo|supabase query: 5|546/.test(
+    m,
+  )
+}
+
+async function fetchSupabaseProjectStatus(
+  projectRef: string,
+  accessToken: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (!res.ok) return null
+    const json = (await res.json()) as { status?: string }
+    return typeof json.status === 'string' ? json.status : null
+  } catch {
+    return null
+  }
+}
+
+function supabasePausedError(status: string): string {
+  return `Supabase: projeto inativo/pausado (status ${status}). Restaure no painel do Supabase (Restore).`
+}
+
+async function notifySupabaseDown(label: string, detail: string): Promise<void> {
+  const sent = await sendTelegramAlert(
+    [
+      '🔴 Supabase inativo / sem sincronizar',
+      '',
+      `Sistema: ${label}`,
+      `Erro: ${detail.slice(0, 500)}`,
+      '',
+      'O banco provavelmente está pausado. Abra o projeto no Supabase e clique em Restore.',
+    ].join('\n'),
+  )
+  if (!sent.ok) console.error('[infra-sync] telegram supabase down', sent.error)
+}
+
+async function systemLabel(yop: SupabaseClient, systemId: string): Promise<string> {
+  const { data } = await yop
+    .from('yop_admin_systems')
+    .select('name, company_name')
+    .eq('id', systemId)
+    .maybeSingle()
+  return (data?.company_name || data?.name || 'Sistema').trim()
+}
+
 function formatPatQueryError(status: number, body: string, projectRef: string): string {
   if (status === 401) {
     return `PAT inválido ou expirado. Gere outro em Account → Access Tokens (sbp_...)`
@@ -419,6 +489,13 @@ function formatPatQueryError(status: number, body: string, projectRef: string): 
       `Entre na conta dona desse projeto (Owner/Admin), crie um Access Token novo e cole aqui. ` +
       `Token com escopo fino precisa de database_read.`
     )
+  }
+  if (
+    status >= 500 ||
+    status === 546 ||
+    /paused|inactive|not ready|unavailable|coming up/i.test(body)
+  ) {
+    return `Supabase: projeto inativo/pausado (HTTP ${status}). Restaure no painel do Supabase (Restore). ${body.slice(0, 120)}`
   }
   return `Supabase query: ${status} ${body.slice(0, 160)}`
 }
@@ -624,6 +701,7 @@ export async function getPublicIntegration(
 export async function syncInfraForSystem(
   yop: SupabaseClient,
   systemId: string,
+  opts?: { telegramSupabaseDown?: 'always' | 'on-new' | 'never' },
 ): Promise<SystemIntegrationPublic> {
   const errors: string[] = []
   // .env é só anexo — chaves vêm do painel. Nunca reimportar no sync (sobrescrevia URL/PAT).
@@ -699,9 +777,18 @@ export async function syncInfraForSystem(
     const projectRef = integ.sb_project_ref || projectRefFromSupabaseUrl(integ.sb_url)
     const accessToken = resolveSbAccessToken(integ)
     let measuredViaPat = false
+    let supabasePaused = false
+
+    if (projectRef && accessToken) {
+      const status = await fetchSupabaseProjectStatus(projectRef, accessToken)
+      if (status && SUPABASE_DOWN_STATUSES.has(status)) {
+        supabasePaused = true
+        errors.push(supabasePausedError(status))
+      }
+    }
 
     // Caminho rápido: PAT + SQL (DB + Storage juntos)
-    if (projectRef && accessToken) {
+    if (!supabasePaused && projectRef && accessToken) {
       try {
         const { dbBytes, storageBytes } = await measureSupabaseViaPat(projectRef, accessToken)
         if (dbBytes != null) patch.sb_db_used_bytes = dbBytes
@@ -718,7 +805,7 @@ export async function syncInfraForSystem(
     }
 
     // Fallback Storage: service role listando objetos (pode ser lento)
-    if (patch.sb_storage_used_bytes == null) {
+    if (!supabasePaused && patch.sb_storage_used_bytes == null) {
       const canSbStorage = Boolean(integ.sb_url && integ.sb_service_role_key)
       if (canSbStorage) {
         try {
@@ -741,7 +828,7 @@ export async function syncInfraForSystem(
     }
 
     // Fallback DB só se PAT path não preencheu
-    if (patch.sb_db_used_bytes == null && projectRef && accessToken && !measuredViaPat) {
+    if (!supabasePaused && patch.sb_db_used_bytes == null && projectRef && accessToken && !measuredViaPat) {
       try {
         const dbUsed = await measureSupabaseDbBytes(projectRef, accessToken)
         if (dbUsed != null) {
@@ -753,7 +840,12 @@ export async function syncInfraForSystem(
       } catch (err) {
         errors.push(`Supabase DB: ${err instanceof Error ? err.message : 'erro'}`)
       }
-    } else if (patch.sb_db_used_bytes == null && (integ.sb_url || integ.has_supabase) && !accessToken) {
+    } else if (
+      !supabasePaused &&
+      patch.sb_db_used_bytes == null &&
+      (integ.sb_url || integ.has_supabase) &&
+      !accessToken
+    ) {
       errors.push(
         'Supabase DB: cole o Access Token (PAT sbp_...) da MESMA conta deste projeto — Account → Access Tokens',
       )
@@ -788,6 +880,18 @@ export async function syncInfraForSystem(
   }
 
   patch.last_error = errors.length ? errors.join(' | ') : null
+
+  const notifyMode = opts?.telegramSupabaseDown ?? 'on-new'
+  const nextDown = isSupabaseDownMessage(patch.last_error)
+  const prevDown = isSupabaseDownMessage(integ.last_error)
+  if (
+    nextDown &&
+    notifyMode !== 'never' &&
+    (notifyMode === 'always' || !prevDown)
+  ) {
+    const label = await systemLabel(yop, systemId)
+    await notifySupabaseDown(label, patch.last_error || 'Falha ao sincronizar Supabase.')
+  }
 
   const { data: updated, error: upError } = await yop
     .from('yop_admin_system_integrations')
@@ -877,10 +981,10 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
   const RESEND_DAILY_ALERT_COUNT = 90
 
   for (const system of systems ?? []) {
+    const label = system.company_name || system.name
     try {
-      const pub = await syncInfraForSystem(yop, system.id)
+      const pub = await syncInfraForSystem(yop, system.id, { telegramSupabaseDown: 'always' })
       synced += 1
-      const label = system.company_name || system.name
 
       const cfPct = usagePct(pub.cf_storage_used_bytes, pub.cf_storage_limit_bytes)
       if (pub.track_cloudflare && pub.has_cloudflare && cfPct != null && cfPct >= R2_ALERT_PCT) {
@@ -910,7 +1014,11 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
         )
       }
     } catch (err) {
-      errors.push(`${system.company_name || system.name}: ${err instanceof Error ? err.message : 'erro'}`)
+      const msg = err instanceof Error ? err.message : 'erro'
+      errors.push(`${label}: ${msg}`)
+      if (isSupabaseDownMessage(msg) || /timeout|demorou demais/i.test(msg)) {
+        await notifySupabaseDown(label, msg)
+      }
     }
   }
 
