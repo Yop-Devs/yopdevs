@@ -386,8 +386,8 @@ function YopAnimatedBackdrop() {
         </g>
       </svg>
 
-      {/* Chuva digital */}
-      <div className="absolute inset-0 opacity-[0.22]">
+      {/* Chuva digital — desligada no mobile via CSS */}
+      <div className="yop-rain-layer absolute inset-0 opacity-[0.22]">
         {rain.map((drop) => (
           <span
             key={drop.left}
@@ -636,7 +636,7 @@ function LandingPageContent() {
       <div className="relative z-10">
       {/* HERO */}
       <section className="relative isolate min-h-[100svh] overflow-hidden">
-        <div className="pointer-events-none absolute left-1/2 top-1/3 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-violet-500/20 blur-[120px] yop-glow-soft" aria-hidden />
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-violet-500/18 blur-[64px] yop-glow-soft" aria-hidden />
         <div className="pointer-events-none absolute -right-10 top-10 h-80 w-80 rounded-full border border-white/10" aria-hidden />
         <div className="pointer-events-none absolute -right-24 top-24 h-[28rem] w-[28rem] rounded-full border border-white/5" aria-hidden />
 
@@ -901,7 +901,7 @@ function LandingPageContent() {
             {FEATURED_PROJECTS.map((project, i) => (
               <article
                 key={project.key}
-                className={`yop-reveal yop-reveal-delay-${(i % 4) + 1} group overflow-hidden rounded-3xl border border-white/15 bg-white/5 backdrop-blur-md transition duration-500 hover:-translate-y-1 hover:border-violet-300/40 hover:shadow-[0_0_50px_rgba(124,58,237,0.2)]`}
+                className={`yop-reveal yop-reveal-delay-${(i % 4) + 1} group overflow-hidden rounded-3xl border border-white/15 bg-[#120a38]/70 transition duration-500 hover:-translate-y-1 hover:border-violet-300/40 hover:shadow-[0_0_50px_rgba(124,58,237,0.2)]`}
               >
                 <button type="button" onClick={() => openLightbox(project)} className="relative block w-full text-left">
                   <div className="relative aspect-[16/10] overflow-hidden bg-[#0a1740]">

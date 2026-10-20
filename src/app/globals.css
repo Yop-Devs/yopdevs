@@ -359,7 +359,6 @@
   transition:
     opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
 }
 .yop-reveal.is-visible {
   opacity: 1;
@@ -461,18 +460,38 @@
 .yop-cable-pulse-c { animation-duration: 8.2s; animation-delay: -4s; }
 .yop-cable-pulse-d { animation-duration: 10s; animation-delay: -1.5s; }
 
-@media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce), (max-width: 768px) {
   .yop-rain-drop,
-  .yop-cable-pulse {
+  .yop-cable-pulse,
+  .yop-orbit,
+  .yop-orbit-reverse,
+  .yop-glow-soft,
+  .yop-brand-text,
+  .yop-float,
+  .yop-float-delay,
+  .yop-marquee,
+  .yop-wa-cta,
+  .yop-wa-shine,
+  .yop-process-flow,
+  .yop-service-icon-ring {
     animation: none !important;
   }
+  .yop-rain-layer {
+    display: none;
+  }
   .yop-rain-drop {
-    opacity: 0.25;
+    opacity: 0;
     transform: none;
   }
   .yop-cable-pulse {
-    opacity: 0.35;
+    opacity: 0.28;
     stroke-dasharray: none;
+  }
+  .yop-brand-text {
+    background-image: none;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    filter: none;
   }
 }
 

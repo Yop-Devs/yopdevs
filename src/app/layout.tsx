@@ -1,5 +1,4 @@
 import { headers } from 'next/headers'
-import { connection } from 'next/server'
 import Script from 'next/script'
 import './globals.css'
 import { fredoka } from '@/components/Logo'
@@ -41,7 +40,6 @@ export const viewport = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  await connection()
   const nonce = (await headers()).get('x-nonce') ?? CSP_NONCE
 
   return (
