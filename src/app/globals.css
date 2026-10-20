@@ -460,38 +460,18 @@
 .yop-cable-pulse-c { animation-duration: 8.2s; animation-delay: -4s; }
 .yop-cable-pulse-d { animation-duration: 10s; animation-delay: -1.5s; }
 
-@media (prefers-reduced-motion: reduce), (max-width: 768px) {
+@media (prefers-reduced-motion: reduce) {
   .yop-rain-drop,
-  .yop-cable-pulse,
-  .yop-orbit,
-  .yop-orbit-reverse,
-  .yop-glow-soft,
-  .yop-brand-text,
-  .yop-float,
-  .yop-float-delay,
-  .yop-marquee,
-  .yop-wa-cta,
-  .yop-wa-shine,
-  .yop-process-flow,
-  .yop-service-icon-ring {
+  .yop-cable-pulse {
     animation: none !important;
   }
-  .yop-rain-layer {
-    display: none;
-  }
   .yop-rain-drop {
-    opacity: 0;
+    opacity: 0.25;
     transform: none;
   }
   .yop-cable-pulse {
-    opacity: 0.28;
+    opacity: 0.35;
     stroke-dasharray: none;
-  }
-  .yop-brand-text {
-    background-image: none;
-    color: #fff;
-    -webkit-text-fill-color: #fff;
-    filter: none;
   }
 }
 
