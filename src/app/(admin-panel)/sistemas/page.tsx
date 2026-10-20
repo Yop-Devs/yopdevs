@@ -189,9 +189,33 @@ export default function AdminSistemasPage() {
     setLoading(false)
   }, [])
 
+  const refreshIntegrations = useCallback(async () => {
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/admin/systems/integrations', { headers })
+      const json = (await res.json()) as {
+        integrations?: SystemIntegrationPublic[]
+        error?: string
+      }
+      if (!res.ok || !json.integrations) return
+      const map: Record<string, SystemIntegrationPublic> = {}
+      for (const row of json.integrations) map[row.system_id] = row
+      setIntegrationsBySystem(map)
+    } catch {
+      // polling silencioso
+    }
+  }, [])
+
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      void refreshIntegrations()
+    }, 60_000)
+    return () => window.clearInterval(t)
+  }, [refreshIntegrations])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

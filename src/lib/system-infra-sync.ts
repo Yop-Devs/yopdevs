@@ -962,11 +962,20 @@ export async function reencryptAllIntegrationSecrets(yop: SupabaseClient): Promi
   return { updated, skipped, errors }
 }
 
-export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
+export async function syncAllSystemsInfra(
+  yop: SupabaseClient,
+  opts?: {
+    telegramSupabaseDown?: 'always' | 'on-new' | 'never'
+    telegramUsageAlerts?: boolean
+  },
+): Promise<{
   synced: number
   alerts: string[]
   errors: string[]
 }> {
+  const telegramSupabaseDown = opts?.telegramSupabaseDown ?? 'always'
+  const telegramUsageAlerts = opts?.telegramUsageAlerts ?? true
+
   const { data: systems, error } = await yop.from('yop_admin_systems').select('id, name, company_name')
   if (error) throw new Error(error.message)
 
@@ -983,7 +992,7 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
   for (const system of systems ?? []) {
     const label = system.company_name || system.name
     try {
-      const pub = await syncInfraForSystem(yop, system.id, { telegramSupabaseDown: 'always' })
+      const pub = await syncInfraForSystem(yop, system.id, { telegramSupabaseDown })
       synced += 1
 
       const cfPct = usagePct(pub.cf_storage_used_bytes, pub.cf_storage_limit_bytes)
@@ -1016,14 +1025,19 @@ export async function syncAllSystemsInfra(yop: SupabaseClient): Promise<{
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'erro'
       errors.push(`${label}: ${msg}`)
-      if (isSupabaseDownMessage(msg) || /timeout|demorou demais/i.test(msg)) {
+      if (
+        telegramSupabaseDown === 'always' &&
+        (isSupabaseDownMessage(msg) || /timeout|demorou demais/i.test(msg))
+      ) {
         await notifySupabaseDown(label, msg)
       }
     }
   }
 
-  for (const msg of alerts) {
-    await sendTelegramAlert(`⚠️ Infra perto do limite\n\n${msg}`)
+  if (telegramUsageAlerts) {
+    for (const msg of alerts) {
+      await sendTelegramAlert(`⚠️ Infra perto do limite\n\n${msg}`)
+    }
   }
 
   return { synced, alerts, errors }
