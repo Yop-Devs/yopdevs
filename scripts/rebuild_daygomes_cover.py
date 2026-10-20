@@ -2,9 +2,10 @@
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
-SAFE = Path(r"c:\Users\gabri\yopdevs\public\projetos\prints\daygomes\safe")
-OUT = Path(r"c:\Users\gabri\yopdevs\public\projetos\prints\daygomes.png")
-LOGO_SRC = Path(r"c:\Users\gabri\yopdevs\public\projetos\daygomes\logo.png")
+ROOT = Path(r"c:\Users\Gabriel Carrara\yopdevs")
+SAFE = ROOT / "public" / "projetos" / "prints" / "daygomes" / "safe"
+OUT = ROOT / "public" / "projetos" / "prints" / "daygomes.png"
+LOGO_SRC = ROOT / "public" / "projetos" / "daygomes" / "logo.png"
 
 logo = Image.open(LOGO_SRC).convert("RGBA")
 print(f"logo src -> {logo.size} mode={logo.mode}")
